@@ -1437,7 +1437,7 @@ function tapMill() {
 }
 function ovenStart() { const n = Math.min(OVENCAP[S.lv.oven - 1], S.farine); if (!n) return false; S.farine -= n; S.oven = { end: now() + dur(9000 * Math.pow(0.8, S.lv.oven - 1) * n), out: 4 * n }; dirty = true; SFX.start(); pop(oven); burst(OVENP[0], 1.6, OVENP[1] + 1.6, '#F6A04A', 6); return true; }
 function tapOven() {
-  if (S.oven && now() >= S.oven.end) { if (WORKER) WORKER.bag = (WORKER.bag || 0) + S.oven.out; else S.carry += S.oven.out; S.fournees++; floatAt(oven, '+' + S.oven.out + ' 🥖'); gain(5 * S.oven.out / 4); S.oven = null; SFX.done(); pop(oven); burst(OVENP[0], 1.8, OVENP[1] + 1.6, ['#E3A73C', '#F3CF7A'], 12); buzz(15); return; }
+  if (S.oven && now() >= S.oven.end) { if (WORKER) WORKER.bag = (WORKER.bag || 0) + S.oven.out; else if (S.hired.ines && !S.tasks.ines) crew.ines.userData.bag = (crew.ines.userData.bag || 0) + S.oven.out; /* once Inès is hired, every batch is hers to shelve, even one you take out yourself */ else S.carry += S.oven.out; S.fournees++; floatAt(oven, '+' + S.oven.out + ' 🥖'); gain(5 * S.oven.out / 4); S.oven = null; SFX.done(); pop(oven); burst(OVENP[0], 1.8, OVENP[1] + 1.6, ['#E3A73C', '#F3CF7A'], 12); buzz(15); return; }
   if (S.oven) return openSkip('Le four', 'La fournée cuit.', () => S.oven.end, () => { S.oven.end = now(); });
   if (!ovenStart()) SFX.no(), toast('Pas de farine', 'Passe d\'abord par le moulin, dans la campagne.');
 }
@@ -1479,6 +1479,7 @@ function autoWork(k, c, u, n, dt) {
   } else if (k === 'jules') {
     if (S.mill ? n >= S.mill.end : S.ble >= 2) { u.target.copy(SPOT.mill); u.job = () => { if (S.mill ? now() >= S.mill.end : S.ble >= 2) tapMill(); }; } else u.target.copy(HOME.jules);
   } else if (k === 'ines') {
+    if (S.carry > 0) { u.bag = (u.bag || 0) + S.carry; S.carry = 0; dirty = true; } // she takes over the loaves the baker still carries
     c.userData.carry.visible = u.bag > 0;
     if (u.bag > 0) { u.target.copy(SPOT.shop); u.job = () => { stockBread(u.bag); u.bag = 0; }; }
     else if (S.oven ? n >= S.oven.end : S.farine >= 1) { u.target.copy(SPOT.oven); u.job = () => { if (S.oven ? now() >= S.oven.end : S.farine >= 1) tapOven(); }; } else u.target.copy(HOME.ines);
@@ -3165,7 +3166,7 @@ function step() {
       const px = player.position.x, pz = player.position.z;
       for (let i = 0; i < S.unlocked; i++) { const pp = PLOT_POS[i]; if (Math.hypot(px - pp[0], pz - pp[1]) < 1.05) { const p = S.plots[i]; if (plotRipe(p)) harvest(i); else if (p.s === 'empty' && n > plotCd[i]) sow(i); } }
       if (n > (cd.mill || 0) && Math.hypot(px - MI[0], pz - MI[1]) < MI[2] && (S.mill ? n >= S.mill.end : S.ble >= 2)) { tapMill(); cd.mill = n + 450; }
-      if (n > (cd.oven || 0) && Math.hypot(px - OV[0], pz - OV[1]) < OV[2] && (S.oven ? n >= S.oven.end : S.farine >= 1)) { tapOven(); cd.oven = n + 450; }
+      if (!(S.hired.ines && !S.tasks.ines) && n > (cd.oven || 0) && Math.hypot(px - OV[0], pz - OV[1]) < OV[2] && (S.oven ? n >= S.oven.end : S.farine >= 1)) { tapOven(); cd.oven = n + 450; } // with Inès at work, walking past the oven no longer takes her batch
       if (S.shop > 0 && n > (cd.shop || 0) && Math.hypot(px - SH[0], pz - SH[1]) < 2.6) tapShop();
       if (S.carry > 0 && Math.hypot(px - SH[0], pz - SH[1]) < 2.8) { stockBread(S.carry); S.carry = 0; }
       if (S.carryC > 0 && Math.hypot(px - SH[0], pz - SH[1]) < 2.8) { stockCake(S.carryC); S.carryC = 0; }
@@ -3335,6 +3336,7 @@ let resetting = false;
 function save() {
   if (resetting) return;
   dirty = false; S.lastSeen = now(); S.px = player.position.x; S.pz = player.position.z;
+  S.inesBag = crew.ines.userData.bag || 0; // the loaves Inès is carrying are not lost if the game closes
   const snap = JSON.parse(JSON.stringify(S));
   try { localStorage.setItem(LSK, JSON.stringify(snap)); } catch (e) {}
   if (!ref) return;
@@ -3409,7 +3411,7 @@ function boot(loaded, hot) {
     $('home-info').textContent = 'Niveau ' + level() + ' · ' + Math.floor(S.pop || 0) + ' habitants · ' + (S.mode === 'comp' ? '🔥 Coup de feu' : '🌿 Douceur de vivre');
   }
   if (location.hash === '#debug') window.__pf = { get S() { return S; }, set S(v) { S = v; }, player, goTo, travel, tap, level, ups, buyUp, stationGo, findPath, solids, rects, GLB, renderer, cam, scene, get zoom() { return zoom; }, set zoom(v) { zoom = v; resize(); }, get quality() { return quality; }, startRaid, spawnCar, tapMairie, tapMill, tapOven, tapShop, harvest, stockBread, deliver, queue, villagers, crew, setFast: (v) => { fast = v; } };
-  Object.keys(crew).forEach((k) => { crew[k].visible = !!S.hired[k]; });
+  Object.keys(crew).forEach((k) => { crew[k].visible = !!S.hired[k]; }); if (S.inesBag > 0) { crew.ines.userData.bag = S.inesBag; S.inesBag = 0; }
   try { cityBoot(); } catch (e) { showErr('village', e); }
   try { ambBoot(); } catch (e) { showErr('ambiance', e); }
   resize(); placeCam(); frame(); loadNear();
