@@ -265,8 +265,8 @@
     <div class="item"><div class="ic">🎁</div><div class="t"><b>Pack de départ · 1,99 €</b><span>+80 pièces, vitesse ×2 pendant 1 heure. Une seule fois.</span></div><button class="btn" data-buy="starter" data-price="1.99" type="button">Prendre</button></div>
     <div class="item"><div class="ic">🥖</div><div class="t"><b>Un pain suspendu · 2 €</b><span>100 % pour la cagnotte. Ton nom s'affiche sur le mur des bienfaiteurs, à la mairie.</span></div><button class="btn red" data-buy="suspendu" data-price="2" type="button">Offrir</button></div>
     <div class="item"><div class="ic">▶️</div><div class="t"><b>Regarder une pub · gratuit</b><span>+20 pièces et quelques centimes pour la cagnotte. Toujours au choix, jamais forcée.</span></div><button class="btn ghost" id="b-ad2" type="button">Voir</button></div>
-    <div class="promise"><b>Notre promesse.</b> Pas de coffre au hasard. Des prix en euros, sans monnaie cachée. Les pièces ne se vendent jamais en tas. Un plafond de <b>20 € par mois</b> : au-delà, la boutique se ferme. Tout ce qui va à la cagnotte est publié.</div>
-    <p class="cap" id="cap">Dépensé ce mois-ci : 0,00 € sur 20 € · Démo : rien n'est débité</p>
+    <div class="promise"><b>Notre promesse.</b> Pas de coffre au hasard. Des prix en euros, sans monnaie cachée. Les pièces ne se vendent jamais en tas. Tout ce qui va à la cagnotte est publié.</div>
+    <p class="cap" id="cap">Dépensé ce mois-ci : 0,00 € · Démo : rien n'est débité</p>
   </div>
 </div>
 
@@ -1159,7 +1159,7 @@ dog.add(baked((b) => { const bd = mesh(new THREE.CapsuleGeometry(0.19, 0.4, 3, 8
 { const tl = new THREE.Group(); tl.position.set(0, 0.46, -0.36); dog.add(tl); const t1 = cyl(0.035, 0.03, 0.34, '#D9A45B', 0, 0, 0, tl, 5); t1.rotation.x = -0.9; dog.userData.tail = tl; }
 const DOGHOME = new THREE.Vector3(-70, 0, 13.6); dog.position.copy(DOGHOME);
 function tickBoars(dt, t, n) {
-  if (S.started && !S.over && S.q >= 9) {
+  if (false && S.started && !S.over && S.q >= 9) { // the old boar raids: the wild animals of 3ca-faune.js have taken over
     if (!raidAt) raidAt = n + (fast ? 22000 : 60000) + Math.random() * 25000;
     if (!raidWarned && n > raidAt - 6000) { raidWarned = true; const far = player.position.x > -40; toast('🐗 Les sangliers arrivent sur le champ !', S.lv.fence ? 'Ta barrière en arrêtera ' + S.lv.fence + '. ' + (far ? 'Prends la 2CV jusqu\'à la campagne !' : 'Cours chasser les autres !') : far ? 'Le champ est dans la campagne : prends la 2CV (🗺️ Carte).' : 'Cours vers eux pour les chasser du champ.'); SFX.alarm(); buzz(80); }
     if (n > raidAt) { raidAt = n + (fast ? 30000 : 90000) + Math.random() * 40000; startRaid(); }
@@ -1178,7 +1178,7 @@ function tickBoars(dt, t, n) {
     else if (stepToward(g, tv.set(BX0 - 6, 0, 9), 6.8, dt)) { g.visible = false; boarPool.push(g); boars.splice(i, 1); }
   }
   dog.visible = !!S.dog;
-  if (S.dog) { let tg = null, bd = 1e9; for (const b of boars) if (b.phase !== 'flee') { const d = Math.hypot(dog.position.x - b.g.position.x, dog.position.z - b.g.position.z); if (d < bd) { bd = d; tg = b.g.position; } }
+  if (S.dog) { let tg = null, bd = 1e9; for (const b of boars.concat(wildDogTargets())) if (b.phase !== 'flee') { const d = Math.hypot(dog.position.x - b.g.position.x, dog.position.z - b.g.position.z); if (d < bd) { bd = d; tg = b.g.position; } }
     const moving = !stepToward(dog, tg || DOGHOME, tg ? 7.5 : 3, dt); dog.position.y = moving ? Math.abs(Math.sin(t * 16)) * 0.1 : 0; dog.userData.tail.rotation.z = 0.6 * Math.sin(t * (tg ? 18 : 6)); }
 }
 
@@ -1205,7 +1205,8 @@ function ups() {
   if (L2.cake > 0) a.push({ ic: '🧁', t: L2.cake ? 'Pâtisserie · niveau ' + L2.cake : 'Ouvrir la pâtisserie', s: L2.cake < 4 ? '1 farine + 2 œufs = 1 gâteau, vendu ' + CAKEPR[L2.cake + 1] + ' pièces à la boulangerie. ' + CAKECAP[L2.cake + 1] + ' gâteaux à la fois.' : 'Au maximum.', cost: L2.cake < 4 ? CAKECOST[L2.cake] : null, buy: () => { L2.cake++; pop(cakeG); } });
   if (L2.bq > 0) a.push({ ic: '👕', t: L2.bq ? 'Boutique de vêtements · niveau ' + L2.bq : 'Ouvrir la boutique de vêtements', s: L2.bq < 3 ? '2 laines = 1 pull, vendu ' + BQPR[L2.bq + 1] + ' pièces. Elle tricote et vend toute seule.' : 'Au maximum.', cost: L2.bq < 3 ? BQCOST[L2.bq] : null, buy: () => { L2.bq++; pop(bqG); } });
   { const ms = S.masons || 1; a.push({ ic: '🧱', t: 'Équipe de maçons · ' + ms + (ms > 1 ? ' équipes' : ' équipe'), s: ms < 3 ? 'Une équipe de plus : un chantier de maison de plus en même temps.' : 'Au maximum.', cost: ms < 3 ? MASONCOST[ms] : null, buy: () => { S.masons = ms + 1; } }); }
-  if (!S.dog) a.push({ ic: '🐕', t: 'Médor, le chien de garde', s: 'Chasse les sangliers tout seul.', cost: 100, buy: () => { S.dog = true; dog.position.copy(DOGHOME); } });
+  if (reserveOn() && !S.garde) a.push({ ic: '🧑‍🌾', t: 'Gaspard, le garde forestier', s: 'Il veille sur la réserve naturelle : plus aucun animal ne s\'en échappe.', cost: 1500, buy: () => { S.garde = true; } });
+  if (!S.dog) a.push({ ic: '🐕', t: 'Médor, le chien de garde', s: 'Chasse les lapins et les sangliers tout seul.', cost: 100, buy: () => { S.dog = true; dog.position.copy(DOGHOME); } });
   return a.filter(upVisible);
 }
 function buyUp(u) {
@@ -1562,7 +1563,6 @@ function openSkip(title, sub, end, skip) { openSheet(title, sub, [], { end, skip
 $('sheet-x').addEventListener('click', closeSheet);
 
 function buy(item, euro) {
-  if (S.spent + euro > 20.001) { toast('Plafond atteint', 'Tu as atteint 20 € ce mois-ci : la boutique se ferme jusqu\'au mois prochain.'); return false; }
   S.spent += euro; dirty = true; record(item, euro);
   toast('Merci !', 'Démo : rien n\'est débité (' + euros(euro) + ').');
   updateCap();
@@ -1572,7 +1572,7 @@ function record(item, euro) {
   if (!db) return;
   db.collection('clics_paywall').doc().set({ item, euro, level: level(), coins: Math.floor(S.coins), user: uid || '', at: new Date().toISOString(), beta: 13 }).catch(() => {});
 }
-function updateCap() { $('cap').textContent = 'Dépensé ce mois-ci : ' + euros(S.spent) + ' sur 20 € · Démo : rien n\'est débité'; $('trial-row').hidden = !!(S.trialUsed || S.pass); }
+function updateCap() { $('cap').textContent = 'Dépensé ce mois-ci : ' + euros(S.spent) + ' · Démo : rien n\'est débité'; $('trial-row').hidden = !!(S.trialUsed || S.pass); }
 document.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => {
   const it = b.getAttribute('data-buy'), e = parseFloat(b.getAttribute('data-price'));
   if (it === 'starter' && S.starter) return toast('Déjà pris', 'Le pack de départ ne se prend qu\'une fois.');
@@ -2440,6 +2440,268 @@ const CATALOGUE = (() => {
     it('portail', 'clotures', 'Portail en fer forgé', '🚪', 450, 11, [2, 1], 9, portail)
   ];
 })();
+/* ================= la faune sauvage : lapins, cerfs, sangliers, aigles ================= */
+// Ils vivent toujours sur la carte. De temps en temps, quelques-uns viennent se servir dans les récoltes ou les enclos.
+// On ne leur fait jamais de mal : on les fait fuir (en s'approchant, avec Médor, la barrière, un épouvantail),
+// ou on leur offre une réserve naturelle, gardée par un garde forestier, où ils vivent en paix.
+const wV = new THREE.Vector3(), wV2 = new THREE.Vector3(), W_SPH = new THREE.IcosahedronGeometry(1, 2);
+const wsph = (r, c, x, y, z, p, sx, sy, sz) => { const m = mesh(W_SPH, c, x, y, z, p); m.scale.set(r * (sx || 1), r * (sy || 1), r * (sz || 1)); return m; };
+function wlimb(r0, r1, a, b, c, p, seg) { wV.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]); const len = wV.length(), m = mesh(new THREE.CylinderGeometry(r1, r0, len, seg || 7), c, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, p); m.quaternion.setFromUnitVectors(UPV, wV.normalize()); return m; }
+const wpivot = (g, x, y, z, build) => { const p = new THREE.Group(); p.position.set(x, y, z); p.add(baked(build)); g.add(p); return p; };
+
+/* ---- les modèles ---- */
+function makeDeer(kind) { // 'cerf' (bois), 'biche', 'faon'
+  const g = new THREE.Group(), R = kind === 'biche' ? '#C08A58' : kind === 'faon' ? '#C99562' : '#B26F3C', R2 = '#8E5A30', CR = '#EBD8B8', WH = '#FFF6E8', DK = '#2B2018';
+  g.add(baked((b) => {
+    wsph(0.3, R, 0, 0.98, 0.26, b, 0.95, 1.02, 1.12); wsph(0.27, R, 0, 0.96, -0.06, b, 0.93, 0.95, 1.55); wsph(0.29, R, 0, 1.0, -0.38, b, 0.97, 1, 1.08);
+    wsph(0.2, CR, 0, 0.83, -0.05, b, 0.88, 0.7, 1.9); wsph(0.16, WH, 0, 1.02, -0.63, b, 1, 1.1, 0.5); wsph(0.055, WH, 0, 1.07, -0.74, b, 1, 1.5, 1); wsph(0.05, R2, 0, 1.13, -0.72, b, 1, 1, 1);
+    if (kind === 'faon') [[0.12, 1.2, -0.2], [-0.1, 1.22, 0], [0.14, 1.18, 0.12], [-0.13, 1.19, -0.34], [0.02, 1.25, -0.12], [-0.02, 1.24, 0.22], [0.17, 1.1, -0.05], [-0.18, 1.1, -0.2]].forEach((q) => wsph(0.035, WH, q[0], q[1], q[2], b, 1, 0.5, 1)); }));
+  const head = wpivot(g, 0, 1.1, 0.44, (b) => {
+    wlimb(0.135, 0.085, [0, -0.04, -0.04], [0, 0.48, 0.2], R, b); wsph(0.11, R, 0, 0.56, 0.28, b, 1, 1, 1.25); wlimb(0.078, 0.05, [0, 0.54, 0.36], [0, 0.49, 0.58], '#C99A6B', b); wsph(0.036, DK, 0, 0.485, 0.6, b);
+    [-1, 1].forEach((s) => { wsph(0.024, DK, s * 0.088, 0.6, 0.36, b); const e = wsph(0.075, R, s * 0.14, 0.69, 0.2, b, 0.45, 1.35, 0.85); e.rotation.z = -s * 0.85; wsph(0.045, '#E8B9A0', s * 0.15, 0.69, 0.215, b, 0.3, 1.1, 0.6).rotation.z = -s * 0.85;
+      if (kind === 'cerf') { const A = '#EADFC6', P0 = [s * 0.05, 0.66, 0.22], P1 = [s * 0.2, 0.95, 0.1], P2 = [s * 0.27, 1.22, 0.18], P3 = [s * 0.2, 1.44, 0.32];
+        wlimb(0.026, 0.022, P0, P1, A, b, 5); wlimb(0.022, 0.018, P1, P2, A, b, 5); wlimb(0.018, 0.01, P2, P3, A, b, 5);
+        wlimb(0.018, 0.008, P1, [s * 0.2, 1.02, 0.36], A, b, 5); wlimb(0.016, 0.008, P2, [s * 0.42, 1.38, 0.12], A, b, 5); wlimb(0.016, 0.008, P2, [s * 0.24, 1.32, 0.42], A, b, 5); wlimb(0.02, 0.008, P0, [s * 0.1, 0.78, 0.44], A, b, 5); } }); });
+  const legs = [[0.14, 0.82, 0.3, 0], [-0.14, 0.82, 0.3, 0], [0.15, 0.84, -0.4, 1], [-0.15, 0.84, -0.4, 1]].map((q) => wpivot(g, q[0], q[1], q[2], (b) => {
+    const k = q[3] ? -0.09 : 0.02; wlimb(0.075, 0.04, [0, 0.05, 0], [0, -0.4, k], R, b); wlimb(0.038, 0.028, [0, -0.4, k], [0, -0.78, q[3] ? -0.02 : 0], R2, b); cyl(0.04, 0.034, 0.07, DK, 0, -0.84, q[3] ? -0.02 : 0, b, 6); }));
+  g.scale.setScalar(kind === 'biche' ? 0.9 : kind === 'faon' ? 0.56 : 1.02);
+  return { g, head, legs };
+}
+function makeWildBoar() {
+  const g = new THREE.Group(), BR = '#5C4636', DK = '#3B2A22', SK = '#4A382B';
+  g.add(baked((b) => {
+    wsph(0.36, BR, 0, 0.64, 0.16, b, 0.95, 1.05, 1.1); wsph(0.33, BR, 0, 0.57, -0.22, b, 0.96, 0.95, 1.35); wsph(0.22, '#6B5444', 0, 0.44, -0.05, b, 0.9, 0.7, 1.8);
+    for (let k = 0; k < 7; k++) { const z = 0.36 - k * 0.11; cone(0.05, 0.16, DK, 0, 0.98 - Math.abs(k - 1.5) * 0.02 - Math.max(0, k - 3) * 0.035, z, b, 4); }
+    wlimb(0.02, 0.012, [0, 0.7, -0.6], [0, 0.5, -0.74], DK, b, 4); wsph(0.035, DK, 0, 0.47, -0.76, b); }));
+  const head = wpivot(g, 0, 0.6, 0.46, (b) => {
+    wsph(0.21, SK, 0, 0.02, 0.1, b, 1, 1, 1.2); wlimb(0.135, 0.085, [0, -0.03, 0.2], [0, -0.12, 0.56], SK, b); const d = cyl(0.088, 0.088, 0.04, '#8E6E5C', 0, 0, 0, b, 8); d.rotation.x = Math.PI / 2 - 0.25; d.position.set(0, -0.125, 0.58);
+    [-1, 1].forEach((s) => { wlimb(0.028, 0.006, [s * 0.085, -0.15, 0.44], [s * 0.13, -0.02, 0.5], '#FFFDF8', b, 5); const e = cone(0.07, 0.16, DK, s * 0.14, 0.14, 0.02, b, 4); e.rotation.z = -s * 0.5; wsph(0.022, '#1E1612', s * 0.12, 0.07, 0.24, b); wsph(0.014, '#2B2018', s * 0.035, -0.12, 0.6, b); }); });
+  const legs = [[0.17, 0.4, 0.24], [-0.17, 0.4, 0.24], [0.17, 0.4, -0.34], [-0.17, 0.4, -0.34]].map((q) => wpivot(g, q[0], q[1], q[2], (b) => { wlimb(0.085, 0.045, [0, 0.06, 0], [0, -0.33, 0], DK, b); cyl(0.05, 0.045, 0.07, '#1E1612', 0, -0.4, 0, b, 6); }));
+  return { g, head, legs };
+}
+function makePiglet() { // marcassin : pelage clair rayé
+  const g = new THREE.Group();
+  g.add(baked((b) => { wsph(0.15, '#C9A06C', 0, 0.22, 0, b, 0.95, 0.95, 1.6); [-0.07, 0, 0.07].forEach((x) => box(0.03, 0.02, 0.34, '#6B4A30', x, 0.345 - Math.abs(x) * 0.35, -0.02, b));
+    wsph(0.1, '#B98E5C', 0, 0.24, 0.24, b, 1, 1, 1.2); wlimb(0.06, 0.04, [0, 0.22, 0.3], [0, 0.19, 0.42], '#8E6E5C', b, 6); [-1, 1].forEach((s) => { cone(0.035, 0.07, '#6B4A30', s * 0.07, 0.3, 0.2, b, 4); wsph(0.013, '#1E1612', s * 0.06, 0.27, 0.32, b); });
+    [[0.08, 0.14], [-0.08, 0.14], [0.08, -0.16], [-0.08, -0.16]].forEach((q) => cyl(0.035, 0.028, 0.14, '#6B4A30', q[0], 0, q[1], b, 5)); }));
+  return { g };
+}
+function makeRabbit(i) {
+  const g = new THREE.Group(), F = i % 3 === 1 ? '#9B948B' : i % 3 === 2 ? '#C9A27A' : '#B39070', BL = '#F0E4D2';
+  g.add(baked((b) => {
+    wsph(0.13, F, 0, 0.16, -0.01, b, 1, 1, 1.45); wsph(0.13, F, 0, 0.16, -0.12, b, 1.12, 1.08, 1); wsph(0.09, BL, 0, 0.11, 0.1, b, 0.9, 0.8, 1); wsph(0.088, F, 0, 0.28, 0.16, b, 1, 1, 1.15); wsph(0.045, BL, 0, 0.255, 0.235, b, 1.1, 0.8, 0.8); wsph(0.016, '#D98C8C', 0, 0.268, 0.27, b);
+    wsph(0.052, '#FFFDF8', 0, 0.17, -0.27, b);
+    [-1, 1].forEach((s) => { wsph(0.017, '#1E1612', s * 0.062, 0.3, 0.2, b); const e = wsph(0.036, F, s * 0.042, 0.44, 0.1, b, 0.7, 2.9, 0.42); e.rotation.x = -0.25; e.rotation.z = -s * 0.16; wsph(0.022, '#E8B9A0', s * 0.043, 0.44, 0.112, b, 0.6, 2.6, 0.3).rotation.set(-0.25, 0, -s * 0.16);
+      wsph(0.035, F, s * 0.055, 0.04, 0.13, b, 0.8, 0.7, 1.3); wsph(0.045, F, s * 0.085, 0.035, -0.07, b, 0.65, 0.55, 1.7); }); }));
+  return { g };
+}
+function makeEagle() { // aigle royal : brun sombre, nuque dorée, bec et serres jaunes
+  const g = new THREE.Group(), BR = '#4E3622', DK = '#33231A', GD = '#B98D4C', Y = '#E8B13A';
+  const inner = new THREE.Group(); g.add(inner);
+  inner.add(baked((b) => {
+    wsph(0.2, BR, 0, 0, 0, b, 1, 0.85, 2.1); wsph(0.11, GD, 0, 0.05, 0.4, b, 1, 1, 1.1); wsph(0.13, GD, 0, 0.03, 0.26, b, 1, 0.95, 1.2);
+    const bk = cone(0.045, 0.14, Y, 0, 0, 0, b, 5); bk.rotation.x = Math.PI / 2 + 0.25; bk.position.set(0, 0.03, 0.55); const hk = cone(0.025, 0.07, '#3B3A3A', 0, 0, 0, b, 4); hk.rotation.x = Math.PI; hk.position.set(0, -0.02, 0.6);
+    [-1, 1].forEach((s) => { wsph(0.018, '#1E1612', s * 0.07, 0.08, 0.46, b); wsph(0.035, Y, s * 0.07, -0.14, -0.1, b, 1, 0.8, 1.6); });
+    [-0.35, 0, 0.35].forEach((a) => { const f = box(0.16, 0.025, 0.42, a ? DK : BR, 0, 0, 0, b); f.position.set(Math.sin(a) * 0.2, -0.01, -0.52); f.rotation.y = a; }); wsph(0.09, '#D9C9A8', 0, 0, -0.36, b, 1.3, 0.4, 1.2); }));
+  const wings = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.13, 0.04, 0.08); p.add(baked((b) => {
+    const a = box(0.6, 0.045, 0.44, BR, 0, 0, 0, b); a.position.set(s * 0.32, 0, 0); const c = box(0.6, 0.03, 0.2, '#6E4E30', 0, 0, 0, b); c.position.set(s * 0.32, 0.02, 0.14);
+    const o = box(0.52, 0.035, 0.36, DK, 0, 0, 0, b); o.position.set(s * 0.84, 0, -0.05); o.rotation.y = -s * 0.14;
+    for (let k = 0; k < 6; k++) { const f = box(0.36, 0.02, 0.07, DK, 0, 0, 0, b), an = -0.5 + k * 0.2; f.position.set(s * (1.16 + Math.cos(an) * 0.14), 0, -0.05 - Math.sin(an) * 0.2 - 0.05); f.rotation.y = -s * an; } })); inner.add(p); return p; });
+  g.traverse((o) => { if (o.isMesh) o.raycast = noRay; });
+  return { g, inner, wings };
+}
+
+/* ---- qui fait quoi : les règles de l'écosystème ---- */
+// dmg : unités abîmées par bouchée (parcelles de blé, carrés du potager, produits d'un enclos) · near : distance à laquelle le boulanger le fait fuir
+// w : ce qui l'attire (blé, potager, enclos) · dog / fence / crow : ce qui l'arrête sans toi (Médor, la barrière du champ, un épouvantail)
+const WSPEC = {
+  lapin:    { ic: '🐇', n: 'lapins', un: 'Un lapin', dmg: 1, bites: 3, eat: 2.6, near: 3.5, run: 5.2, flee: 8, w: { plot: 3, garden: 3, pen: 1 }, dog: true, fence: false, crow: false, hint: 'Approche-toi pour les faire détaler. Médor s\'en charge aussi.' },
+  cerf:     { ic: '🦌', n: 'cerfs', un: 'Un cerf', dmg: 2, bites: 2, eat: 3.6, near: 6, run: 5.6, flee: 9, w: { plot: 2, garden: 3, pen: 1 }, dog: false, fence: false, crow: true, hint: 'Très craintif : il fuit dès que tu arrives. Un épouvantail le tient à distance.' },
+  sanglier: { ic: '🐗', n: 'sangliers', un: 'Un sanglier', dmg: 3, bites: 2, eat: 3.4, near: 2.4, run: 4.4, flee: 7, w: { plot: 3, garden: 2, pen: 2 }, dog: true, fence: true, crow: false, hint: 'Têtu : il faut aller tout près. La barrière du champ et Médor l\'arrêtent.' },
+  aigle:    { ic: '🦅', n: 'aigles', un: 'Un aigle', dmg: 2, bites: 1, eat: 0, near: 5, run: 11, flee: 12, w: { plot: 1, garden: 1, pen: 4 }, dog: false, fence: false, crow: true, hint: 'Il plonge du ciel : sois près de ce qu\'il vise. Un épouvantail le détourne.' }
+};
+const W_TARGET = { plot: 'le champ de blé', garden: 'le potager', hen: 'le poulailler', cow: 'l\'étable', sheep: 'la bergerie' };
+const W_ZONES = { lapin: [[-8, 13], [-58, -18], [-88, -22], [24, 20], [-30, 14], [44, -22]], cerf: [[-76, -44], [-22, -46], [6, -44]], sanglier: [[-98, -30], [-96, 20], [-50, 22]], aigle: [[-64, -22], [18, -30]] };
+const WILD = [], WR = { at: 0, blocks: 0 }, WLAB = [];
+const RESERVE_P = [-70, -34], RES_HW = 11, RES_HD = 8;
+const reserveOn = () => typeof MOV !== 'undefined' && MOV.reserve && MOV.reserve.placed;
+
+/* ---- la réserve naturelle : un grand enclos de nature, à la mode d'un village ---- */
+const reserveG = group(RESERVE_P[0], RESERVE_P[1], 0, 'reserve', 'reserve'), RESERVE_COLS = [];
+{ const WD = '#8A5A30', WD2 = '#6F4526', LOG = '#9A6E44', ST = '#B9B0A0', g = reserveG, HW = RES_HW, HD = RES_HD;
+  const crowns = [];
+  g.add(baked((b) => {
+    // la clôture en bois fendu, avec un porche de rondins
+    const post = (x, z, h) => cyl(0.075, 0.09, h || 1.05, WD, x, 0, z, b, 6), rail = (x0, z0, x1, z1) => { [0.42, 0.82].forEach((y) => rod([x0, y, z0], [x1, y + 0.03, z1], 0.07, LOG, b)); };
+    const side = (x0, z0, x1, z1) => { const n = Math.round(Math.hypot(x1 - x0, z1 - z0) / 2); for (let k = 0; k <= n; k++) { const x = x0 + (x1 - x0) * k / n, z = z0 + (z1 - z0) * k / n; post(x, z); if (k < n) rail(x, z, x0 + (x1 - x0) * (k + 1) / n, z0 + (z1 - z0) * (k + 1) / n); } };
+    side(-HW, -HD, HW, -HD); side(-HW, -HD, -HW, HD); side(HW, -HD, HW, HD); side(-HW, HD, -1.7, HD); side(1.7, HD, HW, HD);
+    [-1.7, 1.7].forEach((x) => cyl(0.13, 0.16, 3.0, WD2, x, 0, HD, b, 7)); rod([-2.1, 2.85, HD], [2.1, 2.95, HD], 0.22, LOG, b); rod([-1.7, 2.4, HD], [-0.9, 2.86, HD], 0.1, WD, b); rod([1.7, 2.4, HD], [0.9, 2.86, HD], 0.1, WD, b);
+    // la mare : berge de sable, galets, roseaux
+    const pd = cyl(3.7, 3.7, 0.05, '#D9C9A3', -4, 0, 0.5, b, 20); pd.scale.set(1.25, 1, 0.95);
+    [[-8.3, 1.6, 0.5], [-7.2, -1.9, 0.38], [-0.4, 2.6, 0.44], [-1.2, -1.6, 0.3], [-4.6, 3.9, 0.34], [-3, -2.9, 0.42]].forEach((q, k) => { const r = mesh(new THREE.DodecahedronGeometry(q[2], 0), k % 2 ? ST : '#A69C8B', q[0], q[2] * 0.55, q[1], b); r.rotation.set(k, k * 1.7, 0); r.scale.y = 0.75; });
+    [[-7.7, 0.2], [-7.4, 0.9], [-7.9, -0.6], [-1.1, 1.5], [-0.8, 0.8], [-5.2, 3.6], [-5.9, 3.4], [-2.4, -2.6], [-3.2, -2.9]].forEach((q, k) => { cyl(0.025, 0.03, 0.9 + (k % 3) * 0.25, '#6E9E43', q[0], 0, q[1], b, 4); cyl(0.045, 0.045, 0.22, '#6B4A2E', q[0], 0.85 + (k % 3) * 0.25, q[1], b, 5); const l = cone(0.04, 0.7, '#7FAE4E', q[0] + 0.1, 0, q[1] + 0.06, b, 4); l.rotation.z = -0.25; });
+    // la cabane d'affût sur pilotis, toit de bardeaux, échelle
+    const hx = 6.6, hz = -4.2; [[-1, -0.9], [1, -0.9], [-1, 0.9], [1, 0.9]].forEach((q) => cyl(0.09, 0.11, 2.2, WD2, hx + q[0], 0, hz + q[1], b, 6)); box(2.5, 0.12, 2.3, LOG, hx, 2.1, hz, b);
+    box(2.3, 1.25, 0.1, WD, hx, 2.2, hz - 1.0, b); box(0.1, 1.25, 2.1, WD, hx - 1.1, 2.2, hz, b); box(0.1, 1.25, 2.1, WD, hx + 1.1, 2.2, hz, b); box(2.3, 0.45, 0.1, WD, hx, 2.2, hz + 1.0, b); box(2.3, 0.2, 0.1, WD, hx, 3.25, hz + 1.0, b);
+    roof(2.6, 2.5, 0.85, '#6B5444', hx, 3.45, hz, b); [0.3, 0.8, 1.3, 1.8].forEach((y) => rod([hx - 0.3, y, hz + 1.55 - y * 0.2], [hx + 0.3, y, hz + 1.55 - y * 0.2], 0.05, LOG, b)); [-0.3, 0.3].forEach((x) => rod([hx + x, 0, hz + 1.6], [hx + x, 2.15, hz + 1.12], 0.06, WD, b));
+    // le râtelier à foin, les souches, le tronc couché, les champignons
+    const rx = 2.6, rz = 3.6; [-0.9, 0.9].forEach((x) => { rod([rx + x, 0, rz - 0.5], [rx + x, 1.25, rz], 0.07, WD, b); rod([rx + x, 0, rz + 0.5], [rx + x, 1.25, rz], 0.07, WD, b); }); rod([rx - 1.05, 1.25, rz], [rx + 1.05, 1.25, rz], 0.07, WD, b); box(1.7, 0.42, 0.55, '#E2C56A', rx, 0.5, rz, b); roof(2.2, 1.1, 0.4, '#8A5A30', rx, 1.3, rz, b);
+    const lg = cyl(0.26, 0.3, 2.6, LOG, 0, 0, 0, b, 8); lg.rotation.z = Math.PI / 2; lg.position.set(-7.4, 0.28, -5.2); lg.rotation.y = 0.5; cyl(0.34, 0.4, 0.45, WD2, 8.6, 0, 4.6, b, 8); cyl(0.3, 0.34, 0.02, '#D9B98A', 8.6, 0.45, 4.6, b, 8); cyl(0.26, 0.32, 0.3, WD2, -9.4, 0, 5.6, b, 8);
+    [[-6.6, -4.6], [-6.9, -4.3], [8.1, 4.1], [8.3, 5.2], [-9.1, 5.1], [3.9, -6.6]].forEach((q, k) => { cyl(0.035, 0.045, 0.14, '#F4EAD5', q[0], 0, q[1], b, 5); wsph(0.085, k % 3 ? '#C9402E' : '#B9804A', q[0], 0.15, q[1], b, 1, 0.6, 1); });
+    // le grand arbre mort où se pose l'aigle, avec son nid
+    const ex = 8.4, ez = -6.2; wlimb(0.3, 0.14, [ex, 0, ez], [ex + 0.2, 5.2, ez - 0.1], '#8C8478', b, 7); wlimb(0.13, 0.06, [ex + 0.1, 3.2, ez], [ex - 1.5, 4.5, ez + 0.5], '#8C8478', b, 5); wlimb(0.12, 0.05, [ex + 0.15, 4.0, ez], [ex + 1.5, 5.2, ez - 0.5], '#8C8478', b, 5); wlimb(0.1, 0.05, [ex + 0.2, 5.0, ez - 0.1], [ex - 0.3, 6.4, ez - 0.4], '#8C8478', b, 5);
+    const ns = cyl(0.55, 0.4, 0.22, '#6B4A2E', ex + 0.2, 5.2, ez - 0.1, b, 9); ns.scale.set(1, 1, 1); cyl(0.4, 0.4, 0.05, '#A98A5C', ex + 0.2, 5.38, ez - 0.1, b, 9);
+    // troncs des arbres (les feuillages, eux, suivent les saisons)
+    [[-8.6, -5.4, 1.15, 0], [-3.4, -6, 1.3, 0], [1.2, -5.6, 1.0, 1], [9.2, 0.6, 1.2, 0], [5.6, 6, 1.0, 1], [-9, 3.4, 0.95, 1], [-1.6, 5.6, 1.1, 2], [3.2, -2.2, 0.9, 2], [-6.2, 6.2, 0.9, 2]].forEach((q, k) => { const x = q[0], z = q[1], s = q[2];
+      if (q[3] === 0) { wlimb(0.3 * s, 0.17 * s, [x, 0, z], [x, 2.3 * s, z], '#7A5634', b, 7); wlimb(0.12 * s, 0.07 * s, [x, 1.7 * s, z], [x + 0.9 * s, 2.7 * s, z + 0.2], '#7A5634', b, 5); crowns.push([x, 3.2 * s, z, 1.45 * s, '#5E8F3E'], [x + 0.95 * s, 3.0 * s, z + 0.3, 0.95 * s, '#6E9E43'], [x - 0.85 * s, 2.9 * s, z - 0.35, 1.0 * s, '#6E9E43'], [x + 0.1, 4.0 * s, z - 0.2, 0.9 * s, '#7FAE4E']); }
+      else if (q[3] === 1) { wlimb(0.14 * s, 0.08 * s, [x, 0, z], [x + 0.1, 3.4 * s, z], '#F1ECE0', b, 6); [0.6, 1.3, 2.1, 2.7].forEach((y, j) => box(0.2 * s, 0.05, 0.03, '#3B3A3A', x + (j % 2 ? 0.05 : -0.04), y * s, z + 0.11 * s, b)); crowns.push([x + 0.1, 3.5 * s, z, 0.95 * s, '#9CC765'], [x - 0.45, 2.9 * s, z + 0.3, 0.7 * s, '#B4D67A'], [x + 0.55, 2.8 * s, z - 0.25, 0.65 * s, '#9CC765']); }
+      else { cyl(0.13 * s, 0.17 * s, 0.7 * s, '#6B4A2E', x, 0, z, b, 6); [[1.15, 1.9, 0.5], [0.9, 1.7, 1.6], [0.62, 1.5, 2.6]].forEach((c) => cone(c[0] * s, c[1] * s, k % 2 ? '#3F6B3A' : '#355E33', x, c[2] * s, z, b, 8)); }
+      RESERVE_COLS.push([RESERVE_P[0] + x, RESERVE_P[1] + z, 0.3 * s]); });
+  }));
+  g.children[0].material = VSTAT; // snow and cloud shadows like the rest of the still world
+  crowns.forEach((c) => { const m = mesh(new THREE.IcosahedronGeometry(c[3], 1), c[4], c[0], c[1], c[2], g); m.scale.y = 0.9; });
+  const wt = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.3, 0.04, 22), new THREE.MeshLambertMaterial({ color: '#6FB3C8', emissive: '#2E6E86', emissiveIntensity: 0.22 })); wt.position.set(-4, 0.06, 0.5); wt.scale.set(1.25, 1, 0.95); wt.receiveShadow = true; g.add(wt);
+  [[-5.4, 1.4], [-3.1, -0.4], [-2.2, 1.6], [-5.9, -0.6]].forEach((q, k) => { const l = mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.02, 9), '#5E8F3E', q[0], 0.09, q[1], g, { noShadow: true }); if (k % 2) mesh(new THREE.IcosahedronGeometry(0.09, 0), '#F7CAD6', q[0], 0.14, q[1], g, { noShadow: true }); l.castShadow = false; });
+  const sg = sign('Réserve naturelle', 3.3, 0.62, '#6F4526', '#F4E9D3', 54); sg.position.set(0, 2.42, HD + 0.14); g.add(sg); const sg2 = sg.clone(); sg2.rotation.y = Math.PI; sg2.position.z = HD - 0.14; g.add(sg2);
+  const pn = sign('Ici, on observe. On ne dérange pas.', 1.9, 0.5, '#F4E9D3', '#3F5A2E', 30); pn.position.set(3.1, 1.1, HD + 0.12); g.add(pn); g.add(baked((b) => { cyl(0.05, 0.05, 1.35, WD, 2.25, 0, HD + 0.05, b, 5); cyl(0.05, 0.05, 1.35, WD, 3.95, 0, HD + 0.05, b, 5); }));
+  // what you bump into: the four sides of the fence (the porch stays open), the pond, the hide
+  [[0, -HD, HW, 0.25], [-HW, 0, 0.25, HD], [HW, 0, 0.25, HD], [-(HW + 1.7) / 2, HD, (HW - 1.7) / 2, 0.25], [(HW + 1.7) / 2, HD, (HW - 1.7) / 2, 0.25]].forEach((q) => { const r = [RESERVE_P[0] + q[0], RESERVE_P[1] + q[1], q[2], q[3]]; rects.push(r); RESERVE_COLS.push(r); });
+  [[-4, 0.5, 3.5], [6.6, -4.2, 1.5], [8.5, -6.2, 0.5]].forEach((q) => { const c = [RESERVE_P[0] + q[0], RESERVE_P[1] + q[1], q[2]]; solids.push(c); RESERVE_COLS.push(c); });
+  RESERVE_COLS.forEach((c) => { if (c.length === 3 && solids.indexOf(c) < 0) solids.push(c); });
+  ambAdopt(g);
+}
+// a quiet spot inside the reserve (not in the pond, not under the hide)
+function reserveSpot(k) { const M = MOV.reserve; for (let t = 0; t < 12; t++) { const x = (rnd01(k * 3.7 + t * 1.3 + 1) - 0.5) * 2 * (RES_HW - 1.4), z = (rnd01(k * 9.1 + t * 2.9 + 2) - 0.5) * 2 * (RES_HD - 1.4); if (Math.hypot((x + 4) / 1.25, z - 0.5) > 4.3 && Math.hypot(x - 6.6, z + 4.2) > 2.4) return [M.x + x, M.z + z]; } return [M.x + 2, M.z + 1]; }
+
+/* ---- l'épouvantail : il tient les cerfs et les aigles à distance (9 m autour de lui) ---- */
+function buildScarecrow(g) {
+  cyl(0.05, 0.06, 2.0, '#8A5A30', 0, 0, 0, g, 6); const cb = rod([-0.75, 1.42, 0], [0.75, 1.42, 0], 0.08, '#8A5A30', g); cb.castShadow = true;
+  box(0.62, 0.62, 0.26, '#C9573F', 0, 0.98, 0, g); [-0.2, 0.2].forEach((x) => box(0.04, 0.62, 0.27, '#2F4B7C', x, 0.98, 0, g)); box(0.7, 0.16, 0.2, '#C9573F', -0.45, 1.34, 0, g); box(0.7, 0.16, 0.2, '#C9573F', 0.45, 1.34, 0, g);
+  box(0.5, 0.5, 0.22, '#5B6B85', 0, 0.5, 0, g); [-0.86, 0.86].forEach((x) => [0, 1, 2].forEach((k) => cone(0.03, 0.26, '#E2C56A', x + (k - 1) * 0.05, 1.3, 0, g, 4).rotation.z = (x > 0 ? -1 : 1) * (1.4 + (k - 1) * 0.3)));
+  wsph(0.21, '#D9B98A', 0, 1.82, 0, g); [-0.07, 0.07].forEach((x) => wsph(0.03, '#2B2018', x, 1.86, 0.19, g)); box(0.14, 0.025, 0.02, '#2B2018', 0, 1.74, 0.2, g);
+  cyl(0.42, 0.42, 0.04, '#E2C56A', 0, 1.97, 0, g, 12); cone(0.24, 0.3, '#E2C56A', 0, 2.0, 0, g, 10); cyl(0.245, 0.245, 0.06, '#C9573F', 0, 2.0, 0, g, 10);
+  [-0.12, 0.05, 0.16].forEach((x) => cone(0.03, 0.22, '#E2C56A', x, 0.3, 0.02, g, 4).rotation.z = Math.PI);
+}
+const scarecrows = () => (S.city && S.city.items ? S.city.items.filter((it) => it.t === 'd' && it.k === 'epouvantail') : []);
+const crowNear = (x, z) => scarecrows().some((it) => Math.hypot(it.x - x, it.z - z) < 9);
+
+/* ---- la vie de tous les jours ---- */
+function wildHome(a) { return reserveOn() ? (a.rs || (a.rs = reserveSpot(a.id))) : a.zone; }
+function wildSpot(a, r) { const h = wildHome(a); if (reserveOn()) return reserveSpot(a.id + Math.floor(Math.random() * 40)); for (let k = 0; k < 8; k++) { const an = Math.random() * 6.28, d = 1 + Math.random() * (r || 5), x = h[0] + Math.cos(an) * d, z = h[1] + Math.sin(an) * d; if (grassOK(x, z)) return [x, z]; } return h; }
+function wildGo(a, x, z, st, sp) { let p = []; if (st !== 'walk') { try { p = findPath(a.g.position.x, a.g.position.z, x, z) || []; } catch (e) { p = []; } } a.path = p.map((q) => [q[0], q[1]]); a.path.push([x, z]); a.st = st; a.speed = sp; }
+function wildStep(a, dt) { const w = a.path[0]; if (!w) return true; const d = Math.hypot(w[0] - a.g.position.x, w[1] - a.g.position.z); if (d < 0.3 || stepToward(a.g, wV.set(w[0], 0, w[1]), a.speed, dt)) a.path.shift(); return !a.path.length; }
+function wildFree(a) { if (a.lb) { setLabel(a.lb, '', ''); a.lb.busy = false; a.lb = null; } a.target = null; }
+function wildScare(a, who) { if (a.st === 'flee') return; const SP = WSPEC[a.sp];
+  if (who === 'player') { S.chased = (S.chased || 0) + 1; gain(3); floatAt(a.g, 'Ouste ! +3 XP'); SFX.pick(4); buzz(25); } else if (who === 'dog') floatAt(a.g, 'Wouf !'); else if (who === 'fence') { floatAt(a.g, '💥 Barrière !'); SFX.start(); } else if (who === 'crow') floatAt(a.g, '😱 L\'épouvantail !'); else if (who === 'garde') floatAt(a.g, 'Allez, on rentre !');
+  burst(a.g.position.x, a.g.position.y + 0.5, a.g.position.z, '#E9DDC3', 6, 3); wildFree(a); const h = a.sp === 'aigle' ? a.zone : wildSpot(a, 3); wildGo(a, h[0], h[1], 'flee', SP.flee); }
+// what there is to eat right now
+function wildTargets() { const L = [];
+  if (!MOV.champ || MOV.champ.placed) for (let i = 0; i < S.unlocked; i++) if (S.plots[i].s !== 'empty') L.push({ kind: 'plot', i, x: PLOT_POS[i][0], z: PLOT_POS[i][1], nm: 'plot' });
+  if (MOV.potager && MOV.potager.placed) for (let i = 0; i < Math.min(6, S.gun || 0); i++) if (S.garden[i].s !== 'empty') L.push({ kind: 'garden', i, x: GPOS[i][0], z: GPOS[i][1], nm: 'garden' });
+  PKEYS.forEach((k) => { if (S.lv[k] > 0 && S.pen[k].n > 0 && MOV['pen_' + k] && MOV['pen_' + k].placed) L.push({ kind: 'pen', k, x: PEN[k].x + 0.6, z: PEN[k].z - 2.7, nm: k }); });
+  return L; }
+function wildDamage(a) { const T = a.target, SP = WSPEC[a.sp], n = now(); let done = 0, what = '';
+  if (T.kind === 'plot') { const all = []; for (let i = 0; i < S.unlocked; i++) if (S.plots[i].s !== 'empty') all.push(i); all.sort((p, q) => Math.hypot(PLOT_POS[p][0] - T.x, PLOT_POS[p][1] - T.z) - Math.hypot(PLOT_POS[q][0] - T.x, PLOT_POS[q][1] - T.z));
+    all.slice(0, SP.dmg).forEach((i) => { const p = S.plots[i]; p.s = 'empty'; p.end = 0; plotCd[i] = n + 1500; burst(PLOT_POS[i][0], 0.5, PLOT_POS[i][1], ['#80552E', '#E8B94A'], 8, 4); done++; }); what = '🌾'; }
+  else if (T.kind === 'garden') { const all = []; for (let i = 0; i < Math.min(6, S.gun || 0); i++) if (S.garden[i].s !== 'empty') all.push(i); all.sort((p, q) => Math.abs(p - T.i) - Math.abs(q - T.i));
+    all.slice(0, SP.dmg).forEach((i) => { const p = S.garden[i]; p.s = 'empty'; p.end = 0; gardenCd[i] = n + 1500; burst(GPOS[i][0], 0.5, GPOS[i][1], ['#80552E', '#5E8F3E'], 8, 4); done++; }); what = '🥬'; }
+  else { const st = S.pen[T.k]; done = Math.min(st.n, SP.dmg); st.n -= done; what = PEN[T.k].e; burst(PEN[T.k].x, 0.8, PEN[T.k].z, ['#FFFDF8', '#F3CF7A'], 8, 4); }
+  if (done) { dirty = true; S.wildLost = (S.wildLost || 0) + done; floatAt(a.g, SP.ic + ' −' + done + ' ' + what); SFX.no(); buzz(30); }
+  return done; }
+
+/* ---- une visite : quelques animaux quittent leur coin et viennent se servir ---- */
+function wildDev() { return 1 + (S.pop || 0) / 150 + (level() - 1) / 12; }
+function wildInterval(res) { const base = (S.mode === 'comp' ? 130 : 200) / wildDev(), s = Math.max(S.mode === 'comp' ? 40 : 55, base) * (0.7 + Math.random() * 0.6) * (res ? 2.6 : 1); return (fast ? s / 3 : s) * 1000; }
+function startWildRaid(res, force) {
+  const T = wildTargets(); if (!T.length) return false; const kinds = {}; T.forEach((t) => { kinds[t.kind] = 1; });
+  const pool = Object.keys(WSPEC).filter((sp) => (!force || force === sp) && WILD.some((a) => a.sp === sp && a.raider !== false && (a.st === 'idle' || a.st === 'walk' || a.st === 'soar'))); if (!pool.length) return false;
+  const wsp = { lapin: 4, cerf: 3, sanglier: 3, aigle: kinds.pen ? 3 : 1 }; let tot = 0; pool.forEach((sp) => { tot += wsp[sp]; }); let r = Math.random() * tot, sp = pool[0]; for (const q of pool) { r -= wsp[q]; if (r <= 0) { sp = q; break; } }
+  const SP = WSPEC[sp]; let kt = 0; Object.keys(kinds).forEach((k) => { kt += SP.w[k]; }); let rk = Math.random() * kt, kind = Object.keys(kinds)[0]; for (const k of Object.keys(kinds)) { rk -= SP.w[k]; if (rk <= 0) { kind = k; break; } }
+  const cand = T.filter((t) => t.kind === kind), first = cand[Math.floor(Math.random() * cand.length)], lv = level();
+  const size = sp === 'lapin' ? 2 + (lv >= 8 ? 1 : 0) : sp === 'cerf' ? 1 + (lv >= 10 ? 1 : 0) : sp === 'sanglier' ? Math.min(3, 1 + Math.floor(lv / 5)) : 1;
+  const free = WILD.filter((a) => a.sp === sp && a.raider !== false && (a.st === 'idle' || a.st === 'walk' || a.st === 'soar')).sort((p, q) => Math.hypot(p.g.position.x - first.x, p.g.position.z - first.z) - Math.hypot(q.g.position.x - first.x, q.g.position.z - first.z)).slice(0, size);
+  if (!free.length) return false; S.raids = (S.raids || 0) + 1; WR.blocks = S.lv.fence || 0; const crow = SP.crow && crowNear(first.x, first.z);
+  free.forEach((a, k) => { const t = cand[(cand.indexOf(first) + k) % cand.length]; a.target = Object.assign({}, t); a.bites = 0; a.inside = false; a.crow = crow; a.lb = WLAB.find((l) => !l.busy) || null; if (a.lb) { a.lb.busy = true; a.lb.obj = a.g; a.lb.dy = sp === 'cerf' ? 2.3 : sp === 'aigle' ? 1 : 1.3; a.lb.act = () => goTo(a.g.position.x, a.g.position.z, 1.2); }
+    if (sp === 'aigle') { a.st = 'raid'; a.ph2 = 0; } else wildGo(a, t.x, t.z, 'raid', SP.run); });
+  toast(SP.ic + ' ' + (free.length > 1 ? 'Des ' + SP.n : SP.un) + (res ? (free.length > 1 ? ' se sont échappés de la réserve : ils visent ' : ' s\'est échappé de la réserve : il vise ') : (free.length > 1 ? ' filent vers ' : ' file vers ')) + W_TARGET[first.nm] + ' !', res ? 'Sans garde forestier, la réserve laisse parfois filer un animal. ' + SP.hint : SP.hint); SFX.alarm(); buzz(80);
+  return true;
+}
+function tickWildRaids(n, res) {
+  if (!S.started || S.over || !(S.q >= 9 || level() >= 4)) return;
+  if (res && S.garde) { WR.at = 0; return; }
+  if (!WR.at) WR.at = n + wildInterval(res) * 0.6;
+  if (n > WR.at) { WR.at = n + wildInterval(res); startWildRaid(res); }
+}
+
+function tickWildGround(a, dt, t, n) {
+  const g = a.g, SP = WSPEC[a.sp], px = player.position.x, pz = player.position.z, dp = Math.hypot(px - g.position.x, pz - g.position.z), small = a.sp === 'lapin' || a.sp === 'marcassin';
+  let moving = false, head = 0.1;
+  if (a.sp === 'marcassin') { const m = a.mom.g; wV.set(m.position.x - Math.sin(m.rotation.y) * (0.9 + a.k * 0.55) + (a.k ? 0.4 : -0.4), 0, m.position.z - Math.cos(m.rotation.y) * (0.9 + a.k * 0.55)); if (a.mom.st === 'raid' || a.mom.st === 'eat') wV.set(a.wait[0], 0, a.wait[1]); else { a.wait[0] = g.position.x; a.wait[1] = g.position.z; }
+    moving = Math.hypot(wV.x - g.position.x, wV.z - g.position.z) > 0.5 && !stepToward(g, wV, 3.2, dt); }
+  else if (a.st === 'idle') { a.t -= dt; head = a.pose === 'eat' ? 1.75 : -0.12;
+    const home = wildHome(a), dh = Math.hypot(home[0] - g.position.x, home[1] - g.position.z), lim = reserveOn() ? 16 : 11;
+    if (dh > lim) { const s = wildSpot(a, 4); wildGo(a, s[0], s[1], 'flee', SP.run); }
+    else if (!reserveOn() && dp < (a.sp === 'cerf' ? 5.5 : a.sp === 'lapin' ? 2.8 : 1.8)) { const an = Math.atan2(g.position.x - px, g.position.z - pz) + (Math.random() - 0.5), d = a.sp === 'cerf' ? 9 : 5; let x = g.position.x + Math.sin(an) * d, z = g.position.z + Math.cos(an) * d; if (!grassOK(x, z)) { const s = wildSpot(a, 6); x = s[0]; z = s[1]; } wildGo(a, x, z, 'walk', SP.run); }
+    else if (a.t <= 0) { if (Math.random() < 0.5) { const s = wildSpot(a, small ? 4 : 6); wildGo(a, s[0], s[1], 'walk', a.sp === 'lapin' ? 2.4 : a.sp === 'cerf' ? 1.3 : 1.5); } else { a.pose = Math.random() < 0.65 ? 'eat' : 'look'; a.t = 3 + Math.random() * 6; } } }
+  else if (a.st === 'walk') { moving = true; if (wildStep(a, dt)) { a.st = 'idle'; a.pose = Math.random() < 0.6 ? 'eat' : 'look'; a.t = 2 + Math.random() * 6; } }
+  else if (a.st === 'flee') { moving = true; head = -0.2; if (wildStep(a, dt)) { a.st = 'idle'; a.pose = 'look'; a.t = 3 + Math.random() * 4; } }
+  else { // raid, eat: this is where the baker, the dog, the fence or a scarecrow can step in
+    const T = a.target, dT = Math.hypot(T.x - g.position.x, T.z - g.position.z);
+    if (dp < SP.near) { wildScare(a, 'player'); return; }
+    if (SP.dog && S.dog && Math.hypot(dog.position.x - g.position.x, dog.position.z - g.position.z) < 1.4) { wildScare(a, 'dog'); return; }
+    if (a.crow && dT < 7) { wildScare(a, 'crow'); return; }
+    if (SP.fence && T.kind === 'plot' && dT < 3.2 && !a.inside) { a.inside = true; if (WR.blocks > 0) { WR.blocks--; wildScare(a, 'fence'); a.inside = false; return; } }
+    if (a.lb) setLabel(a.lb, SP.ic + ' Ouste !', 'warn');
+    if (a.st === 'raid') { moving = true; head = -0.1; if (wildStep(a, dt) || dT < 0.5) { a.st = 'eat'; a.t = SP.eat; } }
+    else { head = 1.75; a.t -= dt; g.rotation.y += Math.sin(t * 18) * 0.02; if (a.t <= 0) { wildDamage(a); a.bites++; const left = wildTargets().filter((q) => q.kind === T.kind);
+        if (a.bites >= SP.bites || !left.length) { a.inside = false; wildFree(a); const h = wildSpot(a, 3); wildGo(a, h[0], h[1], 'flee', SP.run); }
+        else { left.sort((p, q) => Math.hypot(p.x - g.position.x, p.z - g.position.z) - Math.hypot(q.x - g.position.x, q.z - g.position.z)); a.target = Object.assign({}, left[0]); wildGo(a, left[0].x, left[0].z, 'raid', SP.run * 0.6); } } } }
+  // the body: hop for the small ones, a real walk for the others
+  const gy = groundY(g.position.x, g.position.z); a.ph += dt * (moving ? (small ? 13 : 5 + a.speed * 1.5) : 0);
+  if (small) { g.position.y = gy + (moving ? Math.abs(Math.sin(a.ph)) * (a.sp === 'lapin' ? 0.2 : 0.07) : 0); g.rotation.x = moving ? -Math.cos(a.ph * 2) * 0.16 : (a.pose === 'look' && a.sp === 'lapin' ? -0.45 : 0); }
+  else { g.position.y = gy + (moving ? Math.abs(Math.sin(a.ph)) * 0.03 : 0); const amp = moving ? Math.min(0.75, 0.3 + a.speed * 0.07) : 0;
+    a.legs.forEach((l, i) => { const tg = amp * Math.sin(a.ph + (i === 0 || i === 3 ? 0 : Math.PI)); l.rotation.x += (tg - l.rotation.x) * Math.min(1, dt * 14); });
+    a.head.rotation.x += ((a.sp === 'sanglier' ? head * 0.3 : head) + (a.st === 'idle' && a.pose === 'eat' ? Math.sin(t * 5 + a.id) * 0.05 : 0) - a.head.rotation.x) * Math.min(1, dt * 4);
+    if (a.st === 'idle' && a.pose === 'look') a.head.rotation.y = Math.sin(t * 0.5 + a.id * 2) * 0.5; else a.head.rotation.y *= 0.9; }
+}
+function tickWildEagle(a, dt, t, n) {
+  const g = a.g, SP = WSPEC.aigle, res = reserveOn(), c = res ? [MOV.reserve.x + 3, MOV.reserve.z - 1] : a.zone, R = res ? 8 : 15, H = res ? 10 : 17; let flap = 0.12 + 0.1 * Math.sin(t * 1.1 + a.id), bank = 0;
+  wV2.copy(g.position);
+  if (a.st === 'soar') { a.ang += dt * (res ? 0.42 : 0.3); wV.set(c[0] + Math.cos(a.ang) * R, H + Math.sin(t * 0.3 + a.id) * 1.4, c[1] + Math.sin(a.ang) * R); const d = g.position.distanceTo(wV); if (d > 3) g.position.addScaledVector(wV.sub(g.position).normalize(), Math.min(d, 9 * dt)); else g.position.copy(wV); bank = -0.32; if (Math.sin(t * 0.23 + a.id * 3) > 0.92) flap = 0.5 * Math.sin(t * 9); }
+  else if (a.st === 'raid') { const T = a.target; if (a.lb) setLabel(a.lb, '🦅 Ouste !', 'warn');
+    if (!a.ph2) { wV.set(T.x, 11, T.z); const d = g.position.distanceTo(wV); g.position.addScaledVector(wV.sub(g.position).normalize(), Math.min(d, SP.run * dt)); flap = 0.45 * Math.sin(t * 8); if (d < 0.6) { if (a.crow) { wildScare(a, 'crow'); return; } if (Math.hypot(player.position.x - T.x, player.position.z - T.z) < SP.near) { wildScare(a, 'player'); return; } a.ph2 = 1; } }
+    else { wV.set(T.x, 0.9, T.z); const d = g.position.distanceTo(wV); g.position.addScaledVector(wV.sub(g.position).normalize(), Math.min(d, 15 * dt)); flap = -0.55; if (Math.hypot(player.position.x - T.x, player.position.z - T.z) < SP.near * 0.7) { wildScare(a, 'player'); return; } if (d < 0.4) { wildDamage(a); wildFree(a); a.st = 'flee'; } } }
+  else { wV.set(c[0] + Math.cos(a.ang) * R, H, c[1] + Math.sin(a.ang) * R); const d = g.position.distanceTo(wV); g.position.addScaledVector(wV.sub(g.position).normalize(), Math.min(d, SP.flee * dt)); flap = 0.6 * Math.sin(t * 10); if (d < 1) a.st = 'soar'; }
+  const dx = g.position.x - wV2.x, dy = g.position.y - wV2.y, dz = g.position.z - wV2.z, hl = Math.hypot(dx, dz);
+  if (hl > 1e-4) { let da = Math.atan2(dx, dz) - g.rotation.y; while (da > Math.PI) da -= 6.283; while (da < -Math.PI) da += 6.283; g.rotation.y += da * Math.min(1, dt * 5); a.inner.rotation.x += (-Math.atan2(dy, hl) * 0.8 - a.inner.rotation.x) * Math.min(1, dt * 4); }
+  a.inner.rotation.z += (bank - a.inner.rotation.z) * Math.min(1, dt * 2); a.wings[0].rotation.z = -flap; a.wings[1].rotation.z = flap;
+}
+/* ---- le garde forestier : il fait le tour de la réserve, et plus personne ne s'échappe ---- */
+let gardeG = null, gardeU = 0;
+function tickGarde(dt, t) { const on = !!S.garde && reserveOn(); if (!gardeG) { if (!on) return; gardeG = person('#5F7F45', '#8A6A3C', 'cap', '#5A3B26', (b) => { box(0.5, 0.06, 0.5, '#4E6B38', 0, 1.5, 0, b); }); gardeG.userData.dyn = true; } gardeG.visible = on; if (!on) return;
+  const M = MOV.reserve, w = RES_HW - 1.3, d = RES_HD - 1.3, per = 4 * (w + d); gardeU = (gardeU + dt * 1.1) % per; let u = gardeU, x, z;
+  if (u < 2 * w) { x = -w + u; z = d; } else if ((u -= 2 * w) < 2 * d) { x = w; z = d - u; } else if ((u -= 2 * d) < 2 * w) { x = w - u; z = -d; } else { u -= 2 * w; x = -w; z = -d + u; }
+  if (Math.hypot(x + 4, z - 0.5) < 4.6) z = z > 0.5 ? Math.max(z, 5.2) : Math.min(z, -4.2);
+  stepToward(gardeG, wV.set(M.x + x, 0, M.z + z), 3, dt); gardeG.userData.body.position.y = Math.abs(Math.sin(t * 7)) * 0.06; }
+
+function tickFaune(dt, t, n) {
+  if (!WILD.length) return; const res = reserveOn();
+  for (const a of WILD) { if (a.sp === 'aigle') tickWildEagle(a, dt, t, n); else tickWildGround(a, dt, t, n); }
+  tickWildRaids(n, res); tickGarde(dt, t);
+  if (typeof MOV !== 'undefined' && MOV.champ) DOGHOME.set(MOV.champ.x - 7.5, 0, MOV.champ.z + 5.2);
+}
+const wildDogTargets = () => WILD.filter((a) => (a.st === 'raid' || a.st === 'eat') && WSPEC[a.sp] && WSPEC[a.sp].dog).map((a) => ({ g: a.g, phase: 'run' }));
+function fauneBoot() {
+  let id = 0; const add = (sp, parts, zone, extra) => { const a = Object.assign({ sp, id: id++, zone, st: 'idle', pose: 'eat', t: Math.random() * 5, ph: Math.random() * 6, path: [], speed: 1, target: null, bites: 0 }, parts, extra || {}); a.g.userData.dyn = true; a.g.traverse((o) => { if (o.isMesh) { o.raycast = noRay; o.castShadow = true; } }); scene.add(a.g); WILD.push(a); return a; };
+  const place = (a) => { const s = wildSpot(a, 3); a.g.position.set(s[0], groundY(s[0], s[1]), s[1]); a.g.rotation.y = Math.random() * 6.28; };
+  W_ZONES.lapin.forEach((z, i) => place(add('lapin', makeRabbit(i), z)));
+  ['cerf', 'biche', 'faon'].forEach((k, i) => place(add('cerf', makeDeer(k), W_ZONES.cerf[i === 2 ? 1 : i], { raider: k !== 'faon' })));
+  const sows = W_ZONES.sanglier.map((z) => { const a = add('sanglier', makeWildBoar(), z); place(a); return a; });
+  [0, 1].forEach((k) => { const a = add('marcassin', makePiglet(), W_ZONES.sanglier[0], { mom: sows[0], k, wait: [sows[0].g.position.x, sows[0].g.position.z] }); a.g.position.copy(sows[0].g.position); });
+  W_ZONES.aigle.forEach((z, i) => { const a = add('aigle', makeEagle(), z, { st: 'soar', ang: i * 3 }); a.g.position.set(z[0] + 15, 17, z[1]); });
+  for (let k = 0; k < 6; k++) { const l = label(WILD[0].g, 1.4); l.busy = false; setLabel(l, '', ''); WLAB.push(l); }
+  if (window.__pf) window.__pf.faune = { WILD, WSPEC, WR, raid: (sp) => startWildRaid(reserveOn(), sp), targets: wildTargets, reserveOn };
+}
 
 /* ================= CONSTRUIRE : le village s'organise librement, de 10 à 3 000 habitants =================
    - chaque bâtiment de production est « déplaçable » : son groupe 3D, ses points de travail (portes, files, postes des employés)
@@ -2498,9 +2760,10 @@ fountain.userData.kind = 'fontaine';
 movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 400, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'La fierté de la place. Nécessaire au-delà de 400 habitants. +30 beauté.' });
 movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 1500, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
 movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 2500, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
+movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], rot: false, objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand coin de nature clos : cerfs, sangliers, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Sans garde forestier, il arrive qu\'un animal s\'échappe. +35 beauté.' });
 const PROD_KEYS = Object.keys(MOV);
 const START_LAYOUT = { shop: [3, -10.2, 0], oven: [11.5, -9.5, 0], mill: [-12, -10, 0], champ: [17, 10, 0] };
-const SERV_BEAUTY = { fontaine: 30, church: 40, bistrot: 25, mairie: 10 };
+const SERV_BEAUTY = { fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve: 35 };
 // population ceilings: without this service, the village cannot grow past n
 const SERV = [[60, 'market', 'un marché'], [150, 'mairie', 'une mairie'], [400, 'fontaine', 'la grande fontaine'], [600, 'church', 'une église'], [1000, 'bistrot', 'un bistrot'], [1600, 'cake', 'une pâtisserie'], [2200, 'bq', 'une boutique de vêtements'], [2800, 'chateau', 'le château (étape 3)']];
 
@@ -2546,6 +2809,7 @@ const DECO_BASE = [
 ];
 const CAT_EXT = (typeof CATALOGUE !== 'undefined' && Array.isArray(CATALOGUE)) ? CATALOGUE : [];
 const VILLAGE_EXCLUDE = ['metro_guimard']; // trop « ville » pour Petite France
+DECO_BASE.push({ id: 'epouvantail', cat: 'nature', n: 'Épouvantail (éloigne cerfs et aigles à 9 m)', ic: '🧑‍🌾', c: 150, b: 2, fp: [1, 1], lvl: 3, build: buildScarecrow });
 const DECOS = {}; [...DECO_BASE, ...CAT_EXT].forEach((d) => { if (!DECOS[d.id] && VILLAGE_EXCLUDE.indexOf(d.id) < 0) DECOS[d.id] = d; });
 const DCATS = (typeof CATEGORIES !== 'undefined' && Array.isArray(CATEGORIES)) ? CATEGORIES : [];
 const DCAT_NAMES = { nature: ['Arbres et plantes', '🌳'], jardins: ['Jardins', '🌷'], mobilier: ['Mobilier urbain', '🪑'], fontaines: ['Fontaines et statues', '⛲'], lumieres: ['Lumières', '🏮'], terrasses: ['Terrasses et commerces', '☕'], fete: ['Fête et loisirs', '🎠'], monuments: ['Monuments', '🗼'], vehicules: ['Véhicules', '🚲'], clotures: ['Clôtures et sols', '🧱'] };
@@ -3257,7 +3521,7 @@ function step() {
   else if (level() < 3) setLabel(L.chateau, '🔒 Château · niveau 3', 'lock');
   else if (S.cst < 5) setLabel(L.chateau, '🏰 Bâtir · étape ' + (S.cst + 1) + '/5 · ' + CCOST[S.cst] + ' ' + C, S.coins >= CCOST[S.cst] ? 'ready' : '');
   else setLabel(L.chateau, '🏰 Le château', '');
-  tickTourists(dt); tickGarden(t, n); tickOrders(n); tickFarm(t, n, dt); tickCity(n, dt); tickAmb(dt, t);
+  tickTourists(dt); tickGarden(t, n); tickOrders(n); tickFarm(t, n, dt); tickCity(n, dt); tickAmb(dt, t); tickFaune(dt, t, n);
   for (let i = 0; i < loaves.length; i++) loaves[i].visible = i < S.pain; emptySign.visible = S.pain <= 0;
   if (standPop > 0) { standPop = Math.max(0, standPop - dt * 3); const b = Math.sin(standPop * Math.PI); stand.scale.set(1.22 * (1 + 0.12 * b), 1.22 * (1 + 0.2 * b), 1.22 * (1 + 0.12 * b)); }
   setLabel(L.church, '🔒 Église · bientôt', 'lock'); setLabel(L.bistrot, '☕ Bistrot · bientôt', 'lock');
@@ -3414,6 +3678,7 @@ function boot(loaded, hot) {
   Object.keys(crew).forEach((k) => { crew[k].visible = !!S.hired[k]; }); if (S.inesBag > 0) { crew.ines.userData.bag = S.inesBag; S.inesBag = 0; }
   try { cityBoot(); } catch (e) { showErr('village', e); }
   try { ambBoot(); } catch (e) { showErr('ambiance', e); }
+  try { fauneBoot(); } catch (e) { showErr('faune', e); }
   resize(); placeCam(); frame(); loadNear();
   let auto = null; try { auto = sessionStorage.getItem('pf-autostart'); sessionStorage.removeItem('pf-autostart'); } catch (e) {}
   if (auto) startPlay(auto); else if (hot) startPlay();
