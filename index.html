@@ -159,6 +159,18 @@
   @media (max-width: 560px) { .cause small { display:none; } .cause { min-width:0; padding:4px 9px; } .popp .bar { width:44px; } .popp em { display:none; } .hud { gap:5px; } .pill { font-size:14px; padding:3px 9px 3px 4px; } .lvl .bar { width:26px; } .cause .bar { display:none; } .cause span { font-size:12px; } }
   @media (max-width: 380px) { .cause { min-width:0; } .lvl .bar { width:22px; } .coins b { font-size:14px; } }
   @media (prefers-reduced-motion: reduce) { .lb.ready, .lb.coin, .res button.ok { animation:none; } }
+  /* ---- 2.0 : vue du dessus, écran dégagé. Deux compteurs, un objectif d'une ligne, quatre boutons en bas, plus rien au centre ---- */
+  #stick, #dirs, #zone { display:none !important; }
+  .res button { display:none; } .cause { display:none; }
+  .side { top:auto; right:auto; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 10px); transform:translateX(-50%); flex-direction:row; gap:10px; }
+  #b-map, #b-shop, #b-ad { display:none; } body.building .side { display:none; }
+  .quest { bottom:auto; top:calc(env(safe-area-inset-top,0px) + 96px); left:calc(env(safe-area-inset-left,0px) + 10px); right:auto; max-width:min(320px, 72vw); padding:5px 10px 5px 6px; border-radius:999px; box-shadow:0 2px 0 var(--ink); gap:7px; }
+  .quest .av { width:26px; height:26px; font-size:12px; } .quest b { display:none; } .quest p { font-size:12px; margin:0; } .quest:not(.open) p { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; } .quest.open { border-radius:16px; } .quest .btn { padding:5px 9px; font-size:11px; white-space:nowrap; }
+  .toast { top:calc(env(safe-area-inset-top,0px) + 56px); width:auto; max-width:min(330px, 88vw); padding:6px 14px; border-radius:999px; box-shadow:0 2px 0 var(--ink); } .toast b { font-size:12.5px; } .toast span { display:none; }
+  .camctl { bottom:calc(env(safe-area-inset-bottom,0px) + 86px); }
+  #b-snd, .nosave { display:none !important; }
+  #visitbar { position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 14px); transform:translateX(-50%); display:none; gap:10px; z-index:5; } #visitbar .btn { padding:9px 14px; font-size:13px; white-space:nowrap; }
+  body.visiting #visitbar { display:flex; } body.visiting .hud, body.visiting .res, body.visiting .side, body.visiting .quest, body.visiting .camctl, body.visiting #b-snd, body.visiting #labels, body.visiting .toast, body.visiting .nosave, body.visiting #guide { display:none !important; }
 </style>
 
 <canvas id="c" tabindex="0" style="outline:none"></canvas>
@@ -167,6 +179,7 @@
 <div id="press"></div>
 <div id="joy" hidden><i id="knob"></i></div>
 <div id="stick" hidden><i id="stick-k"></i></div>
+<div id="visitbar"><button class="btn gold" id="v-build" type="button">🏗️ Construire ici</button><button class="btn ghost" id="v-quit" type="button">✕ Quitter la visite</button></div>
 <div id="guide" hidden>➤</div>
 <div id="err" hidden></div>
 <div id="zone" hidden></div>
@@ -190,6 +203,7 @@
   <button class="rb" id="b-shop" type="button"><span>🛒</span>Boutique</button>
   <button class="rb gold" id="b-build" type="button"><span>🏗️</span>Construire</button>
   <button class="rb" id="b-ad" type="button"><span>▶️</span>+20</button>
+  <button class="rb" id="b-menu" type="button"><span>☰</span>Menu</button>
 </div>
 <div class="quest" id="quest"><div class="av" id="q-av">★</div><div class="tx"><b id="q-who">Objectif</b><p id="q-text"></p></div><button class="btn gold" id="q-btn" type="button" hidden></button></div>
 <div class="toast" id="toast" hidden><b id="toast-t"></b><span id="toast-s"></span></div>
@@ -215,8 +229,8 @@
       </div>
       <button class="btn ghost wide" id="b-back" type="button" hidden>Retour</button>
     </div>
-    <p class="hint">📱 Joystick pour marcher. Glisse sur l'écran pour regarder autour, pince pour zoomer.<br>💻 ZQSD ou flèches, ou clic. Molette : zoom.</p>
-    <label class="tog"><input type="checkbox" id="lefty"> Joystick à gauche (pour les gauchers)</label>
+    <p class="hint">📱 Glisse pour te promener, pince pour zoomer, touche pour agir.<br>💻 ZQSD ou flèches, ou clic. Molette : zoom.</p>
+    <label class="tog" style="display:none"><input type="checkbox" id="lefty"> Joystick à gauche (pour les gauchers)</label>
     <label class="tog"><input type="checkbox" id="fast"> Mode présentation (minuteurs 10 fois plus courts)</label>
   </div>
 </div>
@@ -1272,7 +1286,7 @@ function stockStall(list) { let n = 0; while (list.length && S.stall.length < 24
 function collectMarket() { if (!(S.mtill > 0)) return false; S.coins += S.mtill; floatAt(stallG, '+' + S.mtill + ' ' + C); S.mtill = 0; dirty = true; SFX.coin(); burst(MKSQ.x, 1.4, MKSQ.z + 2, ['#E3A73C', '#F3CF7A'], 12, 5); buzz(20); return true; }
 function tapMarket() { if (S.lv.mk < 1) return openUp(); const a = stockStall(S.vcarry), b = collectMarket(); if (!a && !b) toast('Le marché', S.stall.length ? S.stall.length + ' cagettes à l\'étal. Les clients passent.' : 'Étal vide : récolte le potager, dans la campagne, derrière la ferme.'); }
 function gardenRun() { let best = -1, bd = 1e9; for (let k = 0; k < S.gun; k++) if (gRipe(S.garden[k])) { const d = Math.hypot(player.position.x - GPOS[k][0], player.position.z - GPOS[k][1]); if (d < bd) { bd = d; best = k; } } if (best >= 0) return goTo(GPOS[best][0], GPOS[best][1], 0.45, gardenRun); if (S.vcarry.length) stationGo('market'); }
-function gardenGo(k) { if (S.lv.mk < 1 || k >= S.gun) return openUp(); const p = S.garden[k]; if (gRipe(p)) return goTo(GPOS[k][0], GPOS[k][1], 0.45, gardenRun); goTo(GPOS[k][0], GPOS[k][1], 0.5, () => { if (S.garden[k].s === 'empty') gSow(k); }); }
+function gardenGo(k) { if (S.lv.mk < 1 || k >= S.gun) return openUp(); const p = S.garden[k]; if (GOD) { if (gRipe(p)) gHarvest(k); else if (p.s === 'empty' && now() > gardenCd[k]) gSow(k); return; } if (gRipe(p)) return goTo(GPOS[k][0], GPOS[k][1], 0.45, gardenRun); goTo(GPOS[k][0], GPOS[k][1], 0.5, () => { if (S.garden[k].s === 'empty') gSow(k); }); }
 function tickGarden(t, n) {
   const open = S.lv.mk > 0; tarps.forEach((tp) => { tp.visible = !open; });
   for (let k = 0; k < GN; k++) { const g = gardens[k], p = S.garden[k], P2 = g.userData.parts, mine = open && k < S.gun; g.visible = open; if (!open) { setLabel(GL[k], '', ''); continue; }
@@ -1338,7 +1352,7 @@ function tapMairie() {
 function penCollect(k, w) { const Pn = PEN[k], st = S.pen[k]; if (!(st.n > 0)) return false; const n = st.n; st.n = 0;
   if (k === 'hen') S.eggs += n; else if (k === 'sheep') S.wool += n; else { const bag = w ? w.bagV : S.vcarry; for (let i = 0; i < n; i++) bag.push(4); }
   gain(2 * n); dirty = true; floatAt(Pn.g, '+' + n + ' ' + Pn.e); SFX.pick(3); buzz(12); burst(Pn.x, 0.8, Pn.z, ['#FFFDF8', '#F3CF7A'], w ? 3 : 8); return true; }
-function penGo(k) { if (S.lv[k] < 1) return openUp(); goTo(PEN[k].x + 0.4, PEN[k].z - 2.9, 0.5, () => { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); }); }
+function penGo(k) { if (S.lv[k] < 1) return openUp(); if (GOD) { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); return; } goTo(PEN[k].x + 0.4, PEN[k].z - 2.9, 0.5, () => { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); }); }
 
 /* ---------------- the pastry shop ---------------- */
 function cakeStart() { const n = Math.min(CAKECAP[S.lv.cake], S.farine, Math.floor(S.eggs / 2)); if (n < 1) return false; S.farine -= n; S.eggs -= 2 * n; S.cakeJob = { end: now() + dur(10000 * n), out: n }; dirty = true; SFX.start(); pop(cakeG); return true; }
@@ -1639,12 +1653,12 @@ function flowAt() {
 }
 const QC = '#E3A73C';
 const Q = [
-  { who: 'Objectif', av: '★', c: QC, t: 'Marche dans le blé mûr, ou touche « Récolter » : récolte 4 parcelles.', at: FI, goal: () => S.recoltes >= 4, xp: 6, coins: 6 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Va au moulin : 2 blés font 1 sac de farine.', at: MI, goal: () => S.farineTot >= 1, xp: 8, coins: 6 },
+  { who: 'Objectif', av: '★', c: QC, t: 'Touche le blé mûr, ou glisse le doigt sur le champ : récolte 4 parcelles.', at: FI, goal: () => S.recoltes >= 4, xp: 6, coins: 6 },
+  { who: 'Objectif', av: '★', c: QC, t: 'Touche le moulin : 2 blés font 1 sac de farine.', at: MI, goal: () => S.farineTot >= 1, xp: 8, coins: 6 },
   { who: 'Objectif', av: '★', c: QC, t: 'Porte la farine au four, à côté de la boulangerie, et cuis ta première fournée.', at: OV, goal: () => S.fournees >= 1, xp: 8, coins: 6 },
   { who: 'Objectif', av: '★', c: QC, t: 'Les baguettes sont dans ton dos : pose-les en vitrine, juste à côté.', at: SH, goal: () => (S.posees || 0) >= 1, xp: 6, coins: 4 },
   { who: 'Objectif', av: '★', c: QC, t: 'Les clients font la queue ! Vends 4 baguettes.', at: () => (S.pain > 0 ? null : flowAt()), goal: () => S.vendus >= 4, xp: 10, coins: 10 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Tes ventes s\'empilent en pièces au-dessus de la boulangerie : passe devant pour les ramasser.', at: SH, goal: () => S.encaisse > 0, xp: 6, coins: 0 },
+  { who: 'Objectif', av: '★', c: QC, t: 'Tes ventes s\'empilent en pièces au-dessus de la boulangerie : touche-la pour les ramasser.', at: SH, goal: () => S.encaisse > 0, xp: 6, coins: 0 },
   { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Ouvre 🏗️ Construire et bâtis une maison : de nouveaux habitants viendront s\'installer.', build: 1, goal: () => cityHouses() >= 3, xp: 12, coins: 20 },
   { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Trace une rue pavée qui touche ta nouvelle maison : seules les maisons desservies par une rue sont habitées.', build: 1, goal: () => cityLinked() >= 3, xp: 12, coins: 20 },
   { who: 'Objectif', av: '★', c: QC, t: 'Achète le vélo du boulanger : le village est grand !', up: 1, goal: () => S.bike, xp: 8, coins: 10 },
@@ -1751,7 +1765,8 @@ function walkTo(o, tx, tz, sp, dt) { const u = o.userData, d = Math.hypot(tx - o
 
 /* ---------------- input ---------------- */
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3();
-const pointers = new Map(); let pinch0 = 0, zoom0 = zoom, moved = 0;
+const GOD = true; // 2.0 : vue du dessus, tout se fait au doigt (glisser = se déplacer, pincer = zoomer, toucher = agir)
+const pointers = new Map(); let pinch0 = 0, zoom0 = zoom, moved = 0, swipe = null;
 const keys = {};
 const joy = { on: false, id: -1, ox: 0, oy: 0, x: 0, y: 0 };
 const joyEl = $('joy'), knobEl = $('knob');
@@ -1774,7 +1789,8 @@ function joyOff() { joy.on = false; joy.id = -1; joy.x = joy.y = 0; joyEl.hidden
 canvas.addEventListener('pointerdown', (e) => {
   try { canvas.setPointerCapture(e.pointerId); window.focus(); } catch (err) {}
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (pointers.size === 1) { moved = 0; joy.id = e.pointerId; joy.ox = joy.lx = e.clientX; joy.oy = joy.ly = e.clientY; joy.on = false; }
+  if (pointers.size === 1) { moved = 0; joy.id = e.pointerId; joy.ox = joy.lx = e.clientX; joy.oy = joy.ly = e.clientY; joy.on = false;
+    const pi = S.started && !BUILD && !VISIT.on ? plotAt(e.clientX, e.clientY) : -1; swipe = pi >= 0 ? { mode: plotRipe(S.plots[pi]) ? 'cut' : S.plots[pi].s === 'empty' ? 'sow' : '' } : null; }
   if (pointers.size === 2) { joyOff(); moved = 99; const p = [...pointers.values()]; pinch0 = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); zoom0 = zoom; }
 });
 canvas.addEventListener('pointermove', (e) => {
@@ -1784,12 +1800,13 @@ canvas.addEventListener('pointermove', (e) => {
   if (e.pointerId !== joy.id) return;
   // one finger (or the mouse) drags the view; the baker stays where he is (tap the ground to send him somewhere)
   const dx = e.clientX - joy.ox, dy = e.clientY - joy.oy, d = Math.hypot(dx, dy); moved = Math.max(moved, d);
-  if (moved > 8 && S.started) camPan(e.clientX - joy.lx, e.clientY - joy.ly);
+  if (swipe && swipe.mode) { if (moved > 8) { const i = plotAt(e.clientX, e.clientY); if (i >= 0) { const p = S.plots[i]; if (swipe.mode === 'cut' && plotRipe(p)) harvest(i); else if (swipe.mode === 'sow' && p.s === 'empty' && now() > plotCd[i]) sow(i); } } } // a finger dragged across the field reaps (or sows) everything it crosses
+  else if (moved > 8 && S.started && !VISIT.on) camPan(e.clientX - joy.lx, e.clientY - joy.ly);
   joy.lx = e.clientX; joy.ly = e.clientY;
 });
 function up(e) {
   const was = pointers.size; pointers.delete(e.pointerId);
-  if (e.pointerId === joy.id) { joyOff(); if (was === 1 && moved < 12 && e.type === 'pointerup') tap(e.clientX, e.clientY); }
+  if (e.pointerId === joy.id) { joyOff(); swipe = null; if (was === 1 && moved < 12 && e.type === 'pointerup') tap(e.clientX, e.clientY); }
 }
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
 canvas.addEventListener('wheel', (e) => { e.preventDefault(); zoom = Math.max(ZMIN, Math.min(ZMAX, zoom * (e.deltaY > 0 ? 1.1 : 0.9))); resize(); }, { passive: false });
@@ -1841,12 +1858,18 @@ function pushOut(nx, nz) {
   return [Math.max(BX0, Math.min(BX1, nx)), Math.max(BZ0, Math.min(BZ1, nz))];
 }
 function goTo(x, z, r, act) { P.goal = new THREE.Vector3(x, 0, z); P.goalR = r; P.act = act || null; P.stuck = 0; P.path = findPath(player.position.x, player.position.z, x, z); P.usedPath = P.path.length > 0; ripple.position.set(x, groundY(x, z) + 0.08, z); rippleT = 0; }
+let pickList = [], pickAt = -1e9;
+function pickRoots() { const t = performance.now(); if (t - pickAt < 1500) return pickList; pickAt = t; const all = []; scene.traverse((o) => { if (o.userData && o.userData.kind) all.push(o); });
+  const set = new Set(all); pickList = all.filter((o) => { for (let a = o.parent; a; a = a.parent) if (set.has(a)) return false; return true; }); return pickList; }
+// which plot of the field is under the finger (no ray through the scene: just where the finger meets the ground)
+function plotAt(x, y) { ndc.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1); ray.setFromCamera(ndc, cam); groundPlane.constant = 0; if (!ray.ray.intersectPlane(groundPlane, hitP)) return -1;
+  let best = -1, bd = 0.95; for (let i = 0; i < S.unlocked; i++) { const d = Math.max(Math.abs(hitP.x - PLOT_POS[i][0]), Math.abs(hitP.z - PLOT_POS[i][1])); if (d < bd) { bd = d; best = i; } } return best; }
 function tap(x, y) {
-  if (!S.started) return;
+  if (!S.started || VISIT.on) return;
   if (BUILD && buildTap(x, y)) return;
   ndc.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, cam);
-  const hits = ray.intersectObjects(scene.children, true);
+  const hits = ray.intersectObjects(pickRoots(), true);
   for (const h of hits) {
     let o = h.object;
     while (o && !(o.userData && o.userData.kind)) o = o.parent;
@@ -1862,11 +1885,12 @@ function tap(x, y) {
   }
   // the ground: on the hill, find where the ray meets the slope
   if (ray.ray.intersectPlane(groundPlane, hitP)) { for (let k = 0; k < 4; k++) { const yy = groundY(hitP.x, hitP.z); if (yy <= 0) break; groundPlane.constant = -yy; ray.ray.intersectPlane(groundPlane, hitP); } groundPlane.constant = 0;
-    camFree = false; goTo(Math.max(BX0, Math.min(BX1, hitP.x)), Math.max(BZ0, Math.min(BZ1, hitP.z)), 0.25, null); }
+    if (!GOD) camFree = false; goTo(Math.max(BX0, Math.min(BX1, hitP.x)), Math.max(BZ0, Math.min(BZ1, hitP.z)), 0.25, null); }
 }
 function harvestRun() { let best = -1, bd = 1e9; for (let i = 0; i < PLOTS; i++) if (i < S.unlocked && plotRipe(S.plots[i])) { const d = Math.hypot(player.position.x - PLOT_POS[i][0], player.position.z - PLOT_POS[i][1]); if (d < bd) { bd = d; best = i; } } if (best < 0) return; goTo(PLOT_POS[best][0], PLOT_POS[best][1], 0.5, harvestRun); }
 function plotGo(i) { const p = S.plots[i], pp = PLOT_POS[i];
   if (i >= S.unlocked) return openUp();
+  if (GOD) { if (plotRipe(p)) harvest(i); else if (p.s === 'empty') { if (now() > plotCd[i]) sow(i); } else tapPlot(i); return; }
   if (plotRipe(p)) return goTo(pp[0], pp[1], 0.5, harvestRun);
   if (p.s === 'empty') return goTo(pp[0], pp[1], 0.6, () => { if (S.plots[i].s === 'empty') sow(i); });
   if (p.s === 'growing') return goTo(pp[0], pp[1], 0.9, () => { if (S.plots[i].s === 'growing' && !plotRipe(S.plots[i])) tapPlot(i); });
@@ -1877,10 +1901,12 @@ function stationGo(kind) {
     gate: () => toast('Bienvenue à Petite France', 'La campagne derrière toi, le marché et le centre-ville devant.'),
     church: () => toast('L\'église · saison 4', 'Bientôt : restaure les vitraux et fais sonner les cloches.'),
     bistrot: () => toast('Le bistrot · bientôt un quartier', 'Le café de la place rouvre bientôt : terrasse, pétanque, concerts du samedi.') }[kind];
+  if (GOD) { cd[kind] = now() + 900; act(); goTo(S.carry > 0 ? SH[0] : s[0], S.carry > 0 ? SH[1] : s[1], S.carry > 0 ? 1.6 : s[2], null); return; } // touched = done; the baker strolls over by himself (and carries the loaves to the shop)
   cd[kind] = now() + 60000;
   return goTo(s[0], s[1], s[2], () => { cd[kind] = now() + 900; act(); });
 }
-L.field.act = () => { if (S.plots.some((p, i) => i < S.unlocked && plotRipe(p))) harvestRun(); else { const i = S.plots.findIndex((p, k) => k < S.unlocked && p.s === 'empty'); if (i >= 0) plotGo(i); else goTo(FI[0], FI[1], 0.5, null); } };
+L.field.act = () => { if (GOD) { let k = 0; const ripe = S.plots.some((p, i) => i < S.unlocked && plotRipe(p)); for (let i = 0; i < S.unlocked; i++) { const p = S.plots[i]; if (ripe ? plotRipe(p) : p.s === 'empty') setTimeout(() => { const q = S.plots[i]; if (ripe ? plotRipe(q) : q.s === 'empty') { if (ripe) harvest(i, true); else sow(i); } }, 70 * k++); } return; }
+  if (S.plots.some((p, i) => i < S.unlocked && plotRipe(p))) harvestRun(); else { const i = S.plots.findIndex((p, k) => k < S.unlocked && p.s === 'empty'); if (i >= 0) plotGo(i); else goTo(FI[0], FI[1], 0.5, null); } };
 L.plots.forEach((l, i) => { l.act = () => plotGo(i); });
 ['mill', 'oven', 'shop', 'chateau', 'church', 'bistrot', 'market', 'cake', 'bq', 'mairie'].forEach((k) => { L[k].act = () => stationGo(k); });
 ['leo', 'ines', 'margot', 'jules', 'paul', 'lucie', 'camille'].forEach((k) => { L[k].act = () => { if (S.hired[k]) tapCrew(k); }; });
@@ -3232,7 +3258,7 @@ function camPan(dx, dy) {
   target.x += -RV[0] * dx * upp + FV[0] * dy * upp / SIN_E; target.z += -RV[1] * dx * upp + FV[1] * dy * upp / SIN_E;
   target.x = Math.max(BX0 - 10, Math.min(BX1 + 10, target.x)); target.z = Math.max(BZ0 - 10, Math.min(BZ1 + 10, target.z)); placeCam(); }
 function camTo(x, z) { camFree = true; target.set(x, 0, z); placeCam(); loadNear(); }
-$('b-center').addEventListener('click', () => { camFree = false; if (viewSaved) { zoom = viewSaved; viewSaved = null; resize(); } });
+$('b-center').addEventListener('click', () => { if (GOD) { if (viewSaved) { zoom = viewSaved; viewSaved = null; resize(); } camTo(MOV.shop.x, MOV.shop.z + 4); return; } camFree = false; if (viewSaved) { zoom = viewSaved; viewSaved = null; resize(); } });
 $('b-view').addEventListener('click', () => { if (viewSaved) { zoom = viewSaved; viewSaved = null; camFree = false; resize(); return; } viewSaved = zoom; zoom = ZMAX * 0.95; resize(); camTo((BX0 + BX1) / 2, (BZ0 + BZ1) / 2 - 6); });
 
 /* ================= finding your way: signposts on the road, arrows at the screen edge ================= */
@@ -3254,7 +3280,7 @@ function tickDirs() {
     const ang = Math.atan2(-dirV.y, dirV.x), mx = w / 2 - 70, my = h / 2 - 120, k = Math.min(mx / Math.max(1e-3, Math.abs(Math.cos(ang))), my / Math.max(1e-3, Math.abs(Math.sin(ang))));
     let x = w / 2 + Math.cos(ang) * k, y = h / 2 + Math.sin(ang) * k + 20; for (const u of used) if (Math.abs(u[0] - x) < 120 && Math.abs(u[1] - y) < 34) y += 38; used.push([x, y]);
     d.el.style.transform = 'translate(' + x.toFixed(0) + 'px,' + y.toFixed(0) + 'px) translate(-50%,-50%)'; d.el.querySelector('i').style.transform = 'rotate(' + ang.toFixed(2) + 'rad)'; });
-  $('b-center').hidden = !camFree && !viewSaved;
+  $('b-center').hidden = GOD ? (!viewSaved && Math.hypot(target.x - MOV.shop.x, target.z - MOV.shop.z - 4) < 28) : (!camFree && !viewSaved);
 }
 
 /* ================= step by step: what the player can see grows with the level and the current objective ================= */
@@ -3268,7 +3294,7 @@ const INTRO = () => [
   ['🏡', 'Bienvenue à Petite France', 'Un village à faire revivre. Ton but : passer de <b>10 à 3 000 habitants</b> en bâtissant le plus beau village de France.'],
   ['🥖', 'Le pain fait vivre le village', 'Récolte le <b>blé</b>, porte-le au <b>moulin</b>, cuis la farine au <b>four</b>, pose les baguettes en <b>vitrine</b>. Tes ventes s\'empilent en <b>pièces dorées</b> au-dessus de la boutique : passe les ramasser !'],
   ['🏗️', 'Construis ton village', 'Avec <b>🏗️ Construire</b> : des maisons, des rues pour les desservir, puis de la décoration. Plus le village est beau, plus il attire du monde. Tout se débloque petit à petit.'],
-  ['🧭', 'Explore', 'Glisse le doigt pour <b>déplacer la vue</b>, pince ou molette pour <b>zoomer</b>, 🔭 pour tout voir. Sur téléphone, le <b>joystick</b> fait marcher ton boulanger ; tu peux aussi toucher le sol pour l\'y envoyer. Les flèches au bord de l\'écran mènent au château, à la campagne et au centre.'],
+  ['🧭', 'Tout au doigt', '<b>Glisse</b> pour te promener dans le village, <b>pince</b> pour zoomer, <b>touche</b> un bâtiment pour agir. Glisse le doigt sur le champ pour récolter. 🔭 montre tout le village, 🎯 ramène à la boulangerie.'],
   S.mode === 'comp' ? ['🔥', 'Coup de feu', 'Les clients n\'attendent pas : s\'ils repartent sans pain, la <b>fréquentation 👥</b> baisse. À zéro, la partie est perdue. Pas de flèches pour t\'aider : à toi de jouer.'] : ['🌿', 'Douceur de vivre', 'Pas de défaite. <b>Le maire te guide</b> pas à pas : suis l\'objectif en bas de l\'écran et le cercle doré.']
 ];
 let inI = 0;
@@ -3284,6 +3310,28 @@ const COIN_G = new THREE.CylinderGeometry(0.34, 0.34, 0.1, 18), COIN_M = new THR
 const PILES = [[shop, () => S.shop, 7.4], [stallG, () => S.mtill, 4.2], [bqG, () => S.btill, 5.6]].map(([g, f, y]) => { const p = new THREE.Group(); p.position.y = y; g.add(p);
   for (let k = 0; k < 10; k++) { const m = new THREE.Mesh(COIN_G, COIN_M); m.position.set((k % 2) * 0.06, k * 0.11, (k % 3) * 0.04); m.rotation.z = (k % 2 ? 0.08 : -0.06); m.visible = false; p.add(m); } return { p, f }; });
 function tickPiles(t) { PILES.forEach((P, i) => { const v = Math.floor(P.f() || 0), n = v <= 0 ? 0 : Math.min(10, 2 + Math.floor(Math.log2(1 + v / 4))); P.p.children.forEach((m, k) => { m.visible = k < n; }); P.p.rotation.y = t * 1.8 + i; P.p.position.y = [7.4, 4.2, 5.6][i] + 0.18 * Math.sin(t * 3 + i); }); }
+
+/* ================= visiter le village : la caméra descend à hauteur d'homme et suit les rues, d'une maison à l'autre ================= */
+const VISIT = { on: false, cam: new THREE.PerspectiveCamera(60, 1, 0.15, 230), stops: [], k: 0, path: [], pos: new THREE.Vector3(), yaw: 0, pause: 0 };
+function visitStops() { const L = [[MOV.shop.x, MOV.shop.z]]; cityObjs.forEach((g) => { if (g && g.userData.kind === 'cityhouse') L.push([g.position.x, g.position.z]); }); PROD_KEYS.forEach((k) => { const M = MOV[k]; if (M.placed && k !== 'shop' && k !== 'champ') L.push([M.x, M.z]); });
+  const out = [L.shift()]; while (L.length) { const c = out[out.length - 1]; let bi = 0, bd = 1e9; L.forEach((q, i) => { const d = Math.hypot(q[0] - c[0], q[1] - c[1]); if (d < bd) { bd = d; bi = i; } }); out.push(L.splice(bi, 1)[0]); } return out; }
+function visitLeg() { const V = VISIT, s = V.stops[V.k % V.stops.length]; let p = []; try { p = roadPath(V.pos.x, V.pos.z, s[0], s[1]) || []; } catch (e) { p = []; } if (p.length) p.pop(); V.path = p; if (!p.length) V.pause = 2.6; }
+function startVisit() { const V = VISIT; if (V.on || BUILD || !S.started) return; V.stops = visitStops(); V.k = 0; V.path = []; V.pos.set(STN.shop[0], 0, STN.shop[1] + 3.6); V.yaw = Math.atan2(MOV.shop.x - V.pos.x, MOV.shop.z - V.pos.z); V.pause = 2.6; V.on = true; P.goal = null; document.body.classList.add('visiting'); }
+function endVisit(build) { const V = VISIT; if (!V.on) return; V.on = false; document.body.classList.remove('visiting'); target.set(V.pos.x, 0, V.pos.z); placeCam(); if (build) openBuild(); }
+function tickVisit(dt) { const V = VISIT; if (!V.on) return; const s = V.stops[V.k % V.stops.length]; let want = V.yaw, stop = V.pause > 0;
+  if (stop) { V.pause -= dt; want = Math.atan2(s[0] - V.pos.x, s[1] - V.pos.z); if (V.pause <= 0) { V.k++; visitLeg(); } }
+  else { const w = V.path[0]; if (!w || Math.hypot(s[0] - V.pos.x, s[1] - V.pos.z) < 8.5) { V.pause = 2.8; V.path = []; } else { const dx = w[0] - V.pos.x, dz = w[1] - V.pos.z, d = Math.hypot(dx, dz); if (d < 0.4) V.path.shift(); else { const st = Math.min(d, 2.3 * dt); V.pos.x += dx / d * st; V.pos.z += dz / d * st; want = Math.atan2(dx, dz); } } }
+  let da = want - V.yaw; while (da > Math.PI) da -= 6.2832; while (da < -Math.PI) da += 6.2832; V.yaw += da * Math.min(1, dt * 1.7);
+  const gy = groundY(V.pos.x, V.pos.z), c = V.cam; c.aspect = window.innerWidth / window.innerHeight; c.fov = c.aspect < 0.8 ? 74 : 58; c.updateProjectionMatrix();
+  V.lookY = (V.lookY || 2) + ((stop ? 3.2 : 2.1) - (V.lookY || 2)) * Math.min(1, dt * 1.5);
+  c.position.set(V.pos.x, gy + 1.7 + Math.sin(performance.now() * 0.0065) * (stop ? 0 : 0.03), V.pos.z); c.lookAt(V.pos.x + Math.sin(V.yaw) * 10, gy + V.lookY, V.pos.z + Math.cos(V.yaw) * 10);
+  target.set(V.pos.x, 0, V.pos.z); }
+$('v-quit').addEventListener('click', () => endVisit(false)); $('v-build').addEventListener('click', () => endVisit(true));
+$('b-menu').addEventListener('click', () => { if (!S.started) return; openSheet('Menu', 'Petite France', [
+  { t: '🚶 Visiter le village', s: 'La caméra descend dans les rues et se promène de maison en maison, comme un habitant.', btn: 'Visiter', ok: true, run: () => { closeSheet(); startVisit(); } },
+  { t: '🗺️ Carte', s: 'Voir les quartiers du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-map').click(); } },
+  { t: '🛒 Boutique', s: 'Pass de saison et offres.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-shop').click(); } },
+  { t: '▶️ +20 pièces', s: 'Regarder une publicité (démo).', btn: 'Voir', ok: true, run: () => { closeSheet(); $('b-ad').click(); } } ]); });
 /* ================= ambiance : l'heure qu'il est en France, les saisons, la météo, le vent, la vie ================= */
 // Tout suit l'horloge de Paris. __pf.amb.set({ hour, season, weather, wind }) force une valeur pour essayer ; set(null) revient au réel.
 const AMB = { hour: 12, h: 1, season: 'ete', weather: 'clair', wind: 0.1, night: 0, force: {}, rain: 0, snow: 0, mist: 0, cloud: 0.4, cover: 0 };
@@ -3490,7 +3538,9 @@ function ambRefresh(dt) {
   ambReal = parisNow(); const F = AMB.force;
   AMB.season = F.season || seasonOf(ambReal.md); AMB.hour = F.hour !== undefined ? F.hour : ambReal.hour; const S0 = SEASON[AMB.season], doy = F.season ? SEASON_DOY[F.season] : ambReal.doy;
   AMB.weather = F.weather || pickWeather(S0, ambReal.doy, ambReal.hour);
-  const sh = sunHeight(AMB.hour, doy, F.hour !== undefined && F.season ? (F.season === 'ete' || F.season === 'printemps') : ambReal.dst); AMB.h = sh.h;
+  // the village lives its own day, about 15 minutes from dawn to dusk; the evening only goes as far as lamps and lit windows, never to black night
+  const gp = F.hour !== undefined ? -1 : (Date.now() / 900000) % 1;
+  const sh = gp < 0 ? sunHeight(AMB.hour, doy, F.season ? (F.season === 'ete' || F.season === 'printemps') : ambReal.dst) : gp < 0.86 ? { h: Math.sin(Math.PI * gp / 0.86), d: gp / 0.86 } : { h: -0.11 * Math.sin(Math.PI * (gp - 0.86) / 0.14), d: 1 }; AMB.h = sh.h; AMB.day = gp;
   // weather eases in and out
   const k = 1 - Math.exp(-dt / 6), W = AMB.weather; AMB.rain += ((W === 'pluie' ? 1 : 0) - AMB.rain) * k; AMB.snow += ((W === 'neige' ? 1 : 0) - AMB.snow) * k; AMB.mist += ((W === 'brume' ? 1 : 0) - AMB.mist) * k;
   AMB.cover += ((W === 'clair' ? 0 : W === 'brume' ? 0.45 : W === 'nuageux' ? 0.6 : 1) - AMB.cover) * k; AMB.cloud += ((W === 'clair' ? 0.55 : W === 'nuageux' ? 0.9 : 0.25) - AMB.cloud) * k;
@@ -3502,7 +3552,7 @@ function ambRefresh(dt) {
   C(6, amC[3]).lerp(AMB.season === 'hiver' ? amSnowFog : amGrey, Math.min(1, cov * 0.7 + AMB.mist * 0.5) * (0.35 + 0.65 * day)); scene.fog.color.copy(amC[3]);
   scene.fog.near = 70 - 42 * AMB.mist - 14 * Math.max(AMB.rain, AMB.snow); scene.fog.far = 150 - 58 * AMB.mist - 22 * Math.max(AMB.rain, AMB.snow);
   renderer.toneMappingExposure = L(10);
-  AMB.night = L(11); AMBU.uNight.value = AMB.night; AMBU.uLitT.value = AMB.hour > 23.2 || AMB.hour < 5.5 ? 0.72 : 0.14;
+  AMB.night = L(11); AMBU.uNight.value = AMB.night; AMBU.uLitT.value = gp < 0 && (AMB.hour > 23.2 || AMB.hour < 5.5) ? 0.72 : 0.14;
   AMBU.uCloud.value = AMB.cloud * (0.25 + 0.75 * day); AMBU.uSnow.value += ((S0.snow * (AMB.season === 'hiver' ? 1 : 0)) - AMBU.uSnow.value) * (1 - Math.exp(-dt / 3));
   // where the light comes from: the sun crosses from east to west by the south; at night the moon takes over
   if (sh.h > 0) SUN.set(Math.cos(Math.PI * sh.d) * 0.95, 0.36 + 1.2 * Math.sin(Math.PI * sh.d), 0.5).normalize().multiplyScalar(33); else SUN.copy(MOON);
@@ -3548,7 +3598,7 @@ function step() {
   let wx = 0, wz = 0;
   {
     let ix = joy.x + stick.x, iy = joy.y + stick.y;
-    { const hid = !(S.started && TOUCH); if (stickEl.hidden !== hid) stickEl.hidden = hid; }
+    { const hid = GOD || !(S.started && TOUCH); if (stickEl.hidden !== hid) stickEl.hidden = hid; }
     if (keys.KeyW || keys.ArrowUp) iy -= 1; if (keys.KeyS || keys.ArrowDown) iy += 1; if (keys.KeyA || keys.ArrowLeft) ix -= 1; if (keys.KeyD || keys.ArrowRight) ix += 1;
     let il = Math.hypot(ix, iy); if (il > 1) { ix /= il; iy /= il; il = 1; }
     const px0 = player.position.x, pz0 = player.position.z;
@@ -3587,7 +3637,7 @@ function step() {
     { const a = Math.ceil(S.carry / 4), b = a + S.carryC, c = b + S.vcarry.length, d = c + S.farine, e = d + S.ble;
       for (let i = 0; i < stack.length; i++) { const m = stack[i]; m.visible = i < e; if (m.visible) m.material.color.set(i < a ? '#C98A2E' : i < b ? '#F0A6B8' : i < c ? PROD[S.vcarry[i - b]].c : i < d ? '#FFFDF8' : '#E8B94A'); m.position.y = 0.42 + lift + i * 0.14; } }
     if (wl > 0.01 && (stick.on || keys.KeyW || keys.KeyS || keys.KeyA || keys.KeyD || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight)) camFree = false;
-    if (!camFree) { vtmp.set(player.position.x + wx * 1.6, player.position.y * 0.7, player.position.z + wz * 1.6); target.lerp(vtmp, 1 - Math.exp(-dt * 4.5)); } placeCam();
+    if (!camFree && !GOD) { vtmp.set(player.position.x + wx * 1.6, player.position.y * 0.7, player.position.z + wz * 1.6); target.lerp(vtmp, 1 - Math.exp(-dt * 4.5)); } placeCam();
     vtmp.set(Math.round(target.x / 2) * 2, 0, Math.round(target.z / 2) * 2); sun.position.copy(vtmp).add(SUN); sun.target.position.copy(vtmp); sun.target.updateMatrixWorld();
     // quarters: name on arrival, models load around you
     { const z = zoneOf(player.position.x, player.position.z); if (z.id !== zoneId) { const first = zoneId !== ''; zoneId = z.id; if (S.started) musicTo(z.id); if (first || S.started) { const el = $('zone'); el.textContent = z.ic + ' ' + z.name; el.hidden = false; el.style.opacity = '1'; zoneT = 2.6; } } if (zoneT > 0) { zoneT -= dt; if (zoneT <= 0) $('zone').style.opacity = '0'; } }
@@ -3756,7 +3806,8 @@ function step() {
     const na = ups().filter((u) => u.cost !== null && S.coins >= u.cost).length; $('up-n').hidden = !na; $('up-n').textContent = na;
   }
   questTick();
-  if (!window.__nodraw) renderer.render(scene, cam); placeLabels();
+  tickVisit(dt);
+  if (!window.__nodraw) renderer.render(scene, VISIT.on ? VISIT.cam : cam); if (!VISIT.on) placeLabels();
   saveT += dt; if (saveT > 3 && dirty) { saveT = 0; try { save(); } catch (e) { showErr('sauvegarde', e); } }
 }
 
@@ -3808,6 +3859,7 @@ function startPlay(mode) {
   SFX.done(); fast = $('fast').checked; S.fast = fast; if (mode) S.mode = mode; $('start').hidden = true; S.started = true; ensureDay(); showOffline();
   if (S.over && S.mode === 'comp') { S.over = false; gameOver(); } else S.over = false;
   try { window.focus(); canvas.focus(); } catch (e) {} dirty = true; loadNear();
+  if (GOD && MOV.shop) { target.set(MOV.shop.x, 0, MOV.shop.z + 4); placeCam(); }
   if (!S.introSeen) showIntro();
 }
 // home screen: continue, or a brand-new game in one of the two modes
