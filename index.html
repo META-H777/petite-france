@@ -169,8 +169,10 @@
   .toast { top:calc(env(safe-area-inset-top,0px) + 56px); width:auto; max-width:min(330px, 88vw); padding:6px 14px; border-radius:999px; box-shadow:0 2px 0 var(--ink); } .toast b { font-size:12.5px; } .toast span { display:none; }
   .camctl { bottom:calc(env(safe-area-inset-bottom,0px) + 86px); }
   #b-snd, .nosave { display:none !important; }
+  .lb.qn { font-family:Fraunces, Georgia, serif; font-weight:700; color:var(--blue); background:rgba(255,253,248,.88); border-color:var(--blue); box-shadow:none; } .lb.qn.ok { background:var(--gold); color:var(--ink); border-color:var(--ink); box-shadow:0 2px 0 var(--ink); }
+  .lb.land { background:rgba(255,253,248,.9); box-shadow:none; opacity:.8; } .lb.land.ok { background:var(--gold); opacity:1; box-shadow:0 2px 0 var(--ink); }
   #visitbar { position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 14px); transform:translateX(-50%); display:none; gap:10px; z-index:5; } #visitbar .btn { padding:9px 14px; font-size:13px; white-space:nowrap; }
-  body.visiting #visitbar { display:flex; } body.visiting .hud, body.visiting .res, body.visiting .side, body.visiting .quest, body.visiting .camctl, body.visiting #b-snd, body.visiting #labels, body.visiting .toast, body.visiting .nosave, body.visiting #guide { display:none !important; }
+  body.visiting #visitbar { display:flex; } body.visiting .hud, body.visiting .res, body.visiting .side, body.visiting .quest, body.visiting .camctl, body.visiting #b-snd, body.visiting #labels, body.visiting .toast, body.visiting .nosave, body.visiting #guide, body.visiting .float { display:none !important; }
 </style>
 
 <canvas id="c" tabindex="0" style="outline:none"></canvas>
@@ -405,7 +407,29 @@ scene.add(sun);
 // x grows to the east. Campagne (west) → bridge → porte « Petite France » → entrée et marché → centre-ville → bistrot. The château sits on a hill north of the centre.
 const BX0 = -104, BX1 = 68, BZ0 = -56, BZ1 = 28; // where you can walk
 const HILL = { x: 26, z: -39, top: 6.5, r0: 14, r1: 22 };
-function groundY(x, z) { const d = Math.hypot(x - HILL.x, z - HILL.z); if (d <= HILL.r0) return HILL.top; if (d >= HILL.r1) return 0; const u = (d - HILL.r0) / (HILL.r1 - HILL.r0); return HILL.top * (1 - u * u * (3 - 2 * u)); }
+/* ---- le relief : des paliers (plats, tenus par des murs de pierre, reliés par des rampes) et des pentes douces. On garde toujours le plus haut. ---- */
+const RELIEF = [
+  { t: 'palier', n: 'Le Haut-Bourg', x0: -34, x1: -2, z0: -58, z1: -22, h: 2.6, edge: 1.4, soft: { e: 7, n: 8 } },
+  { t: 'rampe', x0: -27, x1: -21, z0: -22, z1: -8.5, h: 2.6, side: 1.6 },
+  { t: 'rampe', stairs: true, x0: -10.5, x1: -7.5, z0: -22, z1: -16.8, h: 2.6, side: 0.7 },
+  { t: 'versant', n: 'Le Coteau', x0: -26, x1: 76, z0: 13, z1: 28, h: 2.6, soft: 8 },
+  { t: 'palier', n: 'Le bas-quai nord', x0: -47, x1: -35.5, z0: -62, z1: -20, h: -0.8, edge: 2.5, soft: { s: 6, n: 3 } },
+  { t: 'palier', n: 'Le bas-quai sud', x0: -47, x1: -35.5, z0: 20, z1: 34, h: -0.8, edge: 2.5, soft: { n: 6, s: 3 } },
+  { t: 'coteau', n: 'Les Bois', x: -92, z: -51, r0: 2, r1: 9, h: 2.2 }, { t: 'coteau', x: -72, z: -50, r0: 2, r1: 10, h: 2.6 }, { t: 'coteau', x: -57, z: -47, r0: 2, r1: 8, h: 1.8 }
+];
+const sstep = (a, b, v) => { const u = Math.max(0, Math.min(1, (v - a) / (b - a))); return u * u * (3 - 2 * u); };
+// the highest of what rises; where nothing rises, the lowest of what is dug (the low quays by the river)
+function reliefY(x, z) { let y = 0, lo = 0; for (const f of RELIEF) { let v = 0;
+    if (f.t === 'palier') { const so = f.soft || {}, a = Math.max(0, (f.x0 - x) / (so.w || f.edge)), b = Math.max(0, (x - f.x1) / (so.e || f.edge)), c = Math.max(0, (f.z0 - z) / (so.n || f.edge)), d = Math.max(0, (z - f.z1) / (so.s || f.edge)); v = f.h * (1 - sstep(0, 1, Math.hypot(Math.max(a, b), Math.max(c, d)))); }
+    else if (f.t === 'rampe') { const lat = Math.max(0, f.x0 - x, x - f.x1) / f.side; if (lat < 1 && z >= f.z0 - 1.5 && z <= f.z1) v = f.h * (1 - Math.max(0, z - f.z0) / (f.z1 - f.z0)) * (1 - sstep(0, 1, lat)); }
+    else if (f.t === 'versant') { const lat = Math.max(0, f.x0 - x, x - f.x1) / f.soft; if (lat < 1) v = f.h * sstep(f.z0, f.z1, z) * (1 - sstep(0, 1, lat)); }
+    else v = f.h * (1 - sstep(f.r0, f.r1, Math.hypot(x - f.x, z - f.z)));
+    if (v > y) y = v; if (v < lo) lo = v; } return y > 0.001 ? y : lo; }
+function groundY(x, z) { const h = hillY(x, z), r = reliefY(x, z); return h > 0 ? Math.max(h, r) : r; }
+// the highest ground under a footprint: a building sits there, on a stone base that fills the downhill side
+function padY(x, z, w, d) { const a = Math.max(w, d) / 2; return Math.max(groundY(x, z), groundY(x - a, z - a), groundY(x + a, z - a), groundY(x - a, z + a), groundY(x + a, z + a)); }
+function padDrop(x, z, w, d) { const a = Math.max(w, d) / 2; return padY(x, z, w, d) - Math.min(groundY(x, z), groundY(x - a, z - a), groundY(x + a, z - a), groundY(x - a, z + a), groundY(x + a, z + a)); }
+function hillY(x, z) { const d = Math.hypot(x - HILL.x, z - HILL.z); if (d <= HILL.r0) return HILL.top; if (d >= HILL.r1) return 0; const u = (d - HILL.r0) / (HILL.r1 - HILL.r0); return HILL.top * (1 - u * u * (3 - 2 * u)); }
 const RIVER = { x0: -41.6, x1: -38.6 };
 const ZONES = [
   { id: 'campagne', name: 'La campagne', ic: '🌾', at: [-62, 1.6], test: (x, z) => x < RIVER.x0 },
@@ -462,27 +486,29 @@ const GLB = [];
 const VCOL = new THREE.MeshLambertMaterial({ vertexColors: true }), VCOLF = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), VLIT = new THREE.MeshBasicMaterial({ vertexColors: true });
 /* ---- ambiance: one shader hook shared by the still world (wind sway, seasons on leaves, snow on what faces the sky, lit windows at night, drifting cloud shadows) ---- */
 const AMBU = { uPh: { value: 0 }, uWind: { value: 0.1 }, uWindDir: { value: new THREE.Vector2(0.8, 0.6) }, uSnow: { value: 0 }, uNight: { value: 0 }, uLitT: { value: 0.2 }, uCloud: { value: 0.5 }, uCloudOff: { value: new THREE.Vector2() }, uCloudTex: { value: null },
-  uLeafMix: { value: 0 }, uLeafA: { value: new THREE.Color('#E08A2C') }, uLeafB: { value: new THREE.Color('#C9482E') }, uLeafC: { value: new THREE.Color('#E9B93A') }, uLeafT: { value: new THREE.Vector2(0.4, 0.7) }, uTint: { value: new THREE.Vector4(1, 1, 1, 0) } };
+  uLeafMix: { value: 0 }, uLeafA: { value: new THREE.Color('#E08A2C') }, uLeafB: { value: new THREE.Color('#C9482E') }, uLeafC: { value: new THREE.Color('#E9B93A') }, uLeafT: { value: new THREE.Vector2(0.4, 0.7) }, uTint: { value: new THREE.Vector4(1, 1, 1, 0) }, uLand: { value: null } };
+{ const t = new THREE.DataTexture(new Uint8Array([255]), 1, 1, THREE.RedFormat); t.needsUpdate = true; AMBU.uLand.value = t; }
 { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 128, 128); let sd = 7; const r = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
   for (let k = 0; k < 46; k++) { const x = r() * 128, y = r() * 128, rad = 10 + r() * 22, a = 0.16 + r() * 0.22; for (let ox = -128; ox <= 128; ox += 128) for (let oy = -128; oy <= 128; oy += 128) { const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad); gr.addColorStop(0, 'rgba(255,255,255,' + a + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x + ox - rad, y + oy - rad, rad * 2, rad * 2); } }
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; AMBU.uCloudTex.value = t; }
 /* ---- the grass: every blade is drawn; the carpet follows the view and wraps around it, so it is dense where you look and costs nothing elsewhere ---- */
 const GRASS = { PU: 56, PV: 78, N: [9000, 15000, 22000], W: [1.3, 1.12, 1.0], box: [-113, -65, 77, 37], mw: 380, mh: 204, dirty: true, row: -1, wait: 0, mesh: null, data: null, tex: null };
-Object.assign(AMBU, { uGT: { value: new THREE.Vector4() }, uGP: { value: new THREE.Vector2(GRASS.PU, GRASS.PV) }, uGBox: { value: new THREE.Vector4(GRASS.box[0], GRASS.box[1], 1 / (GRASS.box[2] - GRASS.box[0]), 1 / (GRASS.box[3] - GRASS.box[1])) }, uGPl: { value: new THREE.Vector3() }, uGFade: { value: 1 }, uGW: { value: 1 }, uGMask: { value: null } });
-const GRASS_HEAD = 'attribute vec2 aBase; attribute vec4 aRnd; uniform vec4 uGT, uGBox; uniform vec2 uGP; uniform vec3 uGPl; uniform float uGFade, uGW; uniform sampler2D uGMask, uCloudTex;\n';
+Object.assign(AMBU, { uGT: { value: new THREE.Vector4() }, uGP: { value: new THREE.Vector2(GRASS.PU, GRASS.PV) }, uGBox: { value: new THREE.Vector4(GRASS.box[0], GRASS.box[1], 1 / (GRASS.box[2] - GRASS.box[0]), 1 / (GRASS.box[3] - GRASS.box[1])) }, uGPl: { value: new THREE.Vector3() }, uGFade: { value: 1 }, uGW: { value: 1 }, uGMask: { value: null }, uGH: { value: null } });
+const GRASS_HEAD = 'attribute vec2 aBase; attribute vec4 aRnd; uniform vec4 uGT, uGBox; uniform vec2 uGP; uniform vec3 uGPl; uniform float uGFade, uGW; uniform sampler2D uGMask, uGH, uCloudTex;\n';
 const GRASS_VERT = [
   'vec2 gq = fract(aBase - uGT.zw) - 0.5; vec2 guv = (gq + uGT.zw) * uGP; vec2 gw = vec2(guv.x + guv.y, guv.y - guv.x) * 0.70710678;',
   'float gm = texture2D(uGMask, (gw - uGBox.xy) * uGBox.zw).r; float ge = max(abs(gq.x), abs(gq.y)) * 2.0;',
   'float gs = aRnd.y * smoothstep(0.3, 0.7, gm) * (1.0 - smoothstep(0.8, 1.0, ge)) * uGFade;',
-  'float gy = HTOP * (1.0 - smoothstep(HR0, HR1, distance(gw, vec2(HX, HZ))));',
+  'float gy = texture2D(uGH, (gw - uGBox.xy) * uGBox.zw).r * 18.0 - 2.0;',
   'float gc = cos(aRnd.x), gn = sin(aRnd.x); vec3 gp = position; gp.xz = vec2(gc * gp.x + gn * gp.z, gc * gp.z - gn * gp.x); float gh = position.y / 0.24; gp.xz *= mix(1.0, uGW, 1.0 - gh * 0.5); gp.y *= gs;',
   'float gph = dot(gw, uWindDir) * 0.55 - uPh * 1.7 + aRnd.z * 2.0; float gam = gh * gh * gs * (0.012 + 0.13 * uWind) * (0.6 * uWind + 0.75 * sin(gph) + 0.3 * sin(gph * 2.7 + gw.x)); gp.xz += uWindDir * gam; gp.y -= abs(gam) * 0.35;',
   'vec2 gpl = gw + gp.xz - uGPl.xy; float gpu = (1.0 - smoothstep(0.2, 0.9, length(gpl))) * gh; gp.xz += normalize(gpl + 0.0001) * gpu * 0.12; gp.y *= 1.0 - 0.5 * gpu;',
   'transformed = vec3(gw.x + gp.x, gy + gp.y, gw.y + gp.z) * step(0.03, gs);',
   'vColor.rgb *= mix(vec3(0.9, 0.95, 0.86), vec3(1.08, 1.04, 0.92), aRnd.w); vColor.rgb = mix(vColor.rgb, vColor.rgb * vec3(1.16, 1.08, 0.8), smoothstep(0.45, 0.82, texture2D(uCloudTex, gw * 0.021).r) * 0.35);', ''
 ].join('\n').replace(/HTOP/g, HILL.top.toFixed(2)).replace(/HR0/g, HILL.r0.toFixed(2)).replace(/HR1/g, HILL.r1.toFixed(2)).replace(/HX/g, HILL.x.toFixed(2)).replace(/HZ/g, HILL.z.toFixed(2));
-function ambPatch(m, f) { f = f || ''; const has = (k) => f.indexOf(k) >= 0;
-  m.customProgramCacheKey = () => 'amb:' + f;
+let STYLE_READY = false; // the quarters and their styles are defined further down
+function ambPatch(m, f, x) { f = f || ''; const has = (k) => f.indexOf(k) >= 0;
+  m.customProgramCacheKey = () => 'amb:' + f + (x ? x.key : '');
   m.onBeforeCompile = (sh) => { Object.assign(sh.uniforms, AMBU);
     sh.vertexShader = 'uniform float uPh, uWind, uLitT; uniform vec2 uWindDir; varying vec3 vPfW; varying float vPfL; varying float vPfG;\n' + (has('leafattr') ? 'attribute float aLeaf;\n' : '') + (has('glowattr') ? 'attribute float aGlow;\n' : '') + (has('grass') ? GRASS_HEAD : '') + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' + (has('grass') ? GRASS_VERT : '') +
       'vec4 pfP = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n pfP = instanceMatrix * pfP;\n#endif\nvec3 pfW0 = (modelMatrix * pfP).xyz; vPfW = pfW0; vPfL = 0.0; vPfG = 0.0;\n' +
@@ -490,11 +516,11 @@ function ambPatch(m, f) { f = f || ''; const has = (k) => f.indexOf(k) >= 0;
       (has('leaf') ? 'if (vPfL > 0.0) { float ph = vPfL * 40.0 + uPh * 1.5 + pfW0.x * 0.2; float am = 0.015 + 0.14 * uWind; float sw = am * (sin(ph) + 0.35 * sin(ph * 2.3 + pfW0.y * 2.0)); transformed.x += uWindDir.x * sw; transformed.z += uWindDir.y * sw; transformed.y += 0.25 * am * sin(ph * 1.7 + pfW0.z); }\n' : '') +
       (has('sway') ? '{ float ph = dot(pfW0.xz, uWindDir) * 0.5 - uPh * 1.6; float am = position.y * (0.05 + 0.6 * uWind) * (0.25 * uWind + 0.7 * sin(ph) + 0.3 * sin(ph * 2.7 + pfW0.x)); transformed.x += am * uWindDir.x; transformed.z += am * uWindDir.y; }\n' : '') +
       (has('glowattr') ? 'vPfG = aGlow * step(uLitT, fract(sin(dot(floor(modelMatrix[3].xz), vec2(12.9898, 78.233))) * 43758.5453));\n' : '') + (has('glowall') ? 'vPfG = 1.0;\n' : ''));
-    sh.fragmentShader = 'uniform float uSnow, uNight, uCloud, uLeafMix; uniform vec2 uCloudOff, uLeafT; uniform vec3 uLeafA, uLeafB, uLeafC; uniform vec4 uTint; uniform sampler2D uCloudTex; varying vec3 vPfW; varying float vPfL; varying float vPfG;\n' + sh.fragmentShader
+    sh.fragmentShader = 'uniform float uSnow, uNight, uCloud, uLeafMix; uniform vec2 uCloudOff, uLeafT; uniform vec3 uLeafA, uLeafB, uLeafC; uniform vec4 uTint, uGBox; uniform sampler2D uCloudTex, uLand; varying vec3 vPfW; varying float vPfL; varying float vPfG;\n' + sh.fragmentShader
       .replace('#include <color_fragment>', '#include <color_fragment>\n' +
         (has('leaf') ? 'if (vPfL > 0.0) { vec3 pc = vPfL < uLeafT.x ? uLeafA : (vPfL < uLeafT.y ? uLeafB : uLeafC); float pl = dot(diffuseColor.rgb, vec3(0.3, 0.6, 0.1)); diffuseColor.rgb = mix(diffuseColor.rgb, pc * (0.7 + pl * 1.1), uLeafMix); }\n' : '') +
-        (has('tint') ? 'diffuseColor.rgb = mix(diffuseColor.rgb, uTint.rgb, uTint.a);\n' : ''))
-      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + (has('nosnow') ? '' : '{ vec3 pn = inverseTransformDirection(normal, viewMatrix); float ps = smoothstep(0.5, 0.82, pn.y) * uSnow * (0.72 + 0.5 * texture2D(uCloudTex, vPfW.xz * 0.11).r);' + (has('tint') ? '' : ' ps *= smoothstep(0.07, 0.16, vPfW.y);') + ' diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.94, 1.0), clamp(ps, 0.0, 1.0)); }\n'))
+        (has('tint') ? 'diffuseColor.rgb = mix(diffuseColor.rgb, uTint.rgb, uTint.a); { float pl = texture2D(uLand, (vPfW.xz - uGBox.xy) * uGBox.zw).r; diffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.3, 0.6, 0.1))) * vec3(0.8, 0.85, 0.9), diffuseColor.rgb, pl); }\n' : ''))
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + (x ? x.frag : '') + (has('nosnow') ? '' : '{ vec3 pn = inverseTransformDirection(normal, viewMatrix); float ps = smoothstep(0.5, 0.82, pn.y) * uSnow * (0.72 + 0.5 * texture2D(uCloudTex, vPfW.xz * 0.11).r);' + (has('tint') ? '' : ' ps *= smoothstep(0.07, 0.16, vPfW.y);') + ' diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.94, 1.0), clamp(ps, 0.0, 1.0)); }\n'))
       .replace('#include <opaque_fragment>', '{ float pc2 = texture2D(uCloudTex, vPfW.xz * 0.009 + uCloudOff).r; outgoingLight *= 1.0 - uCloud * smoothstep(0.42, 0.75, pc2) * 0.32; }\noutgoingLight += vPfG * uNight * vec3(1.0, 0.66, 0.3) * 1.5;\n#include <opaque_fragment>'); };
   return m; }
 ambPatch(VCOLF, 'glowattr');
@@ -507,9 +533,10 @@ function isLeaf(o) { const g = o.geometry, pr = g && g.parameters; if (!pr || (g
 const leafHash = (x, z) => { const v = Math.sin(Math.floor(x / 2.5) * 12.9898 + Math.floor(z / 2.5) * 78.233) * 43758.5453; return 0.05 + 0.95 * (v - Math.floor(v)); };
 // things the player places keep their own meshes: they get twin materials that follow the weather too
 const MATW = {}, DYNLEAF = [], TREEPOS = [];
-function ambAdopt(g) { g.updateMatrixWorld(true); g.traverse((o) => { if (!o.isMesh || o.isInstancedMesh || !o.material || !o.material.userData || !o.material.userData.c || MAT[o.material.userData.c] !== o.material) return;
-  const c = o.material.userData.c, lf = isLeaf(o), k = c + (lf ? 'L' : c === '#CFE6EE' ? 'G' : '');
-  o.material = MATW[k] || (MATW[k] = ambPatch(new THREE.MeshLambertMaterial({ color: c }), lf ? 'leafobj' : c === '#CFE6EE' ? 'glowall' : '')); if (lf) DYNLEAF.push(o); }); }
+function ambAdopt(g) { g.updateMatrixWorld(true); const fam = STYLE_READY ? furnitureAt(g.position.x, g.position.z) : null; g.traverse((o) => { if (!o.isMesh || o.isInstancedMesh || !o.material || !o.material.userData || !o.material.userData.c || MAT[o.material.userData.c] !== o.material) return;
+  let c = o.material.userData.c; const lf = isLeaf(o), gl = c === '#CFE6EE'; if (fam && (c === IRON || c === PGREEN)) c = fam; // street furniture takes the colour chosen for the quarter
+  const k = c + (lf ? 'L' : gl ? 'G' : '');
+  o.material = MATW[k] || (MATW[k] = ambPatch(new THREE.MeshLambertMaterial({ color: c }), lf ? 'leafobj' : gl ? 'glowall' : '')); if (lf) DYNLEAF.push(o); }); }
 // the warm halo of a lantern and its pool of light on the ground: only there at night
 const GLOWTEX = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.55)'); gr.addColorStop(0.6, 'rgba(255,255,255,0.14)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); })();
 const HALO = new THREE.SpriteMaterial({ map: GLOWTEX, color: '#FFC470', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
@@ -603,11 +630,11 @@ function hay(x, z, r) { const g = new THREE.Group(); g.position.set(x, 0, z); g.
 /* ---- ground, road, river, hill ---- */
 // the ground comes in two parts, so the river can run low between its stone quays
 const RMID = (RIVER.x0 + RIVER.x1) / 2, RW = RIVER.x1 - RIVER.x0, WY = -0.95;
-function groundPart(xa, xb) { const w = xb - xa, G = new THREE.PlaneGeometry(w, 170, Math.max(2, Math.round(w / 5)), 34); G.rotateX(-Math.PI / 2); G.translate((xa + xb) / 2, 0, 0); const P = G.attributes.position, col = [], c = new THREE.Color();
+function groundPart(xa, xb) { const w = xb - xa, G = new THREE.PlaneGeometry(w, 170, Math.max(2, Math.round(w / 2)), 85); G.rotateX(-Math.PI / 2); G.translate((xa + xb) / 2, 0, 0); const P = G.attributes.position, col = [], c = new THREE.Color();
   for (let i = 0; i < P.count; i++) { const x = P.getX(i), z = P.getZ(i); const n = Math.sin(x * 0.11) * Math.cos(z * 0.13) + Math.sin(x * 0.037 + z * 0.05);
     c.set(x < RIVER.x0 ? '#7FAE4C' : '#78AA49').offsetHSL(n * 0.012, 0, n * 0.022); col.push(c.r, c.g, c.b);
     const out = Math.max(0, Math.max(BX0 - 8 - x, x - BX1 - 8, BZ0 - 8 - z, z - BZ1 - 8)), rv = Math.min(1, Math.max(0, (Math.abs(x - RMID) - 3) / 10));
-    P.setY(i, -0.02 + rv * (-out * 0.02 + (out > 0 ? Math.sin(x * 0.2) * Math.cos(z * 0.17) * Math.min(4, out * 0.25) : 0))); }
+    P.setY(i, -0.02 + reliefY(x, z) + rv * (-out * 0.02 + (out > 0 ? Math.sin(x * 0.2) * Math.cos(z * 0.17) * Math.min(4, out * 0.25) : 0))); }
   G.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); G.computeVertexNormals();
   const gm = new THREE.Mesh(G, ambPatch(new THREE.MeshLambertMaterial({ vertexColors: true }), 'tint')); gm.receiveShadow = true; gm.userData.dyn = true; scene.add(gm); }
 groundPart(-150, RIVER.x0); groundPart(RIVER.x1, 150);
@@ -972,6 +999,8 @@ function inst(geo, color, list, setup, shadow) { const m = new THREE.InstancedMe
     geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(NR, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); geo.setIndex(I);
     geo.setAttribute('aBase', new THREE.InstancedBufferAttribute(base, 2)); geo.setAttribute('aRnd', new THREE.InstancedBufferAttribute(rd, 4)); geo.instanceCount = GRASS.N[quality];
     GRASS.data = new Uint8Array(GRASS.mw * GRASS.mh); GRASS.tex = new THREE.DataTexture(GRASS.data, GRASS.mw, GRASS.mh, THREE.RedFormat); GRASS.tex.magFilter = GRASS.tex.minFilter = THREE.LinearFilter; GRASS.tex.needsUpdate = true; AMBU.uGMask.value = GRASS.tex;
+    { const hd = new Uint8Array(GRASS.mw * GRASS.mh), sx = (GRASS.box[2] - GRASS.box[0]) / GRASS.mw, sz = (GRASS.box[3] - GRASS.box[1]) / GRASS.mh; for (let j = 0; j < GRASS.mh; j++) for (let i = 0; i < GRASS.mw; i++) hd[j * GRASS.mw + i] = Math.max(0, Math.min(255, Math.round((groundY(GRASS.box[0] + (i + 0.5) * sx, GRASS.box[1] + (j + 0.5) * sz) + 2) / 18 * 255)));
+      const ht = new THREE.DataTexture(hd, GRASS.mw, GRASS.mh, THREE.RedFormat); ht.magFilter = ht.minFilter = THREE.LinearFilter; ht.needsUpdate = true; AMBU.uGH.value = ht; } // the height of the ground, so every blade stands on the relief
     const gm = new THREE.Mesh(geo, ambPatch(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), 'grass tint nosnow')); gm.frustumCulled = false; gm.receiveShadow = true; gm.userData.dyn = true; gm.raycast = noRay; scene.add(gm); GRASS.mesh = gm; AMBH.grass = gm; }
   AMBH.flowers = inst(new THREE.SphereGeometry(0.085, 6, 4), null, F, (p, M, c) => { M.compose(tmpP.set(p[0], groundY(p[0], p[1]) + 0.2, p[1]), tmpQ.identity(), tmpS.set(1, 0.7, 1)); c.set(['#D9483B', '#D9483B', '#FFFDF8', '#F2C14E', '#F0A6B8', '#7C8FD6'][Math.floor(rnd() * 6)]); });
   const wg = new THREE.ConeGeometry(0.16, 0.9, 4); wg.translate(0, 0.45, 0);
@@ -1003,6 +1032,20 @@ function mergeStatic() { scene.updateMatrixWorld(true); const buckets = new Map(
     b.pos.forEach((p, i) => { P3.set(p, off); N3.set(b.nor[i], off); C3.set(b.col[i], off); if (b.leaf[i]) L1.fill(b.leaf[i], off / 3, (off + p.length) / 3); off += p.length; });
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P3, 3)); g.setAttribute('normal', new THREE.BufferAttribute(N3, 3)); g.setAttribute('color', new THREE.BufferAttribute(C3, 3)); if (b.mat === VSTAT) g.setAttribute('aLeaf', new THREE.BufferAttribute(L1, 1));
     const m = new THREE.Mesh(g, b.mat); m.castShadow = b.cast; m.receiveShadow = true; m.userData.dyn = true; scene.add(m); }); }
+// murs de soutènement au bord des paliers (ouverts là où une rampe arrive) et dalles sur les rampes
+RELIEF.forEach((f) => { const ST = ['#CFC3A8', '#C4B79B', '#D8CDB6'];
+  if (f.t === 'palier') { const so = f.soft || {}, H = f.h + 0.55;
+    const seg = (xa, za, xb, zb) => { const len = Math.hypot(xb - xa, zb - za), n = Math.max(1, Math.round(len / 2.2)), ax = Math.abs(xb - xa) > Math.abs(zb - za); for (let k = 0; k < n; k++) { const x = xa + (xb - xa) * (k + 0.5) / n, z = za + (zb - za) * (k + 0.5) / n, l = len / n;
+        if (RELIEF.some((r) => r.t === 'rampe' && x > r.x0 - 0.4 && x < r.x1 + 0.4 && Math.abs(z - r.z0) < 2)) continue;
+        mesh(new THREE.BoxGeometry(ax ? l + 0.03 : 0.7, H + 1.2, ax ? 0.7 : l + 0.03), ST[k % 3], x, (H - 1.2) / 2 - 0.06, z); mesh(new THREE.BoxGeometry(ax ? l + 0.03 : 0.92, 0.14, ax ? 0.92 : l + 0.03), '#E2D8C2', x, H, z); solidRect(x, z, ax ? l : 0.7, ax ? 0.7 : l); } };
+    if (!so.s) seg(f.x0 - 0.7, f.z1 + 0.7, f.x1, f.z1 + 0.7); if (!so.w) seg(f.x0 - 0.7, Math.max(f.z0, BZ0 - 3), f.x0 - 0.7, f.z1 + 0.7); if (!so.e) seg(f.x1 + 0.7, Math.max(f.z0, BZ0 - 3), f.x1 + 0.7, f.z1 + 0.7); if (!so.n) seg(f.x0, f.z0 - 0.7, f.x1, f.z0 - 0.7); }
+  if (f.t === 'rampe' && f.stairs) { const L = f.z1 - f.z0, n = Math.round(f.h / 0.2), w = f.x1 - f.x0, xm = (f.x0 + f.x1) / 2; for (let k = 0; k < n; k++) { const hk = f.h * (1 - k / n) + 0.04, s = mesh(new THREE.BoxGeometry(w, hk + 0.4, L / n + 0.02), k % 2 ? '#D8CDB6' : '#CFC3A8', xm, (hk - 0.4) / 2, f.z0 + (k + 0.5) * L / n); s.castShadow = false; }
+    [f.x0 - 0.25, f.x1 + 0.25].forEach((x) => { const m = mesh(new THREE.BoxGeometry(0.4, f.h + 1.2, L + 0.6), '#C4B79B', x, (f.h - 0.4) / 2, f.z0 + L / 2 - 0.3); m.rotation.x = 0; solidRect(x, f.z0 + L / 2, 0.4, L); });
+    GCOVER.push([xm, (f.z0 + f.z1) / 2, w / 2 + 0.1, L / 2 + 1.2, 0, 1]); return; }
+  if (f.t === 'rampe') { const L = f.z1 - f.z0, n = Math.round(L / 1.1), an = Math.atan2(f.h, L), w = f.x1 - f.x0 - 0.6; for (let k = 0; k < n; k++) { const z = f.z0 + (k + 0.5) * L / n, s = mesh(new THREE.BoxGeometry(w, 0.09, L / n + 0.12), k % 2 ? '#E3D6BC' : '#DCCDAF', (f.x0 + f.x1) / 2, reliefY((f.x0 + f.x1) / 2, z) + 0.05, z, scene, { noShadow: true }); s.castShadow = false; s.rotation.x = an; }
+    GCOVER.push([(f.x0 + f.x1) / 2, (f.z0 + f.z1) / 2, w / 2 + 0.2, L / 2 + 1.2, 0, 1]); } });
+// les Bois : des arbres sur les buttes du nord-ouest
+[[-95, -50, 1.2], [-90, -53, 1], [-88, -48, 1.1], [-93, -46, 0.9], [-76, -52, 1.2], [-71, -48, 1.1], [-68, -53, 1], [-74, -46, 0.95], [-66, -49, 1.15], [-60, -47, 1], [-56, -50, 1.1], [-54, -45, 0.9], [-82, -51, 1], [-63, -53, 1.05], [-98, -53, 1.1], [-85, -47, 0.9]].forEach((t, k) => tree(t[0], t[1], t[2], k % 3 === 0 ? 'cypres' : undefined));
 HOUSES.forEach((h) => { h.userData.keep = true; });
 mergeStatic();
 
@@ -1410,11 +1453,11 @@ function placeLabels() {
     if (l.el.style.display === 'none') continue;
     l.obj.getWorldPosition(vtmp);
     const k = l.el.className, near = Math.hypot(vtmp.x - target.x, vtmp.z - target.z); let show;
-    if (/warn|coin/.test(k)) show = true; else if (l.plot && /mini/.test(k)) show = false; else if (/ready|mini/.test(k)) show = near < 40; else show = near < (/timer/.test(k) ? 10 : 7);
+    if (/warn|coin|qn|land/.test(k)) show = true; else if (l.plot && /mini/.test(k)) show = false; else if (/ready|mini/.test(k)) show = near < 40; else show = near < (/timer/.test(k) ? 10 : 7);
     if (show) { vtmp.y += l.dy; vtmp.project(cam); if (vtmp.x < -1.15 || vtmp.x > 1.15 || vtmp.y < -1.15 || vtmp.y > 1.2) show = false; }
     const vis = show ? '' : 'hidden'; if (l.vis !== vis) { l.vis = vis; l.el.style.visibility = vis; } if (!show) continue;
     // far from where you look, a label shrinks to its icon: the village stays visible
-    { const far = near > 13 && !/name/.test(k) && !BUILD; if (far !== !!l.far) { l.far = far; const w = l.txt.split(' '), sh = w[0] + (w[1] && /^[+×x\d]/.test(w[1]) ? ' ' + w[1] : ''); rich(l.el, far && /[^\w\sÀ-ÿ]/.test(w[0]) ? sh : l.txt); } }
+    { const far = near > 13 && !/name|qn|land/.test(k) && !BUILD; if (far !== !!l.far) { l.far = far; const w = l.txt.split(' '), sh = w[0] + (w[1] && /^[+×x\d]/.test(w[1]) ? ' ' + w[1] : ''); rich(l.el, far && /[^\w\sÀ-ÿ]/.test(w[0]) ? sh : l.txt); } }
     l.el.style.transform = 'translate(' + ((vtmp.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-vtmp.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
   }
 }
@@ -1898,7 +1941,7 @@ function plotGo(i) { const p = S.plots[i], pp = PLOT_POS[i];
 function stationGo(kind) {
   const s = STN[kind];
   const act = { mill: tapMill, oven: tapOven, shop: tapShop, chateau: tapChateau, market: tapMarket, cake: tapCake, bq: tapBq, mairie: tapMairie,
-    gate: () => toast('Bienvenue à Petite France', 'La campagne derrière toi, le marché et le centre-ville devant.'),
+    gate: () => toast('Bienvenue à ' + vil().n, 'La campagne derrière toi, le marché et le centre-ville devant.'),
     church: () => toast('L\'église · saison 4', 'Bientôt : restaure les vitraux et fais sonner les cloches.'),
     bistrot: () => toast('Le bistrot · bientôt un quartier', 'Le café de la place rouvre bientôt : terrasse, pétanque, concerts du samedi.') }[kind];
   if (GOD) { cd[kind] = now() + 900; act(); goTo(S.carry > 0 ? SH[0] : s[0], S.carry > 0 ? SH[1] : s[1], S.carry > 0 ? 1.6 : s[2], null); return; } // touched = done; the baker strolls over by himself (and carries the loaves to the shop)
@@ -2897,7 +2940,7 @@ const findRect = (x, z) => rects.find((r) => Math.abs(r[0] - x) < 0.01 && Math.a
 const findSolid = (x, z) => solids.find((r) => Math.abs(r[0] - x) < 0.01 && Math.abs(r[1] - z) < 0.01);
 function movable(key, o) {
   const M = { key, n: o.n, ic: o.ic, x: o.pivot[0], z: o.pivot[1], r: 0, rot: o.rot !== false, fp: o.fp, placed: true, objs: [], pts: [], dirs: [], cols: [], c: o.c || 0, need: o.need || (() => ''), on: o.on || (() => {}), stn: o.stn, desc: o.desc || '' };
-  o.objs.filter(Boolean).forEach((ob) => M.objs.push({ ob, lx: ob.position.x - M.x, lz: ob.position.z - M.z, lry: ob.rotation.y }));
+  o.objs.filter(Boolean).forEach((ob) => M.objs.push({ ob, lx: ob.position.x - M.x, lz: ob.position.z - M.z, lry: ob.rotation.y, ly: ob.position.y - groundY(ob.position.x, ob.position.z) }));
   o.pts.forEach((p) => { const [x, z] = p.get(); M.pts.push({ set: p.set, lx: x - M.x, lz: z - M.z }); });
   (o.dirs || []).forEach((D) => M.dirs.push({ D, lx: D[0], lz: D[1] }));
   o.cols.filter(Boolean).forEach((c) => M.cols.push({ c, lx: c[0] - M.x, lz: c[1] - M.z, a: c[2], b: c.length > 3 ? c[3] : null }));
@@ -2905,7 +2948,7 @@ function movable(key, o) {
 }
 function moveTo(M, x, z, r) { grassChanged();
   M.x = x; M.z = z; M.r = M.rot ? (r || 0) : 0; const off = M.placed ? 0 : 1000;
-  M.objs.forEach((e) => { const [dx, dz] = rotP(e.lx, e.lz, M.r); e.ob.position.x = x + dx + off; e.ob.position.z = z + dz; e.ob.rotation.y = e.lry + M.r; });
+  M.objs.forEach((e) => { const [dx, dz] = rotP(e.lx, e.lz, M.r); e.ob.position.x = x + dx + off; e.ob.position.z = z + dz; e.ob.position.y = groundY(x + dx, z + dz) + e.ly; e.ob.rotation.y = e.lry + M.r; }); // each piece stands on the relief where it lands
   M.pts.forEach((e) => { const [dx, dz] = rotP(e.lx, e.lz, M.r); e.set(x + dx + off, z + dz); });
   M.dirs.forEach((e) => { const [dx, dz] = rotP(e.lx, e.lz, M.r); e.D[0] = dx; e.D[1] = dz; });
   const odd = Math.round(M.r / (Math.PI / 2)) % 2 !== 0;
@@ -2940,7 +2983,7 @@ movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], ob
 movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 2500, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
 movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], rot: false, objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand coin de nature clos : cerfs, sangliers, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Sans garde forestier, il arrive qu\'un animal s\'échappe. +35 beauté.' });
 const PROD_KEYS = Object.keys(MOV);
-const START_LAYOUT = { shop: [3, -10.2, 0], oven: [11.5, -9.5, 0], mill: [-12, -10, 0], champ: [17, 10, 0] };
+const START_LAYOUT = { shop: [3, -10.2, 0], oven: [10, -9.5, 0], mill: [-12, -10, 0], champ: [-11, 8, 0] }; // tout le départ tient dans quatre terrains du Bourg
 const SERV_BEAUTY = { fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve: 35 };
 // population ceilings: without this service, the village cannot grow past n
 const SERV = [[60, 'market', 'un marché'], [150, 'mairie', 'une mairie'], [400, 'fontaine', 'la grande fontaine'], [600, 'church', 'une église'], [1000, 'bistrot', 'un bistrot'], [1600, 'cake', 'une pâtisserie'], [2200, 'bq', 'une boutique de vêtements'], [2800, 'chateau', 'le château (étape 3)']];
@@ -2987,6 +3030,7 @@ const DECO_BASE = [
 ];
 const CAT_EXT = (typeof CATALOGUE !== 'undefined' && Array.isArray(CATALOGUE)) ? CATALOGUE : [];
 const VILLAGE_EXCLUDE = ['metro_guimard']; // trop « ville » pour Petite France
+DECO_BASE.push({ id: 'arbre_quartier', cat: 'nature', n: 'Arbre d\'alignement (l\'essence du quartier)', ic: '🌳', c: 60, b: 3, fp: [1, 1], lvl: 2, build: (g) => { const k = ARBRES[styleAt(g.position.x, g.position.z).a].k; adoptB(g, () => tree(0, 0, 1.05, k)); } });
 DECO_BASE.push({ id: 'epouvantail', cat: 'nature', n: 'Épouvantail (éloigne cerfs et aigles à 9 m)', ic: '🧑‍🌾', c: 150, b: 2, fp: [1, 1], lvl: 3, build: buildScarecrow });
 const DECOS = {}; [...DECO_BASE, ...CAT_EXT].forEach((d) => { if (!DECOS[d.id] && VILLAGE_EXCLUDE.indexOf(d.id) < 0) DECOS[d.id] = d; });
 const DCATS = (typeof CATEGORIES !== 'undefined' && Array.isArray(CATEGORIES)) ? CATEGORIES : [];
@@ -2994,15 +3038,17 @@ const DCAT_NAMES = { nature: ['Arbres et plantes', '🌳'], jardins: ['Jardins',
 DCATS.forEach((c) => { DCAT_NAMES[c.id] = [c.n, c.ic]; });
 
 /* ---- roads: a 2 m grid painted by hand ---- */
-const ROAD_T = [{ n: 'Rue pavée', ic: '🧱', c: 6, col: null }, { n: 'Chemin de terre', ic: '🟫', c: 2, col: '#CDB58C' }, { n: 'Allée de gravier', ic: '⬜', c: 4, col: '#E6DCC6' }];
+const ROAD_T = [{ n: 'Rue pavée', ic: '🧱', c: 6, col: null }, { n: 'Chemin de terre', ic: '🟫', c: 2, col: '#CDB58C' }, { n: 'Allée de gravier', ic: '⬜', c: 4, col: '#E6DCC6' }, { n: 'Calade de galets', ic: '🪨', c: 8, col: '#B4AD9E' }];
 const RMAX = 3000;
 const roadMesh = ROAD_T.map((t, i) => { const geo = new THREE.PlaneGeometry(TILE, TILE).rotateX(-Math.PI / 2);
   const m = new THREE.InstancedMesh(geo, i === 0 ? new THREE.MeshLambertMaterial({ map: paveTex(1, 1) }) : new THREE.MeshLambertMaterial({ color: t.col }), RMAX); m.count = 0; m.receiveShadow = true; m.userData.dyn = true; m.frustumCulled = false; scene.add(m); return m; });
 const tileKey = (ix, iz) => ix + ',' + iz, tileOf = (x) => Math.floor(x / TILE);
 function roadAt(x, z) { const R = S.city && S.city.roads; return !!(R && R[tileKey(tileOf(x), tileOf(z))] !== undefined); }
 const onMainRoad = (x, z) => Math.abs(z) < 2.5 && x > RIVER.x1 + 0.5;
-function drawRoads() { const R = (S.city && S.city.roads) || {}, n = [0, 0, 0];
-  Object.keys(R).forEach((k) => { const t = R[k], [ix, iz] = k.split(',').map(Number); if (n[t] >= RMAX) return; tmpM.makeTranslation(ix * TILE + TILE / 2, 0.07 + t * 0.002, iz * TILE + TILE / 2); roadMesh[t].setMatrixAt(n[t]++, tmpM); });
+function drawRoads() { const R = (S.city && S.city.roads) || {}, n = ROAD_T.map(() => 0);
+  Object.keys(R).forEach((k) => { const t = R[k], [ix, iz] = k.split(',').map(Number); if (n[t] >= RMAX) return; const cx = ix * TILE + TILE / 2, cz = iz * TILE + TILE / 2, gx = (groundY(cx + 1, cz) - groundY(cx - 1, cz)) / 2, gz = (groundY(cx, cz + 1) - groundY(cx, cz - 1)) / 2;
+    if (Math.abs(gx) + Math.abs(gz) < 0.002) tmpM.makeTranslation(cx, groundY(cx, cz) + 0.07 + t * 0.002, cz); else { tmpQ.setFromUnitVectors(UPV, tmpP.set(-gx, 1, -gz).normalize()); tmpM.compose(tmpP.set(cx, groundY(cx, cz) + 0.08 + t * 0.002, cz), tmpQ, tmpS.set(1.04, 1, 1.04)); } // a street laid on a slope leans with it
+    roadMesh[t].setMatrixAt(n[t]++, tmpM); });
   roadMesh.forEach((m, i) => { m.count = n[i]; m.instanceMatrix.needsUpdate = true; }); hideGrass(); }
 
 /* ---- grass under roads and buildings disappears ---- */
@@ -3011,7 +3057,7 @@ function hideGrass() { grassChanged(); }
 /* ---- city state ---- */
 function ensureCity() {
   if (S.city && S.city.v === 1) return;
-  const homes = [{ t: 'h', m: 'maison_a', x: 3, z: 5.8, r: Math.PI, l: 1, end: 0, rent: 0, tt: now() }, { t: 'h', m: 'maison_a', x: -4, z: 5.8, r: Math.PI, l: 1, end: 0, rent: 0, tt: now() }];
+  const homes = [{ t: 'h', m: 'maison_a', x: 3, z: 5.8, r: Math.PI, l: 1, end: 0, rent: 0, tt: now() }, { t: 'h', m: 'maison_a', x: 9, z: 5.8, r: Math.PI, l: 1, end: 0, rent: 0, tt: now() }];
   const prods = {}; PROD_KEYS.forEach((k) => { const L0 = START_LAYOUT[k]; prods[k] = L0 ? [L0[0], L0[1], L0[2], 1] : [MOV[k].x, MOV[k].z, 0, 0]; });
   S.city = { v: 1, prods, items: homes, roads: {} }; S.pop = 10; S.masons = S.masons || 1; dirty = true;
 }
@@ -3021,8 +3067,9 @@ function cityLinked() { if (!S.city) return 0; if (!links) computeLinks(); retur
 function cityHouses() { return ((S.city && S.city.items) || []).filter((it) => it.t === 'h').length; }
 
 function houseGroup(it, idx) {
-  const T = HOUSE_T[it.m], g = new THREE.Group(); g.position.set(it.x, 0, it.z); g.rotation.y = it.r || 0; scene.add(g);
-  const fb = slot(it.m, g, 3, (m) => ambHouse(g, it.m, m)); if (T.fb[0] === 'a') houseFb(fb, 4.5, 4.6, '#F1E3C8', '#B9634A', '#6F9FC0', '#D9483B'); else if (T.fb[0] === 'b') houseFb(fb, 5.6, 5.2, '#EADBC0', '#5B6B85', '#7FA98A', '#F0A6B8'); else houseFb(fb, T.fb[1], T.fb[2], '#F4E9D3', '#4E5D78', '#2F4B7C', '#D9483B');
+  const T = HOUSE_T[it.m], g = new THREE.Group(); g.position.set(it.x, padY(it.x, it.z, T.fp[0], T.fp[1]), it.z); g.rotation.y = it.r || 0; scene.add(g);
+  if (padDrop(it.x, it.z, T.fp[0], T.fp[1]) > 0.12) { const pl = box(T.fp[0] - 0.5, 2.4, T.fp[1] - 0.5, '#CDBFA3', 0, -2.4, 0, g); pl.castShadow = false; } // on a slope, a stone base carries the house
+  const fb = slot(it.m, g, 3, (m) => { ambHouse(g, it.m, m); styleHouse(g, m); }); if (T.fb[0] === 'a') houseFb(fb, 4.5, 4.6, '#F1E3C8', '#B9634A', '#6F9FC0', '#D9483B'); else if (T.fb[0] === 'b') houseFb(fb, 5.6, 5.2, '#EADBC0', '#5B6B85', '#7FA98A', '#F0A6B8'); else houseFb(fb, T.fb[1], T.fb[2], '#F4E9D3', '#4E5D78', '#2F4B7C', '#D9483B');
   const w = T.fp[0] - 1, d = T.fp[1] - 1, fz = d / 2 + 0.1;
   const sc = new THREE.Group(); sc.visible = false; g.add(sc);
   [[-w / 2 - 0.3, fz + 0.5], [w / 2 + 0.3, fz + 0.5], [-w / 2 - 0.3, fz - 0.2], [w / 2 + 0.3, fz - 0.2]].forEach((p) => cyl(0.06, 0.06, 5, '#B9804A', p[0], 0, p[1], sc, 5));
@@ -3053,14 +3100,14 @@ function rebuildCity() {
   grid = null; drawRoads(); links = null; loadNear();
 }
 let cityReady = false;
-function cityBoot() { const fresh = !(S.city && S.city.v === 1); ensureCity(); applyProds(); rebuildCity(); cityReady = true; if (window.__pf) window.__pf.city = { capTotal, popTarget, beauty, servCap, links: () => links, MOV, DECOS, decoGroup, houseGroup, openBuild, exitBuild, enterBuild, startMoveProd, startPlace, startRoad, paintRoad, confirmPlace, buildTap, get PLC() { return PLC; } }; if (fresh || !S.px) { player.position.set(6, 0, 1.6); target.set(6, 0, 1.6); placeCam(); } }
+function cityBoot() { const fresh = !(S.city && S.city.v === 1); ensureCity(); applyProds(); rebuildCity(); landBoot(); cityReady = true; if (window.__pf) window.__pf.city = { capTotal, popTarget, beauty, servCap, links: () => links, MOV, DECOS, decoGroup, houseGroup, openBuild, exitBuild, enterBuild, startMoveProd, startPlace, startRoad, paintRoad, confirmPlace, buildTap, get PLC() { return PLC; } }; if (fresh || !S.px) { player.position.set(6, 0, 1.6); target.set(6, 0, 1.6); placeCam(); } }
 
 /* ---- links, beauty, population ---- */
 let links = null;
 function houseLinked(it) { const [w, d] = itemFp(it); const x0 = it.x - w / 2 - 1, x1 = it.x + w / 2 + 1, z0 = it.z - d / 2 - 1, z1 = it.z + d / 2 + 1;
   for (let x = x0; x <= x1; x += 1) for (let z = z0; z <= z1; z += 1) { const edge = x <= x0 + 0.01 || x >= x1 - 0.99 || z <= z0 + 0.01 || z >= z1 - 0.99; if (edge && (roadAt(x, z) || onMainRoad(x, z))) return true; } return false; }
 function computeLinks() { links = S.city.items.map((it) => it.t === 'h' && houseLinked(it)); }
-function beauty() { let b = 0; S.city.items.forEach((it) => { if (it.t === 'd' && DECOS[it.k]) b += DECOS[it.k].b; else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
+function beauty() { let b = 0; S.city.items.forEach((it) => { if (it.t === 'd' && DECOS[it.k]) b += DECOS[it.k].b * (it.mon ? 2 : 1); else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
   PROD_KEYS.forEach((k) => { if (MOV[k].placed && SERV_BEAUTY[k]) b += SERV_BEAUTY[k]; }); return b + Math.min(60, Object.keys(S.city.roads).length * 0.1); }
 const rentMult = () => 1 + Math.min(1.5, beauty() / 150);
 function capOf(it) { return it.t === 'h' && !(it.end > 0) ? HOUSE_T[it.m].cap * [0, 1, 1.3, 1.6][it.l || 1] : 0; }
@@ -3095,7 +3142,7 @@ function tickCity(n, dt) {
     const lim = Math.floor(S.pop) >= sc[0] - 1 && sc[1]; $('poptip').hidden = !lim; if (lim) $('poptip').textContent = 'Il faut ' + sc[2] + ' pour dépasser ' + fmt(sc[0]); }
   tickDirs(); tickPiles(n / 1000);
   { const bu = buildUnlocked(); if ($('b-build').hidden === bu) $('b-build').hidden = !bu; }
-  GRID.visible = BUILD; if (BUILD) GRID.position.set(Math.round(target.x / 2) * 2, 0.085, Math.round(target.z / 2) * 2);
+  GRID.visible = BUILD; if (BUILD) GRID.position.set(Math.round(target.x / 2) * 2, groundY(target.x, target.z) + 0.085, Math.round(target.z / 2) * 2);
   if (BUILD && SEL && SEL.g) selRing.position.set(SEL.g.position.x, groundY(SEL.g.position.x, SEL.g.position.z) + 0.1, SEL.g.position.z);
 }
 let popT = 0;
@@ -3119,6 +3166,7 @@ function groundHit(sx, sy) { ndc.set(sx / window.innerWidth * 2 - 1, -(sy / wind
   if (!ray.ray.intersectPlane(groundPlane, hitP)) return null; for (let k = 0; k < 4; k++) { const yy = groundY(hitP.x, hitP.z); if (yy <= 0) break; groundPlane.constant = -yy; ray.ray.intersectPlane(groundPlane, hitP); } groundPlane.constant = 0; return [hitP.x, hitP.z]; }
 // is a w×d rectangle centred on x,z free? (own collisions excluded by the caller)
 function cellFree(px, pz) {
+  if (!landOwned(px, pz)) return false; // on ne bâtit que sur un terrain acheté
   if (px < BX0 + 1 || px > BX1 - 1 || pz < BZ0 + 1 || pz > BZ1 - 1) return false;
   if (px > RIVER.x0 - 1.5 && px < RIVER.x1 + 1.5) return false;
   if (px > PARK.x0 - 1 && px < PARK.x1 + 1 && pz > PARK.z - 2.6 && pz < PARK.z + 2.6) return false;
@@ -3160,9 +3208,9 @@ function enterBuild() { BUILD = true; $('build').hidden = true; $('buildbar').hi
 function exitBuild() { cancelPlace(); CELLS.count = 0; GRID.visible = false; BUILD = false; SEL = null; selRing.visible = false; ROADM = null; $('buildbar').hidden = true; $('selbar').hidden = true; $('placebar').hidden = true; document.body.classList.remove('building'); ghostBox.visible = false; }
 
 // ---- placing something new (house, deco, production building) or moving an existing one ----
-function startPlace(spec) { enterBuild(); const a = player.rotation.y; spec.x = player.position.x + Math.sin(a) * 6; spec.z = player.position.z + Math.cos(a) * 6; if (Math.abs(spec.z) < 6) spec.z = spec.z < 0 ? -8 : 8; spec.r = spec.r || 0; PLC = spec; showPlace(); }
+function startPlace(spec) { enterBuild(); const a = player.rotation.y; spec.x = GOD ? target.x : player.position.x + Math.sin(a) * 6; spec.z = GOD ? target.z : player.position.z + Math.cos(a) * 6; /* en vue du dessus, on pose là où l'on regarde */ if (Math.abs(spec.z) < 6) spec.z = spec.z < 0 ? -8 : 8; spec.r = spec.r || 0; PLC = spec; showPlace(); }
 function plSize(r) { const s = PLC; if (s.t === 'h') return itemFp({ t: 'h', m: s.m }, r); if (s.t === 'd') return itemFp({ t: 'd', k: s.k }, r); if (s.t === 'p' || s.t === 'mp') return mfp(MOV[s.k], r); if (s.t === 'mi') return itemFp(S.city.items[s.i], r); return [2, 2]; }
-function plCost() { const s = PLC; if (s.t === 'h') return Math.round(HOUSE_T[s.m].c * buildMul()); if (s.t === 'd') { const cnt = S.city.items.filter((it) => it.k === s.k).length; return Math.round(DECOS[s.k].c * Math.pow(1.06, cnt)); } if (s.t === 'p') return MOV[s.k].c; return 0; }
+function plCost() { const s = PLC; if (s.t === 'h') return Math.round(HOUSE_T[s.m].c * buildMul()); if (s.t === 'd') { if (s.mon) return s.cost || 0; const cnt = S.city.items.filter((it) => it.k === s.k).length; return Math.round(DECOS[s.k].c * Math.pow(1.06, cnt)); } if (s.t === 'p') return MOV[s.k].c; return 0; }
 function plFree() { const [w, d] = plSize(PLC.r), s = PLC; let saved = null;
   if (s.t === 'mp' || s.t === 'p') { saved = MOV[s.k].cols.map((e) => [e.c[0], e.c[1]]); MOV[s.k].cols.forEach((e) => { e.c[0] += 5000; }); }
   if (s.t === 'mi' && s.col) s.col[0] += 5000;
@@ -3184,14 +3232,15 @@ function cancelPlace() { const s = PLC; if (!s) return; if (s.g && (s.t === 'h' 
   if (s.t === 'mi') { const it = S.city.items[s.i]; s.g.position.set(it.x, groundY(it.x, it.z), it.z); s.g.rotation.y = it.r || 0; }
   PLC = null; ghostBox.visible = false; CELLS.count = 0; $('placebar').hidden = true; }
 function confirmPlace() { const s = PLC; if (!s || !plFree()) return; const cost = plCost(); if (S.coins < cost) return;
+  if (s.mon) { const Q = quartierAt(s.x, s.z); if (!Q || Q.id !== s.mon) return toast('🗿 Ce monument appartient à un autre quartier', 'Pose-le dans ' + qName(QUARTIERS.find((q) => q.id === s.mon)) + '.'); }
   if (s.t === 'h') { if (busyMasons() >= S.masons) return toast('Tes maçons sont occupés', 'Attends la fin du chantier, ou embauche une équipe dans « Améliorer ».');
     S.coins -= cost; dropGhost(s.g); S.city.items.push({ t: 'h', m: s.m, x: s.x, z: s.z, r: s.r, l: 1, end: now() + dur(HOUSE_T[s.m].t * 60000 * timeMul()), rent: 0, tt: now() }); gain(Math.ceil(cost / 10)); }
-  else if (s.t === 'd') { S.coins -= cost; dropGhost(s.g); S.city.items.push({ t: 'd', k: s.k, x: s.x, z: s.z, r: s.r }); gain(Math.ceil(cost / 12)); }
+  else if (s.t === 'd') { S.coins -= cost; dropGhost(s.g); const ni = { t: 'd', k: s.k, x: s.x, z: s.z, r: s.r }; if (s.mon) ni.mon = s.mon; S.city.items.push(ni); gain(Math.ceil(cost / 12) + (s.mon ? 20 : 0)); }
   else if (s.t === 'p') { S.coins -= cost; S.city.prods[s.k] = [s.x, s.z, s.r, 1]; MOV[s.k].on(); gain(Math.ceil(cost / 8)); toast(MOV[s.k].n + ' construit !', MOV[s.k].desc); }
   else if (s.t === 'mp') S.city.prods[s.k] = [s.x, s.z, s.r, 1];
   else if (s.t === 'mi') { const it = S.city.items[s.i]; it.x = s.x; it.z = s.z; it.r = s.r; }
   burst(s.x, 1.5, s.z, ['#E3A73C', '#F3CF7A', '#5E8F3E'], 14, 5); dirty = true; ghostBox.visible = false; CELLS.count = 0; $('placebar').hidden = true;
-  const again = (s.t === 'd' || s.t === 'h') ? { t: s.t, m: s.m, k: s.k, r: s.r, x: s.x + plSize(s.r)[0], z: s.z } : null; PLC = null; rebuildCity();
+  const again = (s.t === 'd' || s.t === 'h') && !s.mon ? { t: s.t, m: s.m, k: s.k, r: s.r, x: s.x + plSize(s.r)[0], z: s.z } : null; PLC = null; rebuildCity();
   if (again && S.coins >= (again.t === 'h' ? Math.round(HOUSE_T[again.m].c * buildMul()) : 0)) { PLC = again; showPlace(); } }
 function startMoveProd(k) { enterBuild(); const M = MOV[k]; PLC = { t: 'mp', k, x: M.x, z: M.z, r: M.r }; showPlace(); }
 
@@ -3200,7 +3249,7 @@ function startRoad(t) { enterBuild(); ROADM = { t }; $('placebar').hidden = fals
 function paintRoad(x, z) { const ix = tileOf(x), iz = tileOf(z), k = tileKey(ix, iz), R = S.city.roads, cx = ix * TILE + TILE / 2, cz = iz * TILE + TILE / 2;
   if (ROADM.t < 0) { if (R[k] !== undefined) { S.coins += Math.floor(ROAD_T[R[k]].c / 2); delete R[k]; dirty = true; links = null; drawRoads(); grid = null; } return; }
   if (R[k] === ROADM.t || S.coins < ROAD_T[ROADM.t].c) return;
-  if (cx < BX0 + 1 || cx > BX1 - 1 || cz < BZ0 + 1 || cz > BZ1 - 1 || (cx > RIVER.x0 - 1.5 && cx < RIVER.x1 + 1.5) || Math.hypot(cx - HILL.x, cz - HILL.z) < HILL.r1 || Math.abs(cz) < 2.3) return;
+  if (cx < BX0 + 1 || cx > BX1 - 1 || cz < BZ0 + 1 || cz > BZ1 - 1 || (cx > RIVER.x0 - 1.5 && cx < RIVER.x1 + 1.5) || Math.hypot(cx - HILL.x, cz - HILL.z) < HILL.r1 || Math.abs(cz) < 2.3 || !landOwned(cx, cz)) return;
   for (const [a, b] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6], [0, 0]]) if (blocked(cx + a, cz + b, 0)) return;
   S.coins -= ROAD_T[ROADM.t].c; R[k] = ROADM.t; dirty = true; links = null; drawRoads(); }
 
@@ -3223,7 +3272,7 @@ $('sel-move').addEventListener('click', () => { const s = SEL; if (!s) return; $
   else { const it = S.city.items[s.i]; PLC = { t: 'mi', i: s.i, g: cityObjs[s.i], x: it.x, z: it.z, r: it.r || 0, col: rects.find((c) => c.city && Math.abs(c[0] - it.x) < 0.01 && Math.abs(c[1] - it.z) < 0.01) }; }
   SEL = null; showPlace(); });
 $('sel-rot').addEventListener('click', () => { const s = SEL; if (!s) return; $('sel-move').click(); if (PLC) { PLC.r = (PLC.r + Math.PI / 2) % (Math.PI * 2); showPlace(); } });
-$('sel-del').addEventListener('click', () => { const s = SEL; if (!s || s.t !== 'mi') return; const it = S.city.items[s.i], back = it.t === 'h' ? Math.round(HOUSE_T[it.m].c / 2) : Math.round((DECOS[it.k] ? DECOS[it.k].c : 0) / 2);
+$('sel-del').addEventListener('click', () => { const s = SEL; if (!s || s.t !== 'mi') return; const it = S.city.items[s.i], back = it.t === 'h' ? Math.round(HOUSE_T[it.m].c / 2) : it.mon ? 0 : Math.round((DECOS[it.k] ? DECOS[it.k].c : 0) / 2);
   S.coins += back; S.city.items.splice(s.i, 1); SEL = null; selRing.visible = false; $('selbar').hidden = true; dirty = true; floatAt(player, '+' + back + ' ' + C); rebuildCity(); });
 $('sel-x').addEventListener('click', () => { SEL = null; selRing.visible = false; $('selbar').hidden = true; });
 $('pl-ok').addEventListener('click', () => { if (ROADM) { ROADM = null; $('placebar').hidden = true; return; } confirmPlace(); });
@@ -3327,11 +3376,165 @@ function tickVisit(dt) { const V = VISIT; if (!V.on) return; const s = V.stops[V
   c.position.set(V.pos.x, gy + 1.7 + Math.sin(performance.now() * 0.0065) * (stop ? 0 : 0.03), V.pos.z); c.lookAt(V.pos.x + Math.sin(V.yaw) * 10, gy + V.lookY, V.pos.z + Math.cos(V.yaw) * 10);
   target.set(V.pos.x, 0, V.pos.z); }
 $('v-quit').addEventListener('click', () => endVisit(false)); $('v-build').addEventListener('click', () => endVisit(true));
-$('b-menu').addEventListener('click', () => { if (!S.started) return; openSheet('Menu', 'Petite France', [
+$('b-menu').addEventListener('click', () => { if (!S.started) return; openSheet('Menu', 'Village de ' + vil().n, [
+  { t: '🛡️ Mon village', s: 'Le nom, le blason et la devise de ton village.', btn: 'Modifier', ok: true, run: () => { closeSheet(); villageSheet(); } },
   { t: '🚶 Visiter le village', s: 'La caméra descend dans les rues et se promène de maison en maison, comme un habitant.', btn: 'Visiter', ok: true, run: () => { closeSheet(); startVisit(); } },
   { t: '🗺️ Carte', s: 'Voir les quartiers du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-map').click(); } },
   { t: '🛒 Boutique', s: 'Pass de saison et offres.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-shop').click(); } },
   { t: '▶️ +20 pièces', s: 'Regarder une publicité (démo).', btn: 'Voir', ok: true, run: () => { closeSheet(); $('b-ad').click(); } } ]); });
+/* ================= les quartiers et les îlots : une carte bornée, quadrillée, qu'on ouvre dans un ordre lisible ================= */
+// Cahier des charges : CAHIER-DES-CHARGES-QUARTIERS.md. Neuf quartiers ; chacun est découpé en îlots d'environ 16 m qu'on achète un par un.
+// On ne construit que sur un îlot acheté. Les chiffres (habitants, prix) sont des premiers réglages.
+const TIER_POP = [0, 25, 60, 150, 400, 1000, 2000], TIER_COST = [0, 150, 400, 900, 2000, 4000, 8000], ILOT_BASE = [100, 150, 250, 400, 700, 1200, 2000];
+const QUARTIERS = [
+  { id: 'bourg', n: 'Le Bourg', ic: '🥖', tier: 0, x0: -34, x1: 14, z0: -22, z1: 12, nx: 3, nz: 2, ch: 'la boulangerie' },
+  { id: 'campagne', n: 'La Campagne', ic: '🌾', tier: 1, x0: -104, x1: -50, z0: -20, z1: 28, nx: 3, nz: 3, ch: 'la ferme' },
+  { id: 'quais', n: 'Les Quais', ic: '⛵', tier: 2, x0: -50, x1: -34, z0: -56, z1: 28, nx: 1, nz: 5, ch: 'le marché' },
+  { id: 'hautbourg', n: 'Le Haut-Bourg', ic: '🏛️', tier: 3, x0: -34, x1: -2, z0: -56, z1: -22, nx: 2, nz: 2, ch: 'la mairie' },
+  { id: 'parvis', n: 'Le Parvis', ic: '⛪', tier: 3, x0: 14, x1: 42, z0: -22, z1: 12, nx: 2, nz: 2, ch: 'l\'église' },
+  { id: 'faubourg', n: 'Le Faubourg', ic: '☕', tier: 4, x0: 42, x1: 68, z0: -22, z1: 12, nx: 2, nz: 2, ch: 'le bistrot' },
+  { id: 'coteau', n: 'Le Coteau', ic: '🍇', tier: 4, x0: -34, x1: 68, z0: 12, z1: 28, nx: 6, nz: 1, ch: 'les vignes' },
+  { id: 'bois', n: 'Les Bois', ic: '🦌', tier: 5, x0: -104, x1: -50, z0: -56, z1: -20, nx: 3, nz: 2, ch: 'la faune' },
+  { id: 'butte', n: 'La Butte', ic: '🏰', tier: 6, x0: -2, x1: 68, z0: -56, z1: -22, nx: 4, nz: 2, ch: 'le château' }
+];
+const ILOTS = [];
+QUARTIERS.forEach((Q) => { const sp = (a, b, n) => { const o = []; for (let k = 0; k <= n; k++) o.push(a + 2 * Math.round(k * (b - a) / n / 2)); o[n] = b; return o; };
+  Q.xs = sp(Q.x0, Q.x1, Q.nx); Q.zs = sp(Q.z0, Q.z1, Q.nz); Q.ilots = [];
+  for (let j = 0; j < Q.nz; j++) for (let i = 0; i < Q.nx; i++) { const I = { q: Q, key: Q.id + ':' + (j * Q.nx + i), x0: Q.xs[i], x1: Q.xs[i + 1], z0: Q.zs[j], z1: Q.zs[j + 1], i, j }; I.cx = (I.x0 + I.x1) / 2; I.cz = (I.z0 + I.z1) / 2; Q.ilots.push(I); ILOTS.push(I); }
+  Q.cx = (Q.x0 + Q.x1) / 2; Q.cz = (Q.z0 + Q.z1) / 2; });
+function quartierAt(x, z) { for (const Q of QUARTIERS) if (x >= Q.x0 && x < Q.x1 && z >= Q.z0 && z < Q.z1) return Q; return null; }
+function ilotAt(x, z) { const Q = quartierAt(x, z); if (!Q) return null; let i = 0, j = 0; while (i < Q.nx - 1 && x >= Q.xs[i + 1]) i++; while (j < Q.nz - 1 && z >= Q.zs[j + 1]) j++; return Q.ilots[j * Q.nx + i]; }
+const landS = () => S.land || (S.land = { open: { bourg: 1 }, own: {}, names: {} });
+function landOwned(x, z) { const I = ilotAt(x, z); return !I || !!landS().own[I.key]; }
+const qOpen = (Q) => !!landS().open[Q.id], qName = (Q) => landS().names[Q.id] || Q.n, qOwned = (Q) => Q.ilots.filter((I) => landS().own[I.key]).length;
+const ilotPrice = (I) => Math.round(ILOT_BASE[I.q.tier] * (1 + 0.35 * qOwned(I.q)) / 10) * 10;
+// what still stands between the player and a quarter ('' = it can be opened)
+function qLock(Q) { const pop = Math.floor(S.pop || 0); if (pop < TIER_POP[Q.tier]) return TIER_POP[Q.tier] + ' habitants';
+  const sib = QUARTIERS.some((o) => o.tier === Q.tier && o !== Q && qOpen(o)); if (sib && pop < (TIER_POP[Q.tier + 1] || 1e9)) return TIER_POP[Q.tier + 1] + ' habitants'; return ''; }
+const ilotNear = (I) => ILOTS.some((o) => landS().own[o.key] && o !== I && Math.abs(o.cx - I.cx) < (o.x1 - o.x0 + I.x1 - I.x0) / 2 + 1 && Math.abs(o.cz - I.cz) < (o.z1 - o.z0 + I.z1 - I.z0) / 2 + 1);
+// everything already built keeps its ground: those terrains are given
+function landGrant() { const L = landS(); L.open.bourg = 1; const C = [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]], g = (x, z) => { const I = ilotAt(x, z); if (I && !L.own[I.key]) { L.own[I.key] = 1; dirty = true; } };
+  (S.city.items || []).forEach((it) => { const f = itemFp(it); C.forEach((c) => g(it.x + c[0] * (f[0] / 2 - 0.3), it.z + c[1] * (f[1] / 2 - 0.3))); });
+  PROD_KEYS.forEach((k) => { const M = MOV[k]; if (!M.placed) return; const f = mfp(M, M.r); C.forEach((c) => g(M.x + c[0] * (f[0] / 2 - 0.3), M.z + c[1] * (f[1] / 2 - 0.3))); });
+  Object.keys(S.city.roads || {}).forEach((k) => { const [ix, iz] = k.split(',').map(Number); g(ix * TILE + 1, iz * TILE + 1); });
+  QUARTIERS[0].ilots.forEach((I) => { if (qOwned(QUARTIERS[0]) < 2) L.own[I.key] = 1; }); }
+
+/* ---- what the map shows: land that is not yours is dimmed; in build mode, the terrains for sale are outlined and priced ---- */
+const landData = new Uint8Array(GRASS.mw * GRASS.mh), landTex = new THREE.DataTexture(landData, GRASS.mw, GRASS.mh, THREE.RedFormat); landTex.magFilter = landTex.minFilter = THREE.LinearFilter;
+const landLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: '#F3CF7A', transparent: true, opacity: 0.95, depthTest: false })); landLines.frustumCulled = false; landLines.renderOrder = 5; landLines.userData.dyn = true; landLines.raycast = noRay; landLines.visible = false; scene.add(landLines);
+const LLAB = ILOTS.map((I) => { const a = new THREE.Object3D(); a.position.set(I.cx, groundY(I.cx, I.cz), I.cz); scene.add(a); const l = label(a, 1.2); setLabel(l, '', ''); l.act = () => buyIlot(I); return l; });
+const QLAB = QUARTIERS.map((Q) => { const a = new THREE.Object3D(); a.position.set(Q.cx, groundY(Q.cx, Q.cz), Q.cz); scene.add(a); const l = label(a, 3); setLabel(l, '', ''); l.act = () => (qOpen(Q) ? renameQuartier(Q) : openQuartier(Q)); return l; });
+function landRefresh() { const L = landS(), G = GRASS, sx = (G.box[2] - G.box[0]) / G.mw, sz = (G.box[3] - G.box[1]) / G.mh, P = [];
+  for (let j = 0; j < G.mh; j++) { const z = G.box[1] + (j + 0.5) * sz; for (let i = 0; i < G.mw; i++) { const I = ilotAt(G.box[0] + (i + 0.5) * sx, z); landData[j * G.mw + i] = !I ? 120 : L.own[I.key] ? 255 : qOpen(I.q) ? 190 : 120; } }
+  landTex.needsUpdate = true; AMBU.uLand.value = landTex;
+  ILOTS.forEach((I) => { if (L.own[I.key] || !qOpen(I.q)) return; const e = [[I.x0, I.z0, I.x1, I.z0], [I.x1, I.z0, I.x1, I.z1], [I.x1, I.z1, I.x0, I.z1], [I.x0, I.z1, I.x0, I.z0]];
+    e.forEach((s) => { const n = Math.max(1, Math.round(Math.hypot(s[2] - s[0], s[3] - s[1]) / 2)); for (let k = 0; k < n; k++) { if (k % 2) continue; const xa = s[0] + (s[2] - s[0]) * k / n, za = s[1] + (s[3] - s[1]) * k / n, xb = s[0] + (s[2] - s[0]) * (k + 1) / n, zb = s[1] + (s[3] - s[1]) * (k + 1) / n; P.push(xa, groundY(xa, za) + 0.16, za, xb, groundY(xb, zb) + 0.16, zb); } }); });
+  landLines.geometry.dispose(); landLines.geometry = new THREE.BufferGeometry(); landLines.geometry.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); landT = 9; }
+let landT = 9;
+function tickLand(dt) { if (!S.city || (landT += dt) < 0.5) return; landT = 0; const L = landS(), far = zoom >= 58; landLines.visible = BUILD;
+  ILOTS.forEach((I, k) => { const sale = BUILD && !L.own[I.key] && qOpen(I.q) && (ilotNear(I) || qOwned(I.q) === 0); if (!sale) { if (LLAB[k].txt) setLabel(LLAB[k], '', ''); return; } const p = ilotPrice(I); setLabel(LLAB[k], '🪧 ' + p + ' ' + C, S.coins >= p ? 'land ok' : 'land'); });
+  QUARTIERS.forEach((Q, k) => { let t = '', c = 'qn'; if (qOpen(Q)) { if (far || BUILD) { t = (BUILD ? '🎨 ' : Q.ic + ' ') + qName(Q); if (BUILD && !monumentOf(Q) && qOwned(Q) > 0) { t += ' · 🗿 monument offert'; c = 'qn ok'; } } } else if (BUILD || far) { const lk = qLock(Q); t = lk ? '🔒 ' + qName(Q) + ' · ' + lk : '🗝️ Ouvrir ' + qName(Q) + ' · ' + TIER_COST[Q.tier] + ' ' + C; c = lk ? 'qn' : 'qn ok'; } setLabel(QLAB[k], t, c); }); }
+function landChanged() { dirty = true; landRefresh(); }
+function landBoot() { landGrant(); landRefresh(); villageApply(); if (window.__pf) window.__pf.land = { QUARTIERS, ILOTS, landS, qStyle, renameQuartier, rebuildCity, FACADES, vil, villageSheet, villageApply, MONUMENTS, monumentOf, placeMonument, ilotAt, quartierAt, landOwned, buyIlot, openQuartier, qLock, ilotPrice, landChanged }; }
+
+/* ---- acheter un terrain, ouvrir un quartier, le baptiser ---- */
+function buyIlot(I) { if (!S.started) return; const p = ilotPrice(I);
+  openSheet('Terrain à vendre', qName(I.q) + ' · ' + (I.x1 - I.x0) + ' m × ' + (I.z1 - I.z0) + ' m', [{ t: '🪧 Acheter ce terrain', s: 'Tu pourras y bâtir maisons, rues et décor. ' + qOwned(I.q) + ' terrain' + (qOwned(I.q) > 1 ? 's' : '') + ' sur ' + I.q.ilots.length + ' dans ce quartier.', btn: p + ' ' + C, ok: S.coins >= p,
+    run: () => { if (S.coins < p || landS().own[I.key]) return; S.coins -= p; landS().own[I.key] = 1; closeSheet(); landChanged(); toast('🪧 Terrain acheté', ''); SFX.coin(); } }]); }
+function nameInput(Q) { const w = document.createElement('div'); w.style.cssText = 'margin:0 0 10px'; w.innerHTML = '<label style="display:block;font-size:12px;font-weight:800;margin-bottom:4px">Le nom de ce quartier</label><input type="text" maxlength="24" style="width:100%;box-sizing:border-box;font:800 15px Nunito,sans-serif;padding:9px 11px;border:2.5px solid var(--ink);border-radius:12px;background:#fff">'; w.querySelector('input').value = qName(Q); return w; }
+const cleanName = (v, d) => { v = (v || '').replace(/[<>]/g, '').trim().slice(0, 24); return v || d; };
+function openQuartier(Q) { if (!S.started) return; const lk = qLock(Q), cost = TIER_COST[Q.tier], pre = nameInput(Q);
+  if (lk) return toast('🔒 ' + qName(Q), 'Ce quartier s\'ouvre à ' + lk + '.');
+  openSheet('Ouvrir un quartier', qName(Q) + ' · ' + Q.ilots.length + ' terrains · ouvre ' + Q.ch, [{ t: '🗝️ Ouvrir ce quartier', s: 'Le premier terrain est offert. Choisis son nom maintenant, tu pourras le changer.', btn: cost + ' ' + C, ok: S.coins >= cost,
+    run: () => { if (S.coins < cost || qOpen(Q)) return; S.coins -= cost; const L = landS(); L.open[Q.id] = 1; L.names[Q.id] = cleanName(pre.querySelector('input').value, Q.n);
+      let best = null, bd = 1e9; Q.ilots.forEach((I) => { ILOTS.forEach((o) => { if (!L.own[o.key]) return; const d = Math.hypot(o.cx - I.cx, o.cz - I.cz); if (d < bd) { bd = d; best = I; } }); }); L.own[(best || Q.ilots[0]).key] = 1;
+      closeSheet(); landChanged(); toast(Q.ic + ' ' + qName(Q) + ' est ouvert', ''); SFX.done(); } }], null, pre); }
+
+/* ================= le style de chaque quartier : façades, mobilier, arbre d'alignement ================= */
+// Un style ne change pas les modèles : il remplace les couleurs des murs et des toits des maisons du quartier, celle de la fonte du mobilier, et l'essence de l'arbre d'alignement.
+const FACADES = [{ n: 'Pierre blonde, tuiles rousses' }, { n: 'Enduit blanc, ardoise bleue', w: '#F7F4EC', r: '#4E5D78' }, { n: 'Brique rouge, ardoise sombre', w: '#B9634A', r: '#3E4A5E' }, { n: 'Ocre de Provence, tuiles roses', w: '#E8B878', r: '#D98A6A' }, { n: 'Granit gris, ardoise', w: '#B8B4AA', r: '#3F4654' }];
+const MOBILIERS = [{ n: 'Fonte parisienne d\'origine' }, { n: 'Fonte verte', c: '#2E5A43' }, { n: 'Fer forgé noir', c: '#23262B' }, { n: 'Bois rustique', c: '#7A5234' }];
+const ARBRES = [{ n: 'Platane', k: 'platane' }, { n: 'Tilleul', k: undefined }, { n: 'Peuplier', k: 'peuplier' }];
+function qStyle(Q) { const L = landS(); L.style = L.style || {}; return L.style[Q.id] || (L.style[Q.id] = { f: 0, m: 0, a: 0 }); }
+function styleAt(x, z) { const Q = quartierAt(x, z); return Q ? qStyle(Q) : { f: 0, m: 0, a: 0 }; }
+function furnitureAt(x, z) { if (x > 500 || !S.city) return null; const m = MOBILIERS[styleAt(x, z).m]; return m && m.c ? m.c : null; }
+const FMAT = {};
+function facadeMat(k) { if (!k || !FACADES[k]) return VCOLF; if (FMAT[k]) return FMAT[k]; const F = FACADES[k], v3 = (h) => { const c = new THREE.Color(h); return 'vec3(' + c.r.toFixed(4) + ',' + c.g.toFixed(4) + ',' + c.b.toFixed(4) + ')'; };
+  // every house model has its own cream for the walls and its own red or blue for the roof: recognise them by family, not one by one
+  const frag = '{ vec3 sc = diffuseColor.rgb; float sl = dot(sc, vec3(0.3, 0.6, 0.1)); vec3 sn = inverseTransformDirection(normal, viewMatrix);\n' +
+    'if (sc.r > 0.8 && sc.g > 0.66 && sc.g < 0.9 && sc.b > 0.38 && sc.b < 0.76) diffuseColor.rgb = ' + v3(F.w) + ' * clamp(sl / 0.78, 0.85, 1.15);\n' +
+    'else if (sn.y > 0.2 && sc.r > 0.25 && sc.g < 0.45 * sc.r && sc.b < 0.3 * sc.r) diffuseColor.rgb = ' + v3(F.r) + ' * clamp(sl / 0.24, 0.7, 1.3);\n' +
+    'else if (sn.y > 0.2 && sc.b > sc.r * 1.2 && sl < 0.5) diffuseColor.rgb = ' + v3(F.r) + '; }\n';
+  return (FMAT[k] = ambPatch(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), 'glowattr', { key: ':facade' + k, frag })); }
+function styleHouse(g, m) { const k = styleAt(g.position.x, g.position.z).f; if (!k) return; const mt = facadeMat(k); m.traverse((o) => { if (o.isMesh && o.material === VCOLF) o.material = mt; }); }
+STYLE_READY = true;
+const styleCost = (Q) => 60 * (Q.tier + 1);
+// la fiche d'un quartier : son nom et ses trois choix de style
+function renameQuartier(Q) { if (!S.started) return; const pre = nameInput(Q), st = qStyle(Q), cost = styleCost(Q), opts = [];
+  opts.push({ t: '✏️ Renommer le quartier', s: 'Le nom s\'affiche sur la carte du village.', btn: 'Valider', ok: true, run: () => { landS().names[Q.id] = cleanName(pre.querySelector('input').value, Q.n); closeSheet(); landChanged(); } });
+  const pick = (ic, what, list, key) => list.forEach((o, i) => { const cur = st[key] === i; opts.push({ t: ic + ' ' + o.n, s: cur ? what + ' · le choix actuel' : what, btn: cur ? 'Actuel' : cost + ' ' + C, ok: !cur && S.coins >= cost, run: () => { if (st[key] === i || S.coins < cost) return; S.coins -= cost; st[key] = i; dirty = true; rebuildCity(); renameQuartier(Q); } }); });
+  monumentRows(Q, opts);
+  pick('🏠', 'Façades et toits des maisons', FACADES, 'f'); pick('🪑', 'Mobilier de rue', MOBILIERS, 'm'); pick('🌳', 'Arbre d\'alignement', ARBRES, 'a');
+  openSheet(Q.ic + ' ' + qName(Q), qOwned(Q) + ' terrain' + (qOwned(Q) > 1 ? 's' : '') + ' sur ' + Q.ilots.length + ' · chaque changement de style coûte ' + cost + ' pièces', opts, null, pre); }
+
+/* ================= le monument du quartier : un parmi trois, offert à l'ouverture, qui compte double pour la beauté ================= */
+const MONUMENTS = { bourg: ['vasques', 'kiosque_musique', 'coq'], campagne: ['puits', 'potager_carres', 'cadran_solaire'], quais: ['gloriette', 'allee_tilleuls', 'miroir_eau'], hautbourg: ['equestre', 'bassin_octogonal', 'tapis_vert'],
+  parvis: ['broderie', 'medicis', 'carrousel'], faubourg: ['petanque', 'bal', 'pavillon_treillage'], coteau: ['roseraie', 'jardin_topiaires', 'labyrinthe'], bois: ['lion', 'obelisque', 'pergola_glycine'], butte: ['bassin_rond', 'parterre', 'rang_orangers'] };
+const monumentOf = (Q) => S.city.items.find((it) => it.mon === Q.id);
+function placeMonument(Q, id, cost) { const old = monumentOf(Q); if (old) { S.city.items.splice(S.city.items.indexOf(old), 1); rebuildCity(); }
+  const I = Q.ilots.find((o) => landS().own[o.key]) || Q.ilots[0]; camTo(I.cx, I.cz); startPlace({ t: 'd', k: id, mon: Q.id, cost: cost || 0 }); toast('🗿 Pose le monument dans ' + qName(Q), ''); }
+function monumentRows(Q, opts) { const cur = monumentOf(Q), swap = styleCost(Q) * 5;
+  (MONUMENTS[Q.id] || []).filter((id) => DECOS[id]).forEach((id) => { const D = DECOS[id], here = cur && cur.k === id, cost = cur ? swap : 0;
+    opts.push({ t: '🗿 ' + D.n, s: here ? 'Le monument du quartier · +' + D.b * 2 + ' beauté' : 'Monument · +' + D.b * 2 + ' beauté' + (cur ? ' · remplace l\'actuel' : ' · offert'), btn: here ? 'En place' : cur ? cost + ' ' + C : 'Poser', ok: !here && S.coins >= cost && qOwned(Q) > 0,
+      run: () => { if (here || S.coins < cost) return; closeSheet(); placeMonument(Q, id, cost); } }); }); }
+
+/* ================= l'identité du village : son nom, son blason, sa devise ================= */
+const HERALD = [['Azur', '#2F4B7C'], ['Gueules', '#C9403A'], ['Sinople', '#3F7A46'], ['Sable', '#2B2535'], ['Pourpre', '#7B4A9E'], ['Or', '#E3A73C'], ['Argent', '#F4F1EA']];
+const EMBLEMES = ['🥖', '🌾', '⚜️', '🐓', '🏰', '⛪', '🍇', '🦌', '🐗', '🦅', '🐇', '🌻', '🌳', '⭐', '🔔', '🗝️', '⚓', '🌹', '🐝', '🍎'];
+const FORMES = ['Écu ancien', 'Écu moderne', 'Ovale', 'Losange'], PARTITIONS = ['Plein', 'Parti', 'Coupé', 'Bandé'];
+const vil = () => S.village || (S.village = { n: 'Petite France', dv: '', f: 0, p: 1, c1: 0, c2: 5, e: 0 });
+function blasonPath(g, f) { g.beginPath();
+  if (f === 0) { g.moveTo(10, 8); g.lineTo(90, 8); g.lineTo(90, 62); g.quadraticCurveTo(90, 100, 50, 114); g.quadraticCurveTo(10, 100, 10, 62); }
+  else if (f === 1) { g.moveTo(10, 8); g.lineTo(90, 8); g.lineTo(90, 86); g.quadraticCurveTo(90, 100, 72, 102); g.quadraticCurveTo(56, 104, 50, 113); g.quadraticCurveTo(44, 104, 28, 102); g.quadraticCurveTo(10, 100, 10, 86); }
+  else if (f === 2) g.ellipse(50, 61, 41, 53, 0, 0, Math.PI * 2); else { g.moveTo(50, 5); g.lineTo(93, 61); g.lineTo(50, 116); g.lineTo(7, 61); }
+  g.closePath(); }
+// the coat of arms, drawn in a box 100 wide and 120 high scaled to s pixels wide
+function drawBlason(g, v, x, y, s) { g.save(); g.translate(x, y); g.scale(s / 100, s / 100); const c1 = (HERALD[v.c1] || HERALD[0])[1], c2 = (HERALD[v.c2] || HERALD[5])[1];
+  blasonPath(g, v.f); g.save(); g.clip(); g.fillStyle = c1; g.fillRect(0, 0, 100, 120); g.fillStyle = c2;
+  if (v.p === 1) g.fillRect(50, 0, 50, 120); else if (v.p === 2) g.fillRect(0, 60, 100, 60); else if (v.p === 3) { g.translate(50, 60); g.rotate(Math.PI / 4); g.fillRect(-90, -15, 180, 30); }
+  g.restore(); blasonPath(g, v.f); g.lineWidth = 5; g.lineJoin = 'round'; g.strokeStyle = '#2B2535'; g.stroke();
+  g.font = '46px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(EMBLEMES[v.e] || EMBLEMES[0], 50, v.f === 3 ? 61 : 56); g.restore(); }
+function blasonURL(v, px) { const cv = document.createElement('canvas'); cv.width = px; cv.height = Math.round(px * 1.2); drawBlason(cv.getContext('2d'), v, 0, 0, px); return cv.toDataURL(); }
+// le panneau d'entrée du village, à la française : fond blanc, liseré rouge, le nom en capitales
+const villageCv = document.createElement('canvas'); villageCv.width = 768; villageCv.height = 256; const villageTex = new THREE.CanvasTexture(villageCv); villageTex.colorSpace = THREE.SRGBColorSpace;
+{ const g = group(-33.4, 5.6, Math.PI / 4); g.userData = { dyn: true }; /* tourné vers la caméra, à la sortie du pont */ const mt = new THREE.MeshBasicMaterial({ map: villageTex });
+  [0, Math.PI].forEach((ry) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(3.3, 1.1), mt); p.position.set(0, 1.95, ry ? -0.045 : 0.045); p.rotation.y = ry; p.raycast = noRay; g.add(p); });
+  [-1.35, 1.35].forEach((x) => { const c = cyl(0.06, 0.06, 2.5, '#8FA3B8', x, 0, 0, g, 6); c.raycast = noRay; }); box(3.34, 1.14, 0.06, '#C9302C', 0, 1.38, 0, g).raycast = noRay; rects.push([-33.4, 5.6, 1.5, 1.5]); }
+function drawVillagePanel() { const v = vil(), g = villageCv.getContext('2d'), rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); g.fill(); };
+  g.clearRect(0, 0, 768, 256); g.fillStyle = '#C9302C'; rr(0, 0, 768, 256, 30); g.fillStyle = '#FFFDF8'; rr(14, 14, 740, 228, 20); drawBlason(g, v, 34, 36, 152);
+  const fit = (txt, font, max, start) => { let px = start; do { g.font = font.replace('PX', px); px -= 3; } while (g.measureText(txt).width > max && px > 18); };
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#1E1A26'; const nm = (v.n || 'Petite France').toUpperCase(), F = '900 PXpx Georgia, serif'; g.font = F.replace('PX', 64);
+  // a long name goes on two lines, cut at the space or hyphen nearest the middle, so it stays readable from afar
+  let cut = -1; if (g.measureText(nm).width > 520) { let bd = 1e9; for (let i = 1; i < nm.length - 1; i++) if (nm[i] === ' ' || nm[i] === '-') { const d = Math.abs(i - nm.length / 2); if (d < bd) { bd = d; cut = i; } } }
+  if (cut > 0) { const l1 = nm.slice(0, cut + (nm[cut] === '-' ? 1 : 0)), l2 = nm.slice(cut + 1), lg = l1.length > l2.length ? l1 : l2; fit(lg, F, 520, 70); g.fillText(l1, 478, v.dv ? 66 : 92); g.fillText(l2, 478, v.dv ? 130 : 164); }
+  else { fit(nm, F, 520, 96); g.fillText(nm, 478, v.dv ? 104 : 130); }
+  if (v.dv) { g.fillStyle = '#5A5364'; fit(v.dv, 'italic 700 PXpx Georgia, serif', 520, cut > 0 ? 32 : 40); g.fillText(v.dv, 478, cut > 0 ? 200 : 188); } villageTex.needsUpdate = true; }
+function villageApply() { drawVillagePanel(); const v = vil(); let el = document.getElementById('home-village');
+  if (!el) { el = document.createElement('div'); el.id = 'home-village'; el.style.cssText = 'display:flex;align-items:center;gap:10px;justify-content:center;margin:2px 0 10px'; el.innerHTML = '<img alt="" width="34" height="41"><div style="text-align:left;line-height:1.15"><b style="display:block;font-size:15px"></b><i style="font-size:12px;opacity:.75"></i></div>'; const h = document.querySelector('#start h1'); if (h && h.parentNode) h.parentNode.insertBefore(el, h.nextSibling); }
+  el.querySelector('img').src = blasonURL(v, 68); el.querySelector('b').textContent = 'Village de ' + v.n; el.querySelector('i').textContent = v.dv || ''; }
+function villageSheet() { if (!S.started) return; const v = Object.assign({}, vil()), w = document.createElement('div'); w.style.cssText = 'margin:0 0 10px';
+  const inp = 'width:100%;box-sizing:border-box;font:800 14px Nunito,sans-serif;padding:8px 10px;border:2.5px solid var(--ink);border-radius:12px;background:#fff';
+  w.innerHTML = '<div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><canvas width="150" height="180" style="width:75px;height:90px;flex:none"></canvas><div style="flex:1;min-width:0"><input type="text" data-k="n" maxlength="22" placeholder="Nom du village" style="' + inp + '"><input type="text" data-k="dv" maxlength="40" placeholder="Devise (facultatif)" style="' + inp + ';margin-top:6px;font-weight:700;font-style:italic"></div></div>';
+  const cv = w.querySelector('canvas'), redraw = () => { const g = cv.getContext('2d'); g.clearRect(0, 0, 150, 180); drawBlason(g, v, 0, 0, 150); }; w.querySelector('[data-k=n]').value = v.n; w.querySelector('[data-k=dv]').value = v.dv || '';
+  [['Forme', 'f', FORMES], ['Partition', 'p', PARTITIONS], ['Première couleur', 'c1', HERALD], ['Seconde couleur', 'c2', HERALD], ['Emblème', 'e', EMBLEMES]].forEach(([title, key, list]) => { const row = document.createElement('div'); row.style.cssText = 'margin-bottom:8px'; const lb = document.createElement('div'); lb.textContent = title; lb.style.cssText = 'font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--blue);margin-bottom:4px'; row.appendChild(lb);
+    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px'; row.appendChild(wrap);
+    const mark = () => [...wrap.children].forEach((b, i) => { b.style.outline = v[key] === i ? '3px solid var(--gold)' : 'none'; b.style.outlineOffset = '1px'; });
+    list.forEach((o, i) => { const b = document.createElement('button'); b.type = 'button'; const col = Array.isArray(o); b.textContent = col ? '' : o; b.title = col ? o[0] : o; b.setAttribute('aria-label', col ? o[0] : o);
+      b.style.cssText = 'border:2px solid var(--ink);border-radius:10px;cursor:pointer;font:800 ' + (key === 'e' ? '18px' : '12px') + ' Nunito,sans-serif;padding:' + (col ? '0' : key === 'e' ? '3px 6px' : '6px 9px') + ';min-width:34px;height:34px;background:' + (col ? o[1] : 'var(--white)');
+      b.addEventListener('click', () => { v[key] = i; mark(); redraw(); }); wrap.appendChild(b); }); mark(); w.appendChild(row); });
+  redraw();
+  openSheet('Mon village', 'Son nom, son blason et sa devise : ils s\'affichent à l\'entrée du village.', [{ t: '💾 Enregistrer', s: 'Tu pourras tout changer plus tard, gratuitement.', btn: 'Valider', ok: true,
+    run: () => { v.n = cleanName(w.querySelector('[data-k=n]').value, 'Petite France').slice(0, 22); v.dv = (w.querySelector('[data-k=dv]').value || '').replace(/[<>]/g, '').trim().slice(0, 40); S.village = v; dirty = true; closeSheet(); villageApply(); toast('🛡️ ' + v.n, ''); } }], null, w); }
 /* ================= ambiance : l'heure qu'il est en France, les saisons, la météo, le vent, la vie ================= */
 // Tout suit l'horloge de Paris. __pf.amb.set({ hour, season, weather, wind }) force une valeur pour essayer ; set(null) revient au réel.
 const AMB = { hour: 12, h: 1, season: 'ete', weather: 'clair', wind: 0.1, night: 0, force: {}, rain: 0, snow: 0, mist: 0, cloud: 0.4, cover: 0 };
@@ -3581,7 +3784,7 @@ function tickAmb(dt, t) {
 function ambBoot() {
   GRASS.row = 0; grassRows(0); GRASS.dirty = false;
   for (let i = 0; i < 7; i++) BIRDS.push(makeBird(i)); ambRefresh(60); AMBU.uSnow.value = SEASON[AMB.season].snow; ambRefresh(60);
-  if (window.__pf) window.__pf.amb = { AMB, SEASON, BIRDS, TREEPOS, AMBU, CHIM, birdBoxes, roadPath, isRoad, set(o) { AMB.force = o || {}; ambSlow = 9; for (let k = 0; k < 4; k++) ambRefresh(60); AMBU.uSnow.value = SEASON[AMB.season].snow; return AMB; } };
+  if (window.__pf) window.__pf.amb = { AMB, SEASON, BIRDS, TREEPOS, AMBU, CHIM, birdBoxes, roadPath, isRoad, camTo, groundY, startVisit, VISIT, GCOVER, solids, rects, set(o) { AMB.force = o || {}; ambSlow = 9; for (let k = 0; k < 4; k++) ambRefresh(60); AMBU.uSnow.value = SEASON[AMB.season].snow; return AMB; } };
 }
 
 /* ---------------- the loop ---------------- */
@@ -3738,7 +3941,7 @@ function step() {
   else if (level() < 3) setLabel(L.chateau, '🔒 Château · niveau 3', 'lock');
   else if (S.cst < 5) setLabel(L.chateau, '🏰 Bâtir · étape ' + (S.cst + 1) + '/5 · ' + CCOST[S.cst] + ' ' + C, S.coins >= CCOST[S.cst] ? 'ready' : '');
   else setLabel(L.chateau, '🏰 Le château', '');
-  tickTourists(dt); tickGarden(t, n); tickOrders(n); tickFarm(t, n, dt); tickCity(n, dt); tickAmb(dt, t); tickFaune(dt, t, n);
+  tickTourists(dt); tickGarden(t, n); tickOrders(n); tickFarm(t, n, dt); tickCity(n, dt); tickAmb(dt, t); tickFaune(dt, t, n); tickLand(dt);
   for (let i = 0; i < loaves.length; i++) loaves[i].visible = i < S.pain; emptySign.visible = S.pain <= 0;
   if (standPop > 0) { standPop = Math.max(0, standPop - dt * 3); const b = Math.sin(standPop * Math.PI); stand.scale.set(1.22 * (1 + 0.12 * b), 1.22 * (1 + 0.2 * b), 1.22 * (1 + 0.12 * b)); }
   setLabel(L.church, '🔒 Église · bientôt', 'lock'); setLabel(L.bistrot, '☕ Bistrot · bientôt', 'lock');
