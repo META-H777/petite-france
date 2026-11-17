@@ -453,7 +453,7 @@ const AMBU = { uPh: { value: 0 }, uWind: { value: 0.1 }, uWindDir: { value: new 
   for (let k = 0; k < 46; k++) { const x = r() * 128, y = r() * 128, rad = 10 + r() * 22, a = 0.16 + r() * 0.22; for (let ox = -128; ox <= 128; ox += 128) for (let oy = -128; oy <= 128; oy += 128) { const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad); gr.addColorStop(0, 'rgba(255,255,255,' + a + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x + ox - rad, y + oy - rad, rad * 2, rad * 2); } }
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; AMBU.uCloudTex.value = t; }
 /* ---- the grass: every blade is drawn; the carpet follows the view and wraps around it, so it is dense where you look and costs nothing elsewhere ---- */
-const GRASS = { PU: 56, PV: 78, N: [9000, 15000, 22000], W: [1.55, 1.25, 1.0], box: [-113, -65, 77, 37], mw: 380, mh: 204, dirty: true, row: -1, wait: 0, mesh: null, data: null, tex: null };
+const GRASS = { PU: 56, PV: 78, N: [9000, 15000, 22000], W: [1.3, 1.12, 1.0], box: [-113, -65, 77, 37], mw: 380, mh: 204, dirty: true, row: -1, wait: 0, mesh: null, data: null, tex: null };
 Object.assign(AMBU, { uGT: { value: new THREE.Vector4() }, uGP: { value: new THREE.Vector2(GRASS.PU, GRASS.PV) }, uGBox: { value: new THREE.Vector4(GRASS.box[0], GRASS.box[1], 1 / (GRASS.box[2] - GRASS.box[0]), 1 / (GRASS.box[3] - GRASS.box[1])) }, uGPl: { value: new THREE.Vector3() }, uGFade: { value: 1 }, uGW: { value: 1 }, uGMask: { value: null } });
 const GRASS_HEAD = 'attribute vec2 aBase; attribute vec4 aRnd; uniform vec4 uGT, uGBox; uniform vec2 uGP; uniform vec3 uGPl; uniform float uGFade, uGW; uniform sampler2D uGMask, uCloudTex;\n';
 const GRASS_VERT = [
@@ -461,11 +461,11 @@ const GRASS_VERT = [
   'float gm = texture2D(uGMask, (gw - uGBox.xy) * uGBox.zw).r; float ge = max(abs(gq.x), abs(gq.y)) * 2.0;',
   'float gs = aRnd.y * smoothstep(0.3, 0.7, gm) * (1.0 - smoothstep(0.8, 1.0, ge)) * uGFade;',
   'float gy = HTOP * (1.0 - smoothstep(HR0, HR1, distance(gw, vec2(HX, HZ))));',
-  'float gc = cos(aRnd.x), gn = sin(aRnd.x); vec3 gp = position; gp.xz = vec2(gc * gp.x + gn * gp.z, gc * gp.z - gn * gp.x); float gh = position.y / 0.4; gp.xz *= mix(1.0, uGW, 1.0 - gh * 0.5); gp.y *= gs;',
-  'float gph = dot(gw, uWindDir) * 0.55 - uPh * 1.7 + aRnd.z * 2.0; float gam = gh * gh * gs * (0.02 + 0.26 * uWind) * (0.6 * uWind + 0.75 * sin(gph) + 0.3 * sin(gph * 2.7 + gw.x)); gp.xz += uWindDir * gam; gp.y -= abs(gam) * 0.35;',
-  'vec2 gpl = gw + gp.xz - uGPl.xy; float gpu = (1.0 - smoothstep(0.2, 0.9, length(gpl))) * gh; gp.xz += normalize(gpl + 0.0001) * gpu * 0.22; gp.y *= 1.0 - 0.5 * gpu;',
+  'float gc = cos(aRnd.x), gn = sin(aRnd.x); vec3 gp = position; gp.xz = vec2(gc * gp.x + gn * gp.z, gc * gp.z - gn * gp.x); float gh = position.y / 0.24; gp.xz *= mix(1.0, uGW, 1.0 - gh * 0.5); gp.y *= gs;',
+  'float gph = dot(gw, uWindDir) * 0.55 - uPh * 1.7 + aRnd.z * 2.0; float gam = gh * gh * gs * (0.012 + 0.13 * uWind) * (0.6 * uWind + 0.75 * sin(gph) + 0.3 * sin(gph * 2.7 + gw.x)); gp.xz += uWindDir * gam; gp.y -= abs(gam) * 0.35;',
+  'vec2 gpl = gw + gp.xz - uGPl.xy; float gpu = (1.0 - smoothstep(0.2, 0.9, length(gpl))) * gh; gp.xz += normalize(gpl + 0.0001) * gpu * 0.12; gp.y *= 1.0 - 0.5 * gpu;',
   'transformed = vec3(gw.x + gp.x, gy + gp.y, gw.y + gp.z) * step(0.03, gs);',
-  'vColor.rgb *= mix(vec3(0.78, 0.9, 0.7), vec3(1.16, 1.07, 0.84), aRnd.w); vColor.rgb = mix(vColor.rgb, vColor.rgb * vec3(1.28, 1.13, 0.68), smoothstep(0.42, 0.8, texture2D(uCloudTex, gw * 0.021).r) * 0.6);', ''
+  'vColor.rgb *= mix(vec3(0.9, 0.95, 0.86), vec3(1.08, 1.04, 0.92), aRnd.w); vColor.rgb = mix(vColor.rgb, vColor.rgb * vec3(1.16, 1.08, 0.8), smoothstep(0.45, 0.82, texture2D(uCloudTex, gw * 0.021).r) * 0.35);', ''
 ].join('\n').replace(/HTOP/g, HILL.top.toFixed(2)).replace(/HR0/g, HILL.r0.toFixed(2)).replace(/HR1/g, HILL.r1.toFixed(2)).replace(/HX/g, HILL.x.toFixed(2)).replace(/HZ/g, HILL.z.toFixed(2));
 function ambPatch(m, f) { f = f || ''; const has = (k) => f.indexOf(k) >= 0;
   m.customProgramCacheKey = () => 'amb:' + f;
@@ -948,13 +948,13 @@ function inst(geo, color, list, setup, shadow) { const m = new THREE.InstancedMe
   while (G.length < 0 && guard++ < 30000) { const x = BX0 + rnd() * (BX1 - BX0), z = BZ0 + rnd() * (BZ1 - BZ0); if (free(x, z)) G.push([x, z]); }
   guard = 0; while (F.length < 900 && guard++ < 20000) { const x = BX0 + rnd() * (BX1 - BX0), z = BZ0 + rnd() * (BZ1 - BZ0); if (free(x, z)) F.push([x, z]); }
   { // one tuft: five thin blades, dark at the root, pale at the tip, each bent its own way
-    const P = [], C = [], NR = [], I = [], c0 = new THREE.Color('#5C913D'), c1 = new THREE.Color('#86BA4F'), c2 = new THREE.Color('#BFDF7C');
-    for (let b = 0; b < 5; b++) { const a = rnd() * 6.28, ox = (rnd() - 0.5) * 0.44, oz = (rnd() - 0.5) * 0.44, h = 0.22 + rnd() * 0.18, w = 0.05 + rnd() * 0.025, bend = 0.04 + rnd() * 0.13, ca = Math.cos(a), sa = Math.sin(a), n = P.length / 3;
+    const P = [], C = [], NR = [], I = [], c0 = new THREE.Color('#6C9F44'), c1 = new THREE.Color('#82B54E'), c2 = new THREE.Color('#A4CC66');
+    for (let b = 0; b < 7; b++) { const a = rnd() * 6.28, ox = (rnd() - 0.5) * 0.46, oz = (rnd() - 0.5) * 0.46, h = 0.11 + rnd() * 0.13, w = 0.026 + rnd() * 0.014, bend = 0.02 + rnd() * 0.07, ca = Math.cos(a), sa = Math.sin(a), n = P.length / 3;
       [[-w / 2, 0, 0, c0], [w / 2, 0, 0, c0], [-w * 0.36, h * 0.55, bend * 0.3, c1], [w * 0.36, h * 0.55, bend * 0.3, c1], [0, h, bend, c2]].forEach((v) => { P.push(ox + v[0] * ca + v[2] * sa, v[1], oz - v[0] * sa + v[2] * ca); C.push(v[3].r, v[3].g, v[3].b); NR.push(0, 1, 0); });
       I.push(n, n + 1, n + 3, n, n + 3, n + 2, n + 2, n + 3, n + 4); }
     const NMAX = GRASS.N[2], geo = new THREE.InstancedBufferGeometry(), cols = Math.round(Math.sqrt(NMAX * GRASS.PU / GRASS.PV)), rows = Math.ceil(NMAX / cols), base = new Float32Array(NMAX * 2), rd = new Float32Array(NMAX * 4), order = [];
     for (let k = 0; k < cols * rows; k++) order.push(k); for (let k = order.length - 1; k > 0; k--) { const q = Math.floor(rnd() * (k + 1)), t = order[k]; order[k] = order[q]; order[q] = t; }
-    for (let k = 0; k < NMAX; k++) { const c = order[k] % cols, r = Math.floor(order[k] / cols); base[k * 2] = (c + rnd()) / cols; base[k * 2 + 1] = (r + rnd()) / rows; rd[k * 4] = rnd() * 6.28; rd[k * 4 + 1] = 0.6 + rnd() * rnd() * 1.1; rd[k * 4 + 2] = rnd(); rd[k * 4 + 3] = rnd(); }
+    for (let k = 0; k < NMAX; k++) { const c = order[k] % cols, r = Math.floor(order[k] / cols); base[k * 2] = (c + rnd()) / cols; base[k * 2 + 1] = (r + rnd()) / rows; rd[k * 4] = rnd() * 6.28; rd[k * 4 + 1] = 0.7 + rnd() * rnd() * 0.75; rd[k * 4 + 2] = rnd(); rd[k * 4 + 3] = rnd(); }
     geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(NR, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); geo.setIndex(I);
     geo.setAttribute('aBase', new THREE.InstancedBufferAttribute(base, 2)); geo.setAttribute('aRnd', new THREE.InstancedBufferAttribute(rd, 4)); geo.instanceCount = GRASS.N[quality];
     GRASS.data = new Uint8Array(GRASS.mw * GRASS.mh); GRASS.tex = new THREE.DataTexture(GRASS.data, GRASS.mw, GRASS.mh, THREE.RedFormat); GRASS.tex.magFilter = GRASS.tex.minFilter = THREE.LinearFilter; GRASS.tex.needsUpdate = true; AMBU.uGMask.value = GRASS.tex;
