@@ -17,6 +17,9 @@
   #talk .av { flex:none; width:46px; height:46px; border-radius:50%; border:3px solid var(--ink, #2B2535); color:#fff; font:900 22px Fraunces, Georgia, serif; display:flex; align-items:center; justify-content:center; }
   #talk b { display:block; font:900 13px Nunito, sans-serif; letter-spacing:.02em; margin-bottom:3px; }
   #talk p { margin:0; font:700 14px/1.35 Nunito, sans-serif; }
+  .pill.rents { cursor:pointer; font:900 15px Nunito, sans-serif; gap:6px; align-items:center; animation:rentpulse 1.6s ease-in-out infinite; }
+  .pill.rents small { font-size:11px; opacity:.7; }
+  @keyframes rentpulse { 50% { transform:scale(1.06); } }
   #ambfx { position:fixed; inset:0; pointer-events:none; transition:background 2s linear; }
   #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
   .cn { display:inline-block; width:1em; height:1em; border-radius:50%; background:radial-gradient(circle at 35% 32%, #FCE7A6 0 18%, #EDB84A 45%, #B9802A 100%); border:.11em solid var(--ink); vertical-align:-.16em; font-style:normal; }
@@ -201,6 +204,7 @@
   <div class="pill lvl" title="Niveau"><i id="lvl">1</i><div class="bar"><b id="xpbar"></b></div></div>
   <div class="pill coins"><i class="cn"></i><b id="coins">0</b></div>
   <button class="pill popp" id="b-pop" type="button"><i>🏠</i><span><b><span id="pop">10</span><em class="pgoal"> / 3 000</em></b><span class="bar"><b id="popbar"></b></span><small id="poptip" hidden></small></span></button>
+  <button class="pill rents" id="b-rents" type="button" hidden>🪙 <b id="rents">0</b><small id="rents-s">loyers</small></button>
   <div class="pill cause" id="cause-pill"><small>Cagnotte de la saison (démo)</small><div class="bar"><b id="causebar"></b></div><span id="cause">0,00 €</span></div>
 </div>
 <div class="res" id="res"><div class="fq"><span>👥</span><div class="bar"><b id="freqbar"></b></div><b id="freq">60</b></div><button type="button" id="c-field">🌾 <b></b></button><button type="button" id="c-mill">⚙️ <b></b></button><button type="button" id="c-oven">🔥 <b></b></button><button type="button" id="c-shop">🥖 <b></b></button><button type="button" id="c-mkt" hidden>🥕 <b></b></button><button type="button" id="c-farm" hidden>🐔 <b></b></button><button type="button" id="c-cake" hidden>🧁 <b></b></button><button type="button" id="c-bq" hidden>👕 <b></b></button><button type="button" id="c-mairie">🏛️ <b></b></button></div>
@@ -1318,7 +1322,7 @@ function ups() {
   { const sl = S.lv.stock || 0; a.push({ ic: '🏚️', t: 'Grenier et réserves · niveau ' + (sl + 1), s: sl < 5 ? 'Pendant ton absence, l\'équipe vend jusqu\'à ' + 2 * STOCK[sl] + ' baguettes. Niveau suivant : ' + 2 * STOCK[sl + 1] + ', et ' + STOCK[sl + 1] + ' blés et pains en réserve.' : 'Au maximum : ' + 2 * STOCK[5] + ' baguettes vendues pendant ton absence.', cost: sl < 5 ? STOCKCOST[sl] : null, buy: () => { S.lv.stock = sl + 1; } }); }
   { const ms = S.masons || 1; a.push({ ic: '🧱', t: 'Équipe de maçons · ' + ms + (ms > 1 ? ' équipes' : ' équipe'), s: ms < 5 ? 'Une équipe de plus : un chantier de maison de plus en même temps.' : 'Au maximum.', cost: ms < 5 ? MASONCOST[ms] : null, buy: () => { S.masons = ms + 1; } }); }
   if (reserveOn() && !S.garde) a.push({ ic: '🧑‍🌾', t: 'Gaspard, le garde forestier', s: 'Il veille sur la réserve naturelle : plus aucun animal ne s\'en échappe.', cost: 1500, buy: () => { S.garde = true; } });
-  if ((S.popMax || S.pop || 0) >= 60) { const nf = S.fetes || 0, fc = feteCost(nf); a.push({ ic: '🎉', t: 'Fête du village' + (nf ? ' · ' + nf + ' donnée' + (nf > 1 ? 's' : '') : ''), s: 'Bal, lampions et grande tablée sur la place. +' + feteRenom(fc) + ' de renommée pour ton village. Chaque fête est plus grande, et plus chère, que la précédente.', cost: fc, buy: () => { S.fetes = nf + 1; S.renom = (S.renom || 0) + feteRenom(fc); S.feteUntil = now() + 240000; toast('🎉 Fête du village', 'Renommée : ' + fmt(S.renom) + ' ⭐'); }, noXp: true }); }
+  if ((S.popMax || S.pop || 0) >= 60) { const nf = S.fetes || 0, fc = feteCost(nf); a.push({ ic: '🎉', t: 'Fête du village' + (nf ? ' · ' + nf + ' donnée' + (nf > 1 ? 's' : '') : ''), s: 'Bal, lampions et grande tablée sur la place. +' + feteRenom(fc) + ' de renommée, et +5 % de beauté pendant une heure. Une fête toutes les 20 minutes au plus.', cost: fc, wait: (S.feteNext || 0) > now() ? 'Dans ' + Math.ceil((S.feteNext - now()) / 60000) + ' min' : '', buy: () => { S.feteNext = now() + 1200000; S.feteB = now() + 3600000; S.fetes = nf + 1; S.renom = (S.renom || 0) + feteRenom(fc); S.feteUntil = now() + 240000; toast('🎉 Fête du village', 'Renommée : ' + fmt(S.renom) + ' ⭐'); }, noXp: true }); }
   if (!S.dog) a.push({ ic: '🐕', t: 'Médor, le chien de garde', s: 'Chasse les lapins et les sangliers tout seul.', cost: 100, buy: () => { S.dog = true; dog.position.copy(DOGHOME); } });
   return a.filter(upVisible);
 }
@@ -1327,7 +1331,7 @@ const feteCost = (n) => Math.round(300 * Math.pow(1.12, n) / 10) * 10, feteRenom
 let feteT = 0;
 function tickFete(dt, n) { if (!(S.feteUntil > n) || (feteT += dt) < 0.45) return; feteT = 0; const a = Math.random() * 6.283, r = 2 + Math.random() * 9; burst(shop.position.x + Math.cos(a) * r, 2.5 + Math.random() * 3, shop.position.z + 7 + Math.sin(a) * r * 0.6, ['#E0405A', '#F3CF7A', '#4C8FD0', '#FFFDF8', '#5E8F3E'], 10, 5); }
 function buyUp(u) {
-  if (u.cost === null) return;
+  if (u.cost === null || u.wait) return;
   if (S.coins < u.cost) { SFX.no(); return toast('Il te manque ' + Math.ceil(u.cost - S.coins) + ' pièces', 'Vends du pain et reviens.'); }
   S.coins -= u.cost; u.buy(); if (!u.noXp) gain(Math.ceil(u.cost / 8)); SFX.level(); buzz(30); burst(player.position.x, player.position.y + 1.6, player.position.z, ['#E3A73C', '#F3CF7A', '#FFFDF8'], 18, 6); dirty = true; renderUp();
 }
@@ -1336,7 +1340,7 @@ function renderUp() {
   ups().forEach((u) => { const d = document.createElement('div'); d.className = 'item' + (u.cost !== null && S.coins >= u.cost ? ' best' : '');
     d.innerHTML = '<div class="ic"></div><div class="t"><b></b><span></span></div><button class="btn" type="button"></button>';
     d.querySelector('.ic').textContent = u.ic; d.querySelector('b').textContent = u.t; d.querySelector('span').textContent = u.s;
-    const b = d.querySelector('button'); if (u.cost === null) { b.textContent = 'Max'; b.disabled = true; } else { rich(b, u.cost + ' ' + C); b.classList.toggle('gold', S.coins >= u.cost); b.addEventListener('click', () => buyUp(u)); }
+    const b = d.querySelector('button'); if (u.wait) { b.textContent = u.wait; b.disabled = true; } else if (u.cost === null) { b.textContent = 'Max'; b.disabled = true; } else { rich(b, u.cost + ' ' + C); b.classList.toggle('gold', S.coins >= u.cost); b.addEventListener('click', () => buyUp(u)); }
     box2.appendChild(d); });
 }
 function openUp() { renderUp(); $('up').hidden = false; }
@@ -1554,13 +1558,13 @@ function millStart() { if (S.farine >= stockCap() / 3) return false; const n = M
 function tapMill() {
   if (S.mill && now() >= S.mill.end) { S.farine += S.mill.out; S.farineTot += S.mill.out; floatAt(mill, '+' + S.mill.out + ' farine'); gain(3 * S.mill.out); S.mill = null; SFX.done(); pop(mill); burst(MILLP[0], 1.6, MILLP[1] + 2, '#FFFDF8', 10); buzz(15); return; }
   if (S.mill) return openSkip('Le moulin', 'Le moulin moud ton blé.', () => S.mill.end, () => { S.mill.end = now(); });
-  if (!millStart()) SFX.no(), toast('Pas assez de blé', 'Il faut 2 bottes de blé pour un sac de farine.');
+  if (!millStart()) { SFX.no(); if (S.farine >= stockCap() / 3) toast('La réserve de farine est pleine', 'Cuis du pain au four, ou agrandis les réserves dans « Améliorer ».'); else toast('Pas assez de blé', 'Il faut 2 bottes de blé pour un sac de farine.'); }
 }
 function ovenStart() { if (S.pain >= stockCap()) return false; const n = Math.min(OVENCAP[S.lv.oven - 1], S.farine); if (!n) return false; S.farine -= n; S.oven = { end: now() + dur(9000 * Math.pow(0.8, S.lv.oven - 1) * n), out: 4 * n }; dirty = true; SFX.start(); pop(oven); burst(OVENP[0], 1.6, OVENP[1] + 1.6, '#F6A04A', 6); return true; }
 function tapOven() {
   if (S.oven && now() >= S.oven.end) { if (WORKER) WORKER.bag = (WORKER.bag || 0) + S.oven.out; else if (S.hired.ines && !S.tasks.ines) crew.ines.userData.bag = (crew.ines.userData.bag || 0) + S.oven.out; /* once Inès is hired, every batch is hers to shelve, even one you take out yourself */ else S.carry += S.oven.out; S.fournees++; floatAt(oven, '+' + S.oven.out + ' 🥖'); gain(5 * S.oven.out / 4); S.oven = null; SFX.done(); pop(oven); burst(OVENP[0], 1.8, OVENP[1] + 1.6, ['#E3A73C', '#F3CF7A'], 12); buzz(15); return; }
   if (S.oven) return openSkip('Le four', 'La fournée cuit.', () => S.oven.end, () => { S.oven.end = now(); });
-  if (!ovenStart()) SFX.no(), toast('Pas de farine', 'Passe d\'abord par le moulin, dans la campagne.');
+  if (!ovenStart()) { SFX.no(); if (S.pain >= stockCap()) toast('La vitrine est pleine', 'Attends les clients, ou agrandis les réserves dans « Améliorer ».'); else toast('Pas de farine', 'Passe d\'abord par le moulin, dans la campagne.'); }
 }
 function tapShop() {
   if (S.shop > 0) { S.coins += S.shop; S.encaisse += S.shop; floatAt(shop, '+' + S.shop + ' ' + C); S.shop = 0; dirty = true; SFX.coin(); burst(SHOPP[0], 1.4, SHOPP[1] + 3.4, ['#E3A73C', '#F3CF7A'], 14, 5); buzz(20); return; }
@@ -1765,7 +1769,7 @@ const Q = [
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Pose les baguettes en vitrine, juste à côté.', say: 'Ça sent bon ! Ça faisait des années que le village n\'avait pas senti ça. Vite, en vitrine !', at: SH, goal: () => (S.posees || 0) >= 1, xp: 6, coins: 4 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Les clients font la queue ! Vends 4 baguettes.', say: 'Regarde, ils reviennent ! Madame Rabier est déjà là. Elle arrive toujours la première… pour avoir le temps de critiquer.', at: () => (S.pain > 0 ? null : flowAt()), goal: () => S.vendus >= 4, xp: 10, coins: 10 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Touche les pièces au-dessus de la boulangerie pour les ramasser.', say: 'Les sous, on les ramasse tout de suite, sinon c\'est le chat qui joue avec.', at: SH, goal: () => S.encaisse > 0, xp: 6, coins: 0 },
-  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Ouvre 🏗️ Construire et bâtis une maison.', say: 'Bonnefoy, maire de cette commune depuis 31 ans ! Un village sans habitants, c\'est une mairie sans électeurs. Bâtissez, que diable !', build: 1, goal: () => cityHouses() >= 3, xp: 12, coins: 20 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Ouvre 🏗️ Construire et bâtis 3 maisons.', say: 'Bonnefoy, maire de cette commune depuis 31 ans ! Un village sans habitants, c\'est une mairie sans électeurs. Bâtissez, que diable !', build: 1, goal: () => cityHouses() >= 3, xp: 12, coins: 20 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Trace une rue pavée qui touche ta nouvelle maison.', say: 'Une maison sans rue ? Et le facteur, il passe par la fenêtre ? Pavez-moi ça !', build: 1, goal: () => cityLinked() >= 3, xp: 12, coins: 20 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Achète le vélo du boulanger.', say: 'À mon âge je faisais la tournée à vélo. En côte. Avec 40 baguettes. Et sans me plaindre.', up: 1, goal: () => S.bike, xp: 8, coins: 10 },
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Embauche Léo : il récoltera le champ à ta place.', say: 'Salut ! Moi c\'est Léo. Je fauche, je sème, je parle aux vaches. Enfin surtout je fauche. Tu m\'embauches ?', up: 1, goal: () => S.hired.leo, xp: 10, coins: 10 },
@@ -1773,7 +1777,7 @@ const Q = [
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Vends 15 baguettes sans faire attendre les clients.', say: 'Un client qui attend trop s\'en va chez le voisin. Et le voisin, c\'est à 14 kilomètres. Alors il revient fâché.', goal: () => S.vendus >= 15, xp: 12, coins: 20 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis la mairie, puis passe me voir.', say: 'Je travaille actuellement depuis le banc de la place. C\'est très bien pour le teint, mais pas pour les dossiers. Une mairie, vite !', build: 1, at: () => [STN.mairie[0], STN.mairie[1], 1.4], goal: () => !!(S.day && S.day.id && S.day.basket), xp: 10, coins: 10 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Embauche Jules, le meunier.', say: 'Le petit Jules, je l\'ai connu haut comme une miche. Il fait tourner un moulin comme personne.', up: 1, goal: () => S.hired.jules, xp: 12, coins: 20 },
-  { who: 'Gégé, du bistrot', av: 'G', c: '#C0703A', t: 'Ouvre le Menu et touche « Visiter le village ».', say: 'Gégé, du bistrot ! Enfin, du futur bistrot. Fais donc un tour dans les rues, à hauteur d\'homme. Tu verras, c\'est pas pareil vu d\'en bas.', goal: () => (S.visited || 0) >= 1, xp: 12, coins: 20 },
+  { who: 'Gégé, du bistrot', av: 'G', c: '#C0703A', t: 'Touche « Visiter » pour faire un tour du village.', say: 'Gégé, du bistrot ! Enfin, du futur bistrot. Fais donc un tour dans les rues, à hauteur d\'homme. Tu verras, c\'est pas pareil vu d\'en bas.', visit: 1, skip: 240, goal: () => (S.visited || 0) >= 1, xp: 12, coins: 20 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Livre une commande du village : bouton 📋 Commandes.', say: 'L\'école, la cantine, les pompiers : tout le monde réclame du pain ! Je promets tout, vous livrez. C\'est ça, la politique.', goal: () => (S.livrees || 0) >= 1, xp: 14, coins: 20 },
   { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Au niveau 3, lance la première étape du château.', say: 'Hortense de Rocheval. Ce château est à ma famille depuis 1612, et il tombe en ruine depuis 1613. Aidez-moi à lui rendre son éclat.', at: () => (level() >= 3 && !S.cbuild ? [GATEP[0], GATEP[1], 1.5] : null), goal: () => S.cst >= 1 || S.cbuild > 0, xp: 0, coins: 30 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis le marché, sur une place de 16 m sur 6.', say: 'Un marché le dimanche matin, voilà ce qui fait une vraie commune ! Et des électeurs de bonne humeur.', build: 1, goal: () => S.lv.mk >= 1, xp: 14, coins: 30 },
@@ -1785,23 +1789,48 @@ const Q = [
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Construis la bergerie, puis la boutique de vêtements.', say: 'Des moutons, de la laine, des pulls. L\'hiver arrive, et le maire tricote très mal.', build: 1, goal: () => S.lv.bq >= 1, xp: 16, coins: 40 },
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Construis l\'étable : le lait se vend au marché.', say: 'Une vache ! Je vais l\'appeler Marguerite. Toutes les vaches s\'appellent Marguerite, c\'est la règle.', build: 1, goal: () => S.lv.cow >= 1, xp: 16, coins: 40 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Le village atteint 100 habitants : bâtis et trace des rues.', say: 'Cent habitants ! J\'ai préparé un discours de quarante minutes. Non ? Bon, vingt.', build: 1, goal: () => (S.pop || 0) >= 100, xp: 30, coins: 100 },
+  { who: 'Gégé, du bistrot', av: 'G', c: '#C0703A', t: 'Donne une fête du village (🔨 Améliorer).', say: 'Une fête ! Lampions, accordéon, et le maire qui danse le madison. Ça vaut le détour, crois-moi.', up: 1, goal: () => (S.fetes || 0) >= 1, xp: 20, coins: 0 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Atteins 150 habitants.', say: 'Cent cinquante administrés ! Il va falloir agrandir la salle des fêtes. Ou réduire mon discours.', build: 1, goal: () => (S.pop || 0) >= 150, xp: 24, coins: 60 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Embellis une maison : touche-la, puis « La fleurir ».', say: 'Une maison fleurie, c\'est une maison heureuse. Et des voisins jaloux, ce qui est encore mieux.', goal: () => S.city.items.filter((it) => it.t === 'h' && it.l >= 2 && !(it.end > 0)).length >= 1, xp: 20, coins: 40 },
+  { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Ouvre un nouveau quartier (touche son panneau en mode Construire).', say: 'Y a de la place partout autour ! On pourrait mettre des vaches. Ou des maisons. Surtout des vaches.', build: 1, goal: () => Object.keys(landS().open).length >= 3, xp: 24, coins: 60 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis la grande fontaine.', say: 'Une fontaine sur la place ! Les enfants y jetteront des pièces. Que je récupérerai pour le budget.', build: 1, goal: () => !!MOV.fontaine.placed, xp: 30, coins: 80 },
+  { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Lance la deuxième étape du château.', say: 'Les tours tiennent debout. La plupart. Il est temps de s\'occuper des remparts.', goal: () => (S.cst >= 2 || (S.cst === 1 && S.cbuild > 0)), xp: 30, coins: 0 },
+  { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Atteins 300 habitants.', say: 'Trois cents âmes ! J\'en connais déjà la moitié par leur prénom, et l\'autre moitié par leurs péchés.', build: 1, goal: () => (S.pop || 0) >= 300, xp: 30, coins: 100 },
+  { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Construis l\'église.', say: 'Une église, mon enfant. Pas pour moi, hein. Enfin si, un peu pour moi.', build: 1, goal: () => !!MOV.church.placed, xp: 40, coins: 120 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Pose un monument dans un deuxième quartier.', say: 'Chaque quartier mérite sa fierté. Dans mon temps, c\'était le lavoir. On y apprenait tout.', build: 1, goal: () => S.city.items.filter((it) => it.mon).length >= 2, xp: 30, coins: 100 },
+  { who: 'Gégé, du bistrot', av: 'G', c: '#C0703A', t: 'Atteins 500 habitants.', say: 'Cinq cents ! À ce rythme, il me faudra une deuxième terrasse. Et un deuxième Gégé.', build: 1, goal: () => (S.pop || 0) >= 500, xp: 36, coins: 150 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Livre 20 commandes du village.', say: 'Les pompiers, la cantine, la kermesse : tout le monde me remercie, et c\'est vous qui livrez. J\'adore la démocratie.', goal: () => (S.livrees || 0) >= 20, xp: 36, coins: 150 },
+  { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Donne au village 600 de beauté.', say: 'Un village se juge à ses fleurs, mon cher. Et à ses grilles en fer forgé. Surtout aux grilles.', build: 1, goal: () => beauty() >= 600, xp: 36, coins: 150 },
+  { who: 'Gégé, du bistrot', av: 'G', c: '#C0703A', t: 'Construis le bistrot.', say: 'Enfin un vrai comptoir ! Pastis, belote, et le maire qui refait le monde tous les soirs.', build: 1, goal: () => !!MOV.bistrot.placed, xp: 40, coins: 200 },
   { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Cap sur 1 000 habitants : église, bistrot et beaux manoirs.', say: 'Père Anselme. Mes cloches n\'ont pas sonné depuis dix ans. Avec mille âmes au village, elles sonneront de nouveau.', build: 1, goal: () => (S.pop || 0) >= 1000, xp: 80, coins: 500 },
+  { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Bâtis un manoir ou un corps de ferme.', say: 'Un corps de ferme ! Avec une grange, un pigeonnier, et de la place pour Marguerite.', build: 1, goal: () => S.city.items.some((it) => it.t === 'h' && (it.m === 'hotel_particulier' || it.m === 'corps_ferme')), xp: 50, coins: 300 },
+  { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Termine la troisième étape du château.', say: 'Le grand salon retrouve ses lustres. Mon arrière-grand-oncle y avait perdu son dentier en 1923. On le cherche encore.', goal: () => S.cst >= 3, xp: 60, coins: 0 },
+  { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Atteins 1 500 habitants.', say: 'Mille cinq cents fidèles. Pour la messe de minuit, il faudra des chaises pliantes.', build: 1, goal: () => (S.pop || 0) >= 1500, xp: 60, coins: 400 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Embellis 10 maisons.', say: 'Des géraniums à chaque fenêtre. Voilà un village qui se tient.', goal: () => S.city.items.filter((it) => it.t === 'h' && it.l >= 2 && !(it.end > 0)).length >= 10, xp: 60, coins: 400 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Ouvre 8 quartiers.', say: 'Huit quartiers ! Je vais pouvoir nommer huit adjoints. Enfin, sept : Gégé refuse.', build: 1, goal: () => Object.keys(landS().open).length >= 8, xp: 70, coins: 500 },
+  { who: 'Gégé, du bistrot', av: 'G', c: '#C0703A', t: 'Atteins 2 000 habitants.', say: 'Deux mille ! Je vais devoir apprendre les prénoms. Je commence par les gros buveurs.', build: 1, goal: () => (S.pop || 0) >= 2000, xp: 80, coins: 600 },
+  { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Lance la quatrième étape du château.', say: 'Les jardins à la française reviennent. Mes ancêtres taillaient les ifs eux-mêmes. Enfin, leurs jardiniers.', goal: () => (S.cst >= 4 || (S.cst === 3 && S.cbuild > 0)), xp: 80, coins: 0 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Un monument dans 6 quartiers.', say: 'Six monuments ! On va finir dans les guides touristiques. J\'ai déjà préparé mon sourire.', build: 1, goal: () => S.city.items.filter((it) => it.mon).length >= 6, xp: 90, coins: 800 },
+  { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Atteins 2 500 habitants.', say: 'Deux mille cinq cents. Les cloches sonnent tous les dimanches, et même le mardi par erreur.', build: 1, goal: () => (S.pop || 0) >= 2500, xp: 100, coins: 1000 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Dernière ligne droite : 3 000 habitants.', say: 'Trois mille ! On parlera de nous jusqu\'à la préfecture. Peut-être même au journal de 13 heures !', build: 1, goal: () => (S.pop || 0) >= 3000, xp: 200, coins: 2000 },
   { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Termine les 5 étapes du château.', say: 'Mes ancêtres vous regardent depuis leurs portraits. Ils ont l\'air sévères, mais ils sont ravis. Enfin je crois.', goal: () => S.cst >= 5, xp: 0, coins: 200 },
-  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Continue d\'embellir le village : la prochaine région arrive bientôt.', say: 'Mes amis, Petite France est sauvée. Je vais pouvoir prendre ma retraite. Non, je plaisante, je me représente.', goal: () => false, xp: 0, coins: 0 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Continue d\'embellir le village : la prochaine région arrive bientôt.', say: 'Mes amis, notre village est sauvé. Je vais pouvoir prendre ma retraite. Non, je plaisante, je me représente.', goal: () => false, xp: 0, coins: 0 },
 ];
 function questAt() { const bb = boars.find((x) => x.phase !== 'flee'); if (bb) return [bb.g.position.x, bb.g.position.z, 1.1]; const q = Q[Math.min(S.q, Q.length - 1)]; if (q.at === undefined) return flowAt(); return typeof q.at === 'function' ? q.at() : q.at; }
 /* the villagers speak: a portrait, a name, one line, as in the best village games */
 let talkT = 0;
 function talk(q) { const el = $('talk'); if (!el || !q || !q.say) return; $('tk-av').textContent = q.av; $('tk-av').style.background = q.c; $('tk-who').textContent = q.who; $('tk-say').textContent = q.say; el.hidden = false; el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); clearTimeout(talkT); talkT = setTimeout(() => { el.hidden = true; }, 11000); }
 function questTick() {
+  if (S.qmig !== 1) { if ((S.q || 0) >= 26) S.q = 26; S.qmig = 1; } /* objectifs ajoutés le 18/11/2026 */
+  if (S.qIdx !== S.q) { S.qIdx = S.q; S.qAt = now(); }
   const q = Q[Math.min(S.q, Q.length - 1)];
-  if (q.goal()) { S.q++; gain(q.xp, q.coins); SFX.done(); if (q.coins) toast('Objectif réussi', '+' + q.coins + ' pièces'); dirty = true; return questTick(); }
+  if (q.goal() || (q.skip && now() - (S.qAt || now()) > q.skip * 1000)) { S.q++; gain(q.xp, q.coins); SFX.done(); if (q.coins) toast('Objectif réussi', '+' + q.coins + ' pièces'); dirty = true; return questTick(); }
   $('q-who').textContent = q.who; $('q-av').textContent = q.av; $('q-av').style.background = q.c;
   if (q.say && S.said !== S.q && S.started) { S.said = S.q; dirty = true; talk(q); }
   if ($('q-text').textContent !== q.t) $('q-text').textContent = q.t;
   const b = $('q-btn');
   if (q.up) { b.hidden = false; b.textContent = '🔨 Améliorer'; b.onclick = openUp; }
+  else if (q.visit) { b.hidden = false; b.textContent = '👀 Visiter'; b.onclick = () => startVisit(); }
   else if (q.build) { b.hidden = false; b.textContent = '🏗️ Construire'; b.onclick = openBuild; }
   else if (q.map && player.position.x < -20) { b.hidden = false; b.textContent = '🗺️ Carte'; b.onclick = () => { renderMap(); $('map').hidden = false; }; }
   else b.hidden = true;
@@ -1816,7 +1845,7 @@ function calcOffline(last) {
   const cli = clientsPerMin() / 60 * (0.55 + 0.6 * S.freq / 100);
   const breads = S.hired.leo && S.hired.jules && S.hired.ines ? Math.min(cap * secs, cli * 1.4 * secs, 2 * stockCap()) : 0;
   const other = (S.cst >= 1 ? CFEE[S.cst] / CINT[S.cst] : 0) + (S.hired.paul && S.lv.mk > 0 ? Math.min(S.gun / 32, cli * 0.38) * PROD[S.lv.mk - 1].p : 0);
-  offGain = Math.round(breads * PRICES[S.lv.shop - 1] + other * secs * 0.25); offSecs = secs;
+  offGain = Math.round((breads * PRICES[S.lv.shop - 1] + other * secs * 0.25) * 0.45); offSecs = secs; /* l'absence rapporte à peu près autant que le jeu, pas trois fois plus */
 }
 function showOffline() {
   if (!(offGain > 0)) return; const h = Math.floor(offSecs / 3600), m = Math.round((offSecs % 3600) / 60);
@@ -1828,10 +1857,11 @@ const vPool = [], queue = []; let lastServe = 0; const PATIENCE = 30;
 /* ÉCONOMIE V2 : les réglages du rythme des revenus, au même endroit.
    cli0 = clients par minute d'un hameau ; cliPop = habitants pour 1 client par minute de plus ; carPop = habitants pour que toutes les voitures s'arrêtent ;
    ordK / habitants = secondes entre deux commandes (ordMin au plus vite) ; ordPay = ce que paie une commande, en part du prix de vente. */
-const ECO = { cli0: 3.2, cliPop: 110, carPop: 12000, ordK: 120000, ordMin: 28, ordPay: 0.96, prix0: 150, prixK: 70, prixMax: 9 };
+const ECO = { cli0: 3.2, cliStart: 5, cliPop: 110, carPop: 12000, ordK: 120000, ordMin: 28, ordPay: 0.96, prix0: 150, prixK: 60, prixMax: 12 };
 /* L'indice du village : logements, décors et terrains coûtent plus cher à mesure que le village grandit (au-delà de prix0 habitants, +100 % tous les prixK habitants, jusqu'à prixMax). */
 const villageMul = () => Math.min(ECO.prixMax, 1 + Math.max(0, (S.popMax || S.pop || 0) - ECO.prix0) / ECO.prixK);
-const clientsPerMin = () => Math.max(ECO.cli0, (S.pop || 0) / ECO.cliPop);
+/* au départ 5 clients par minute (la première heure ne traîne plus), puis le village prend le relais ; en Coup de feu, 40 % de clients en plus */
+const clientsPerMin = () => { const p = S.pop || 0; return Math.max(ECO.cli0, p / ECO.cliPop, ECO.cliStart - Math.max(0, p - 60) * 0.018) * (S.mode === 'comp' ? 1.4 : 1); };
 function demand(n) {
   const cap = Math.min(S.unlocked * S.lv.seed * 2 / 22, 0.667 / Math.pow(0.8, S.lv.mill - 1), 0.444 / Math.pow(0.8, S.lv.oven - 1));
   const auto = 0.5 + (S.hired.leo ? 0.17 : 0) + (S.hired.jules ? 0.17 : 0) + (S.hired.ines ? 0.16 : 0);
@@ -1848,7 +1878,7 @@ function freePerson(g) { g.userData.nav = null; g.visible = false; setLabel(g.us
 const QBASE = [SHOPP[0] + 1.2, -3.7], QDIR = [1, 0];
 function spawnVillager(car) {
   const g = newPerson(), fromLeft = Math.random() < 0.5;
-  const d = { phase: 'in', exitX: fromLeft ? -14 : 30, wait: 0, walk: 0, want: 1 + (Math.random() < 0.2 + 0.1 * S.lv.shop ? 1 : 0), got: 0, car: car || null, pat: car ? PATIENCE + 6 : PATIENCE, angry: false };
+  const pt = S.mode === 'comp' ? 0.7 : 1, d = { phase: 'in', exitX: fromLeft ? -14 : 30, wait: 0, walk: 0, want: 1 + (Math.random() < 0.2 + 0.1 * S.lv.shop ? 1 : 0), got: 0, car: car || null, pat: (car ? PATIENCE + 6 : PATIENCE) * pt, angry: false }; /* en Coup de feu, les clients attendent 30 % moins */
   if (car) { g.position.set(car.g.position.x + 0.9, 0, car.g.position.z - 0.6); d.want = 2 + Math.floor(Math.random() * 4); }
   else g.position.set(fromLeft ? -14 : 30, 0, 1.2 + Math.random() * 0.8);
   g.userData.v = d; villagers.push(g); queue.push(g); return g;
@@ -1890,7 +1920,7 @@ const pointers = new Map(); let pinch0 = 0, zoom0 = zoom, moved = 0, swipe = nul
 const keys = {};
 const joy = { on: false, id: -1, ox: 0, oy: 0, x: 0, y: 0 };
 const joyEl = $('joy'), knobEl = $('knob');
-const ZMIN = 12, ZMAX = 120;
+const ZMIN = 12, ZMAX = 170; /* on peut reculer assez pour voir tout son village */
 window.addEventListener('keydown', (e) => { if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; keys[e.code] = true; if (/^Arrow|Space/.test(e.code)) e.preventDefault(); if (e.code === 'KeyM' && S.started) { renderMap(); $('map').hidden = !$('map').hidden; } });
 window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 window.addEventListener('blur', () => { Object.keys(keys).forEach((k) => { keys[k] = false; }); });
@@ -3056,7 +3086,7 @@ PKEYS.forEach((k) => { const P = PEN[k];
     need: () => (k === 'cow' && S.lv.mk < 1 ? 'le marché' : k === 'sheep' && level() < 6 ? 'niveau 6' : k === 'hen' && level() < 4 ? 'niveau 4' : ''), on: () => { if (S.lv[k] < 1) S.lv[k] = 1; }, desc: k === 'hen' ? 'Des œufs pour les gâteaux.' : k === 'cow' ? 'Du lait pour le marché.' : 'De la laine pour les pulls.' }); });
 movable('cake', { n: 'Pâtisserie', ic: '🧁', pivot: [CAKEP[0], CAKEP[1]], objs: [cakeG], fp: [6, 6], pts: [ptA(CAKEP), ptA(STN.cake), ptV(SPOT.cake), ptV(HOME.camille)], cols: [findRect(CAKEP[0], CAKEP[1])], c: CAKECOST[0], need: () => (S.lv.hen < 1 ? 'le poulailler' : ''), on: () => { if (S.lv.cake < 1) S.lv.cake = 1; }, desc: '1 farine + 2 œufs = 1 gâteau. Nécessaire au-delà de 1 600 habitants.' });
 movable('bq', { n: 'Boutique de vêtements', ic: '👕', pivot: [BQP_[0], BQP_[1]], objs: [bqG], fp: [6, 6], pts: [ptA(BQP_), ptA(BQDOOR), ptA(STN.bq)], cols: [findRect(BQP_[0], BQP_[1])], c: BQCOST[0], need: () => (S.lv.sheep < 1 ? 'la bergerie' : ''), on: () => { if (S.lv.bq < 1) S.lv.bq = 1; }, desc: '2 laines = 1 pull. Nécessaire au-delà de 2 200 habitants.' });
-movable('mairie', { n: 'Mairie', ic: '🏛️', pivot: [MAIRIEP[0], MAIRIEP[1]], objs: [mairie], fp: [10, 7], pts: [ptA(MAIRIEP), ptA(STN.mairie)], cols: [findRect(MAIRIEP[0], MAIRIEP[1])], c: 300, need: () => ((S.pop || 0) < 25 ? '25 habitants' : ''), desc: 'Lettre, panier et commandes du jour. Nécessaire au-delà de 150 habitants.' });
+movable('mairie', { n: 'Mairie', ic: '🏛️', pivot: [MAIRIEP[0], MAIRIEP[1]], objs: [mairie], fp: [10, 7], pts: [ptA(MAIRIEP), ptA(STN.mairie)], cols: [findRect(MAIRIEP[0], MAIRIEP[1])], c: 150, need: () => ((S.pop || 0) < 25 ? '25 habitants' : ''), desc: 'Lettre, panier et commandes du jour. Nécessaire au-delà de 150 habitants.' });
 fountain.userData.kind = 'fontaine';
 movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 1500, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'La fierté de la place. Nécessaire au-delà de 400 habitants. +30 beauté.' });
 movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
@@ -3070,20 +3100,20 @@ const SERV = [[60, 'market', 'un marché'], [150, 'mairie', 'une mairie'], [400,
 
 /* ---- houses ---- */
 const HOUSE_T = { // logements de village uniquement. Plus un logement est grand : plus cher par habitant, mais plus d'habitants par minute de maçon et par mètre carré.
-  maisonnette: { n: 'Maisonnette', ic: '🛖', cap: 12, c: 80, fp: [4, 4], t: 2, lvl: 1, fb: ['s', 3.6, 3.6], glb: 1 },
-  maison_a: { n: 'Maison de village', ic: '🏡', cap: 24, c: 190, fp: [6, 6], t: 3.6, lvl: 1, fb: ['a'] },
+  maisonnette: { n: 'Maisonnette', ic: '🛖', cap: 12, c: 60, fp: [4, 4], t: 2, lvl: 1, fb: ['s', 3.6, 3.6], glb: 1 },
+  maison_a: { n: 'Maison de village', ic: '🏡', cap: 24, c: 150, fp: [6, 6], t: 3.6, lvl: 1, fb: ['a'] },
   maison_b: { n: 'Grande maison', ic: '🏠', cap: 30, c: 280, fp: [6, 6], t: 4.2, lvl: 6, fb: ['b'] },
   maison_colombages: { n: 'Maison à colombages', ic: '🏚️', cap: 34, c: 360, fp: [6, 6], t: 4.5, lvl: 10, fb: ['s', 5.6, 5.6], glb: 1 },
   maison_ville: { n: 'Maison de bourg', ic: '🏘️', cap: 40, c: 480, fp: [6, 6], t: 5.1, lvl: 14, fb: ['s', 5.6, 5.6], glb: 1 },
   longere: { n: 'Longère', ic: '🏡', cap: 60, c: 800, fp: [12, 6], t: 7.4, lvl: 18, fb: ['s', 11.6, 5.6], glb: 1 },
   presbytere: { n: 'Presbytère', ic: '⛪', cap: 80, c: 1200, fp: [10, 8], t: 9.2, lvl: 22, fb: ['s', 9.6, 7.6], glb: 1 },
   maisons_rangee: { n: 'Maisons en rangée', ic: '🏘️', cap: 90, c: 1500, fp: [14, 6], t: 10, lvl: 26, fb: ['s', 13.6, 5.6], glb: 1 },
-  hotel_particulier: { n: 'Manoir', ic: '🏰', cap: 120, c: 2400, fp: [12, 10], t: 12.5, lvl: 30, fb: ['s', 11.6, 9.6], glb: 1 },
-  corps_ferme: { n: 'Corps de ferme', ic: '🐓', cap: 150, c: 2800, fp: [14, 12], t: 15.6, lvl: 34, fb: ['s', 13.6, 11.6], glb: 1 }
+  hotel_particulier: { n: 'Manoir', ic: '🏰', cap: 120, c: 2760, fp: [12, 10], t: 12.5, lvl: 30, fb: ['s', 11.6, 9.6], glb: 1 },
+  corps_ferme: { n: 'Corps de ferme', ic: '🐓', cap: 150, c: 3220, fp: [14, 12], t: 15.6, lvl: 34, fb: ['s', 13.6, 11.6], glb: 1 }
 };
 // chaque exemplaire d'un même modèle coûte 16 % de plus que le précédent : varier les logements devient le bon calcul
 const HOUSE_GROW = 1.10;
-function housePrice(m) { const n = S.city ? S.city.items.filter((it) => it.t === 'h' && it.m === m).length : 0; return Math.round(HOUSE_T[m].c * Math.pow(HOUSE_GROW, n) * villageMul()); }
+function housePrice(m) { const n = S.city ? S.city.items.filter((it) => it.t === 'h' && it.m === m).length : 0; const vm = villageMul(); return Math.round(HOUSE_T[m].c * Math.pow(HOUSE_GROW, n) * (m === 'maisonnette' ? 1 + (vm - 1) * 0.5 : vm)); } /* les petites maisons du début restent abordables */
 function decoPrice(k) { const cnt = S.city ? S.city.items.filter((it) => it.k === k).length : 0; return Math.round(DECOS[k].c * Math.pow(1.06, cnt) * villageMul()); }
 const HLV = ['', 'Habitée', 'Fleurie', 'Maison de maître'];
 const MASONCOST = [0, 500, 2500, 12000, 50000];
@@ -3196,8 +3226,10 @@ const nearMainRoad = (x, z) => Math.abs(z) < 3.6;
 function houseLinked(it) { const [w, d] = itemFp(it); if (!roadNet) roadNet = roadNetwork(); const x0 = it.x - w / 2 - 1, x1 = it.x + w / 2 + 1, z0 = it.z - d / 2 - 1, z1 = it.z + d / 2 + 1;
   for (let x = x0; x <= x1; x += 1) for (let z = z0; z <= z1; z += 1) { const edge = x <= x0 + 0.01 || x >= x1 - 0.99 || z <= z0 + 0.01 || z >= z1 - 0.99; if (edge && (nearMainRoad(x, z) || roadNet.has(tileKey(tileOf(x), tileOf(z))))) return true; } return false; }
 function computeLinks() { roadNet = roadNetwork(); links = S.city.items.map((it) => it.t === 'h' && houseLinked(it)); }
-function beauty() { let b = 0; S.city.items.forEach((it) => { if (it.t === 'd' && DECOS[it.k]) b += DECOS[it.k].b * (it.mon ? 1.5 : 1); else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
-  PROD_KEYS.forEach((k) => { if (MOV[k].placed && SERV_BEAUTY[k]) b += SERV_BEAUTY[k]; }); return b + Math.min(60, Object.keys(S.city.roads).length * 0.1); }
+/* un beau décor cher rapporte plus de beauté qu'un petit massif (jusqu'à +25 %) */
+const decoB = (d) => d.b * (1 + 0.25 * Math.min(1, Math.max(0, (d.c - 40) / 360)));
+function beauty() { let b = 0; S.city.items.forEach((it) => { if (it.t === 'd' && DECOS[it.k]) b += it.mon ? DECOS[it.k].b * 1.5 : decoB(DECOS[it.k]); else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
+  PROD_KEYS.forEach((k) => { if (MOV[k].placed && SERV_BEAUTY[k]) b += SERV_BEAUTY[k]; }); b += Math.min(60, Object.keys(S.city.roads).length * 0.1); return (S.feteB || 0) > now() ? b * 1.05 : b; } /* une fête embellit le village pendant une heure */
 const rentMult = () => 1 + Math.min(1.5, beauty() / 150);
 function capOf(it) { if (it.t !== 'h') return 0; const l = it.end > 0 ? (it.l || 1) - 1 : it.l || 1; return HOUSE_T[it.m].cap * [0, 1, 1.3, 1.6][l]; } // pendant qu'on l'embellit, elle garde les habitants de son niveau précédent
 function capTotal() { if (!links) computeLinks(); return S.city.items.reduce((a, it, i) => a + (links[i] ? capOf(it) : 0), 0); }
@@ -3218,14 +3250,17 @@ function tickCity(n, dt) {
     const lb = g.userData.lb;
     if (it.end > 0) setLabel(lb, '🏗️ ' + clock(it.end - n), 'timer');
     else if (links && !links[i]) setLabel(lb, '🚧 Pas de rue', 'warn mini');
-    else if ((it.rent || 0) >= 5) setLabel(lb, '🪙 +' + Math.floor(it.rent), 'coin');
+    else if ((it.rent || 0) >= 5 && zoom < 40) setLabel(lb, '🪙 +' + Math.floor(it.rent), 'coin'); /* de loin, un seul bouton « loyers » au lieu de cinquante pastilles */
     else setLabel(lb, '', ''); });
+  { let tot = 0, full = false; S.city.items.forEach((it, i) => { if (it.t === 'h' && it.l > 0 && !(it.end > 0)) { tot += Math.floor(it.rent || 0); if ((it.rent || 0) >= capOf(it) * RENT_K * rm * 119) full = true; } });
+    const b = $('b-rents'), on = tot >= 20 && !BUILD && !VISIT.on; if (b.hidden === on) b.hidden = !on; if (on) { $('rents').textContent = fmt(tot); $('rents-s').textContent = full ? 'loyers · pleins !' : 'loyers'; } }
+  if (S.started && n > (S.bHintAt || 0) && capTotal() - (S.pop || 0) > 30 && beauty() < capTotal() * 0.85 && (S.pop || 0) >= popTarget() - 3) { S.bHintAt = n + 900000; toast('🌷 Tes maisons ne sont pas pleines', 'Il manque de la beauté : décore le village (🏗️ Construire → Jardins) pour attirer du monde.'); }
   if (!links) computeLinks();
   // population drifts toward its target; arrivals and departures are gentle
   const tg = popTarget(), p = S.pop || 0, k = 1 - Math.exp(-dt / 40), step = (tg - p) * k;
   S.pop = Math.max(0, p + (Math.abs(step) < dt * 0.15 ? Math.sign(tg - p) * Math.min(Math.abs(tg - p), dt * 0.15) : step));
-  if (S.pop >= 1000 && !S.m1000) { S.m1000 = true; dirty = true; toast('1 000 habitants !', 'Petite France devient un vrai bourg.'); burst(player.position.x, 3, player.position.z, ['#E3A73C', '#2F4B7C', '#C9573F'], 30, 7); }
-  if (S.pop >= GOAL_POP && !S.won) { S.won = true; dirty = true; $('win').hidden = false; }
+  if (S.pop >= 1000 && !S.m1000) { S.m1000 = true; dirty = true; toast('1 000 habitants !', vil().n + ' devient un vrai bourg.'); burst(player.position.x, 3, player.position.z, ['#E3A73C', '#2F4B7C', '#C9573F'], 30, 7); }
+  if (S.pop >= GOAL_POP && !S.won) { S.won = true; dirty = true; $('win').querySelector('.kick').textContent = vil().n; $('win').hidden = false; }
   if ((popT += dt) > 0.25) { popT = 0; const sc = servCap(); $('pop').textContent = fmt(S.pop); $('popbar').style.width = Math.min(100, S.pop / GOAL_POP * 100) + '%';
     const lim = Math.floor(S.pop) >= sc[0] - 1 && sc[1]; $('poptip').hidden = !lim; if (lim) $('poptip').textContent = 'Il faut ' + sc[2] + ' pour dépasser ' + fmt(sc[0]); }
   tickDirs(); tickPiles(n / 1000);
@@ -3235,6 +3270,8 @@ function tickCity(n, dt) {
 }
 let popT = 0;
 
+function collectRents() { let tot = 0; S.city.items.forEach((it, i) => { if (it.t !== 'h') return; const r = Math.floor(it.rent || 0); if (r >= 1) { it.rent -= r; tot += r; if (cityObjs[i] && tot < 4000) burst(it.x, 2.5, it.z, ['#E3A73C', '#F3CF7A'], 3, 3); } }); if (!tot) return 0; S.coins += tot; dirty = true; SFX.coin(); buzz(25); toast('🪙 Loyers ramassés', '+' + fmt(tot) + ' pièces'); return tot; }
+$('b-rents').addEventListener('click', () => collectRents());
 /* ---- tapping a house in play mode: rent, level up ---- */
 function tapCityHouse(i) {
   if (!S.started) return; const it = S.city.items[i]; if (!it) return; const T = HOUSE_T[it.m];
@@ -3291,7 +3328,7 @@ function renderBuild() {
   else if (BTAB === 'rues') { ROAD_T.forEach((T, i) => row(T.ic, T.n, 'Touche ou glisse pour tracer · ' + T.c + ' ' + C + ' la case de 2 m', T.c + ' ' + C, S.coins >= T.c, '', () => startRoad(i)));
     row('🧽', 'Gomme', 'Retire des cases de rue (remboursées à moitié)', 'Gommer', true, '', () => startRoad(-1)); }
   else if (BTAB === 'batiments') PROD_KEYS.forEach((k) => { if (k === 'reserve' && !MOV.reserve.placed) return; const M = MOV[k], need = M.placed ? '' : M.need(); row(M.ic, M.n, M.placed ? 'Déjà construit · en mode construction, touche-le pour le déplacer' : M.desc, M.placed ? 'Déplacer' : M.c + ' ' + C, M.placed || S.coins >= M.c, need ? 'il faut ' + need : '', () => M.placed ? startMoveProd(k) : startPlace({ t: 'p', k })); });
-  else { let teasers = 0; Object.values(DECOS).filter((d) => d.cat === BTAB && !d.hide).sort((a, b) => a.lvl - b.lvl || a.c - b.c).forEach((d) => { if (lv < (d.lvl || 1) && ++teasers > 2) return; const cnt = S.city.items.filter((it) => it.k === d.id).length, c = decoPrice(d.id); row(d.ic, d.n, '+' + d.b + ' beauté' + (cnt ? ' · ' + cnt + ' posé' + (cnt > 1 ? 's' : '') : ''), c + ' ' + C, S.coins >= c, lv < (d.lvl || 1) ? 'niveau ' + d.lvl : '', () => startPlace({ t: 'd', k: d.id })); }); }
+  else { let teasers = 0; Object.values(DECOS).filter((d) => d.cat === BTAB && !d.hide).sort((a, b) => a.lvl - b.lvl || a.c - b.c).forEach((d) => { if (lv < (d.lvl || 1) && ++teasers > 2) return; const cnt = S.city.items.filter((it) => it.k === d.id).length, c = decoPrice(d.id); row(d.ic, d.n, '+' + Math.round(decoB(d)) + ' beauté' + (cnt ? ' · ' + cnt + ' posé' + (cnt > 1 ? 's' : '') : ''), c + ' ' + C, S.coins >= c, lv < (d.lvl || 1) ? 'niveau ' + d.lvl : '', () => startPlace({ t: 'd', k: d.id })); }); }
 }
 function enterBuild() { BUILD = true; $('build').hidden = true; $('buildbar').hidden = false; document.body.classList.add('building'); P.goal = null; }
 function exitBuild() { cancelPlace(); CELLS.count = 0; GRID.visible = false; BUILD = false; SEL = null; selRing.visible = false; ROADM = null; $('buildbar').hidden = true; $('selbar').hidden = true; $('placebar').hidden = true; document.body.classList.remove('building'); ghostBox.visible = false; }
@@ -3337,7 +3374,8 @@ function startMoveProd(k) { enterBuild(); const M = MOV[k]; PLC = { t: 'mp', k, 
 function startRoad(t) { enterBuild(); ROADM = { t }; $('placebar').hidden = false; $('pl-t').textContent = t < 0 ? '🧽 Touche ou glisse sur une rue pour la gommer' : ROAD_T[t].ic + ' ' + ROAD_T[t].n + ' · touche ou glisse pour tracer'; rich($('pl-ok'), 'Terminer'); $('pl-ok').disabled = false; $('pl-rot').disabled = true; }
 function paintRoad(x, z) { const ix = tileOf(x), iz = tileOf(z), k = tileKey(ix, iz), R = S.city.roads, cx = ix * TILE + TILE / 2, cz = iz * TILE + TILE / 2;
   if (ROADM.t < 0) { if (R[k] !== undefined) { S.coins += Math.floor(ROAD_T[R[k]].c / 2); delete R[k]; dirty = true; links = null; drawRoads(); grid = null; } return; }
-  if (R[k] === ROADM.t || S.coins < ROAD_T[ROADM.t].c) return;
+  if (R[k] === ROADM.t) return; if (S.coins < ROAD_T[ROADM.t].c) { if (now() > (paintRoad.warn || 0)) { paintRoad.warn = now() + 4000; toast('Il te manque des pièces', 'Une case de ' + ROAD_T[ROADM.t].n.toLowerCase() + ' coûte ' + ROAD_T[ROADM.t].c + ' pièces.'); } return; }
+  for (const c of GCOVER) { if (!c[5]) continue; const dx = cx - c[0], dz = cz - c[1], cs = Math.cos(c[4]), sn = Math.sin(c[4]); if (Math.abs(dx * cs - dz * sn) < c[2] && Math.abs(dx * sn + dz * cs) < c[3]) return; } /* pas de rue sur les chemins et les rampes */
   if (cx < BX0 + 1 || cx > BX1 - 1 || cz < BZ0 + 1 || cz > BZ1 - 1 || (cx > RIVER.x0 - 1.5 && cx < RIVER.x1 + 1.5) || Math.hypot(cx - HILL.x, cz - HILL.z) < HILL.r1 || Math.abs(cz) < 2.3 || !landOwned(cx, cz)) return;
   for (const [a, b] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6], [0, 0]]) if (blocked(cx + a, cz + b, 0)) return;
   S.coins -= ROAD_T[ROADM.t].c; R[k] = ROADM.t; dirty = true; links = null; drawRoads(); }
@@ -3453,17 +3491,18 @@ function tickPiles(t) { PILES.forEach((P, i) => { const v = Math.floor(P.f() || 
 /* ================= visiter le village : la caméra descend à hauteur d'homme et suit les rues, d'une maison à l'autre ================= */
 const VISIT = { on: false, cam: new THREE.PerspectiveCamera(60, 1, 0.15, 230), stops: [], k: 0, path: [], pos: new THREE.Vector3(), yaw: 0, pause: 0 };
 function visitStops() { const L = [[MOV.shop.x, MOV.shop.z]]; cityObjs.forEach((g) => { if (g && g.userData.kind === 'cityhouse') L.push([g.position.x, g.position.z]); }); PROD_KEYS.forEach((k) => { const M = MOV[k]; if (M.placed && k !== 'shop' && k !== 'champ') L.push([M.x, M.z]); });
-  const out = [L.shift()]; while (L.length) { const c = out[out.length - 1]; let bi = 0, bd = 1e9; L.forEach((q, i) => { const d = Math.hypot(q[0] - c[0], q[1] - c[1]); if (d < bd) { bd = d; bi = i; } }); out.push(L.splice(bi, 1)[0]); } return out; }
+  const out = [L.shift()]; while (L.length) { const c = out[out.length - 1]; let bi = 0, bd = 1e9; L.forEach((q, i) => { const d = Math.hypot(q[0] - c[0], q[1] - c[1]); if (d < bd) { bd = d; bi = i; } }); out.push(L.splice(bi, 1)[0]); } if (out.length > 10) { const k = out.length / 10; return Array.from({ length: 10 }, (_, i) => out[Math.floor(i * k)]); } return out; } /* un tour d'une dizaine d'arrêts, puis retour à la vue du dessus */
 function visitLeg() { const V = VISIT, s = V.stops[V.k % V.stops.length]; let p = []; try { p = roadPath(V.pos.x, V.pos.z, s[0], s[1]) || []; } catch (e) { p = []; } if (p.length) p.pop(); V.path = p; if (!p.length) V.pause = 2.6; }
-function startVisit() { const V = VISIT; if (V.on || BUILD || !S.started) return; S.visited = (S.visited || 0) + 1; dirty = true; V.stops = visitStops(); V.k = 0; V.path = []; V.pos.set(STN.shop[0], 0, STN.shop[1] + 3.6); V.yaw = Math.atan2(MOV.shop.x - V.pos.x, MOV.shop.z - V.pos.z); V.pause = 2.6; V.on = true; P.goal = null; document.body.classList.add('visiting'); }
-function endVisit(build) { const V = VISIT; if (!V.on) return; V.on = false; document.body.classList.remove('visiting'); target.set(V.pos.x, 0, V.pos.z); placeCam(); if (build) openBuild(); }
+function startVisit() { const V = VISIT; if (V.on || BUILD || !S.started) return; S.visited = (S.visited || 0) + 1; dirty = true; V.stops = visitStops(); V.k = 0; V.path = []; V.pos.set(STN.shop[0] + 3.2, 0, STN.shop[1] + 4.6); V.yaw = Math.atan2(MOV.shop.x - V.pos.x, MOV.shop.z - V.pos.z); V.pause = 2.6; V.on = true; P.goal = null; document.body.classList.add('visiting'); }
+function endVisit(build) { const V = VISIT; if (!V.on) return; V.on = false; villagers.forEach((g) => { g.visible = true; }); document.body.classList.remove('visiting'); target.set(V.pos.x, 0, V.pos.z); placeCam(); if (build) openBuild(); }
 function tickVisit(dt) { const V = VISIT; if (!V.on) return; const s = V.stops[V.k % V.stops.length]; let want = V.yaw, stop = V.pause > 0;
-  if (stop) { V.pause -= dt; want = Math.atan2(s[0] - V.pos.x, s[1] - V.pos.z); if (V.pause <= 0) { V.k++; visitLeg(); } }
-  else { const w = V.path[0]; if (!w || Math.hypot(s[0] - V.pos.x, s[1] - V.pos.z) < 8.5) { V.pause = 2.8; V.path = []; } else { const dx = w[0] - V.pos.x, dz = w[1] - V.pos.z, d = Math.hypot(dx, dz); if (d < 0.4) V.path.shift(); else { const st = Math.min(d, 2.3 * dt); V.pos.x += dx / d * st; V.pos.z += dz / d * st; want = Math.atan2(dx, dz); } } }
+  if (stop) { V.pause -= dt; want = Math.atan2(s[0] - V.pos.x, s[1] - V.pos.z); if (V.pause <= 0) { V.k++; if (V.k >= V.stops.length) { toast('👀 Fin de la visite', 'Merci d\'être passé !'); return endVisit(false); } visitLeg(); } }
+  else { const w = V.path[0]; if (!w || Math.hypot(s[0] - V.pos.x, s[1] - V.pos.z) < 8.5) { V.pause = 2.8; V.path = []; } else { const dx = w[0] - V.pos.x, dz = w[1] - V.pos.z, d = Math.hypot(dx, dz); if (d < 0.4) V.path.shift(); else { const st = Math.min(d, 3.2 * dt); V.pos.x += dx / d * st; V.pos.z += dz / d * st; { const q = pushOut(V.pos.x, V.pos.z); V.pos.x = q[0]; V.pos.z = q[1]; } /* jamais dans un mur */ want = Math.atan2(dx, dz); } } }
   let da = want - V.yaw; while (da > Math.PI) da -= 6.2832; while (da < -Math.PI) da += 6.2832; V.yaw += da * Math.min(1, dt * 1.7);
   const gy = groundY(V.pos.x, V.pos.z), c = V.cam; c.aspect = window.innerWidth / window.innerHeight; c.fov = c.aspect < 0.8 ? 74 : 58; c.updateProjectionMatrix();
   V.lookY = (V.lookY || 2) + ((stop ? 3.2 : 2.1) - (V.lookY || 2)) * Math.min(1, dt * 1.5);
   c.position.set(V.pos.x, gy + 1.7 + Math.sin(performance.now() * 0.0065) * (stop ? 0 : 0.03), V.pos.z); c.lookAt(V.pos.x + Math.sin(V.yaw) * 10, gy + V.lookY, V.pos.z + Math.cos(V.yaw) * 10);
+  villagers.forEach((g) => { g.visible = Math.hypot(g.position.x - V.pos.x, g.position.z - V.pos.z) > 2; }); /* pas de tête collée à l'objectif */
   target.set(V.pos.x, 0, V.pos.z); }
 $('v-quit').addEventListener('click', () => endVisit(false)); $('v-build').addEventListener('click', () => endVisit(true));
 $('b-menu').addEventListener('click', () => { if (!S.started) return; openSheet('Menu', 'Village de ' + vil().n, [
@@ -3627,7 +3666,7 @@ function villageApply() { drawVillagePanel(); const v = vil(); let el = document
 function villageSheet() { if (!S.started) return; const v = Object.assign({}, vil()), w = document.createElement('div'); w.style.cssText = 'margin:0 0 10px';
   const inp = 'width:100%;box-sizing:border-box;font:800 14px Nunito,sans-serif;padding:8px 10px;border:2.5px solid var(--ink);border-radius:12px;background:#fff';
   w.innerHTML = '<div style="display:flex;gap:12px;align-items:center;margin-bottom:10px"><canvas width="150" height="180" style="width:75px;height:90px;flex:none"></canvas><div style="flex:1;min-width:0"><input type="text" data-k="n" maxlength="22" placeholder="Nom du village" style="' + inp + '"><input type="text" data-k="dv" maxlength="40" placeholder="Devise (facultatif)" style="' + inp + ';margin-top:6px;font-weight:700;font-style:italic"></div></div>';
-  const cv = w.querySelector('canvas'), redraw = () => { const g = cv.getContext('2d'); g.clearRect(0, 0, 150, 180); drawBlason(g, v, 0, 0, 150); }; w.querySelector('[data-k=n]').value = v.n; w.querySelector('[data-k=dv]').value = v.dv || '';
+  const cv = w.querySelector('canvas'), redraw = () => { const g = cv.getContext('2d'); g.clearRect(0, 0, 150, 180); drawBlason(g, v, 0, 0, 150); }; w.querySelector('[data-k=n]').value = v.n; w.querySelector('[data-k=dv]').value = v.dv || ''; { const bi = document.createElement('input'); bi.type = 'text'; bi.maxLength = 22; bi.setAttribute('data-k', 'bourg'); bi.placeholder = 'Nom du quartier central (Le Bourg)'; bi.style.cssText = inp + ';margin:0 0 10px'; bi.value = landS().names.bourg || ''; w.insertBefore(bi, w.children[1] || null); }
   [['Forme', 'f', FORMES], ['Partition', 'p', PARTITIONS], ['Première couleur', 'c1', HERALD], ['Seconde couleur', 'c2', HERALD], ['Emblème', 'e', EMBLEMES]].forEach(([title, key, list]) => { const row = document.createElement('div'); row.style.cssText = 'margin-bottom:8px'; const lb = document.createElement('div'); lb.textContent = title; lb.style.cssText = 'font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--blue);margin-bottom:4px'; row.appendChild(lb);
     const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px'; row.appendChild(wrap);
     const mark = () => [...wrap.children].forEach((b, i) => { b.style.outline = v[key] === i ? '3px solid var(--gold)' : 'none'; b.style.outlineOffset = '1px'; });
@@ -3636,7 +3675,7 @@ function villageSheet() { if (!S.started) return; const v = Object.assign({}, vi
       b.addEventListener('click', () => { v[key] = i; mark(); redraw(); }); wrap.appendChild(b); }); mark(); w.appendChild(row); });
   redraw();
   openSheet('Mon village', 'Son nom, son blason et sa devise : ils s\'affichent à l\'entrée du village.' + (S.renom ? ' Renommée : ' + fmt(S.renom) + ' ⭐ (' + (S.fetes || 0) + ' fête' + ((S.fetes || 0) > 1 ? 's' : '') + ' donnée' + ((S.fetes || 0) > 1 ? 's' : '') + ').' : ''), [{ t: '💾 Enregistrer', s: 'Tu pourras tout changer plus tard, gratuitement.', btn: 'Valider', ok: true,
-    run: () => { v.n = cleanName(w.querySelector('[data-k=n]').value, 'Petite France').slice(0, 22); v.dv = (w.querySelector('[data-k=dv]').value || '').replace(/[<>]/g, '').trim().slice(0, 40); S.village = v; dirty = true; closeSheet(); villageApply(); toast('🛡️ ' + v.n, ''); } }], null, w); }
+    run: () => { v.n = cleanName(w.querySelector('[data-k=n]').value, 'Petite France').slice(0, 22); v.dv = (w.querySelector('[data-k=dv]').value || '').replace(/[<>]/g, '').trim().slice(0, 40); S.village = v; { const bv = (w.querySelector('[data-k=bourg]').value || '').replace(/[<>]/g, '').trim().slice(0, 22); if (bv) landS().names.bourg = bv; else delete landS().names.bourg; try { landRefresh(); } catch (e) {} } dirty = true; closeSheet(); villageApply(); toast('🛡️ ' + v.n, ''); } }], null, w); }
 /* ================= ambiance : l'heure qu'il est en France, les saisons, la météo, le vent, la vie ================= */
 // La saison suit la date de Paris ; la journée du village dure 15 minutes. __pf.amb.set({ day (0 à 1), hour, season, wind }) force une valeur pour essayer ; set(null) revient au réel.
 const AMB = { hour: 12, h: 1, season: 'ete', weather: 'clair', wind: 0.1, night: 0, force: {}, rain: 0, snow: 0, mist: 0, cloud: 0.4, cover: 0 };
@@ -3934,15 +3973,15 @@ function step() {
     if ((loadT += dt) > 1.5) { loadT = 0; loadNear(); }
     // walking close is enough: harvest, sow, mill, bake, cash in
     if (S.started && !P.work) {
-      const px = player.position.x, pz = player.position.z;
-      for (let i = 0; i < S.unlocked; i++) { const pp = PLOT_POS[i]; if (Math.hypot(px - pp[0], pz - pp[1]) < 1.05) { const p = S.plots[i]; if (plotRipe(p)) { startWork('cut', () => { if (plotRipe(S.plots[i])) harvest(i); }, pp); break; } else if (p.s === 'empty' && n > plotCd[i]) { plotCd[i] = n + 900; startWork('sow', () => { if (S.plots[i].s === 'empty') sow(i); }, pp); break; } } }
-      if (!P.work && n > (cd.mill || 0) && Math.hypot(px - MI[0], pz - MI[1]) < MI[2] && (S.mill ? n >= S.mill.end : S.ble >= 2)) { cd.mill = n + 450; startWork('mill', tapMill, MI); }
-      if (!P.work && !(S.hired.ines && !S.tasks.ines) && n > (cd.oven || 0) && Math.hypot(px - OV[0], pz - OV[1]) < OV[2] && (S.oven ? n >= S.oven.end : S.farine >= 1)) { cd.oven = n + 450; startWork('oven', tapOven, OV); } // with Inès at work, walking past the oven no longer takes her batch
+      const px = player.position.x, pz = player.position.z, cap = stockCap(), away = P.goal && Math.hypot(P.goal.x - px, P.goal.z - pz) > 2.5; /* en chemin vers ailleurs, il ne s'arrête pas aux ateliers */
+      for (let i = 0; i < S.unlocked; i++) { const pp = PLOT_POS[i]; if (Math.hypot(px - pp[0], pz - pp[1]) < 1.05) { const p = S.plots[i]; if (plotRipe(p) && S.ble < cap) { startWork('cut', () => { if (plotRipe(S.plots[i])) harvest(i); }, pp); break; } else if (p.s === 'empty' && n > plotCd[i]) { plotCd[i] = n + 900; startWork('sow', () => { if (S.plots[i].s === 'empty') sow(i); }, pp); break; } } }
+      if (!P.work && !away && n > (cd.mill || 0) && Math.hypot(px - MI[0], pz - MI[1]) < MI[2] && (S.mill ? n >= S.mill.end : S.ble >= 2 && S.farine < cap / 3)) { cd.mill = n + 450; startWork('mill', tapMill, MI); }
+      if (!P.work && !away && !(S.hired.ines && !S.tasks.ines) && n > (cd.oven || 0) && Math.hypot(px - OV[0], pz - OV[1]) < OV[2] && (S.oven ? n >= S.oven.end : S.farine >= 1 && S.pain < cap)) { cd.oven = n + 450; startWork('oven', tapOven, OV); } // with Inès at work, walking past the oven no longer takes her batch
       if (S.shop > 0 && n > (cd.shop || 0) && Math.hypot(px - SH[0], pz - SH[1]) < 2.6) tapShop();
       if (S.carry > 0 && Math.hypot(px - SH[0], pz - SH[1]) < 2.8) { stockBread(S.carry); S.carry = 0; }
       if (S.carryC > 0 && Math.hypot(px - SH[0], pz - SH[1]) < 2.8) { stockCake(S.carryC); S.carryC = 0; }
-      PKEYS.forEach((k) => { if (!P.work && S.lv[k] > 0 && S.pen[k].n > 0 && Math.hypot(px - PEN[k].x, pz - PEN[k].z) < 3.2) startWork('pen', () => penCollect(k), [PEN[k].x, PEN[k].z]); });
-      if (S.lv.cake > 0 && n > (cd.cake || 0) && Math.hypot(px - STN.cake[0], pz - STN.cake[1]) < 2.3 && (S.cakeJob ? n >= S.cakeJob.end : (S.farine >= 1 && S.eggs >= 2)) && !P.work) { cd.cake = n + 500; startWork('cake', tapCake, STN.cake); }
+      PKEYS.forEach((k) => { if (!P.work && !away && S.lv[k] > 0 && S.pen[k].n > 0 && Math.hypot(px - PEN[k].x, pz - PEN[k].z) < 3.2) startWork('pen', () => penCollect(k), [PEN[k].x, PEN[k].z]); });
+      if (S.lv.cake > 0 && n > (cd.cake || 0) && Math.hypot(px - STN.cake[0], pz - STN.cake[1]) < 2.3 && (S.cakeJob ? n >= S.cakeJob.end : (S.farine >= 1 && S.eggs >= 2)) && !P.work && !away) { cd.cake = n + 500; startWork('cake', tapCake, STN.cake); }
       if (S.btill > 0 && Math.hypot(px - BQDOOR[0], pz - BQDOOR[1]) < 2.6) collectBq();
       if (S.lv.mk > 0) { for (let k = 0; k < S.gun; k++) if (!P.work && Math.hypot(px - GPOS[k][0], pz - GPOS[k][1]) < 0.95) { const p = S.garden[k]; if (gRipe(p)) startWork('garden', () => { if (gRipe(S.garden[k])) gHarvest(k); }, GPOS[k]); else if (p.s === 'empty' && n > gardenCd[k]) { gardenCd[k] = n + 900; startWork('sow', () => { if (S.garden[k].s === 'empty') gSow(k); }, GPOS[k]); } }
         if (n > (cd.market || 0) && Math.hypot(px - STN.market[0], pz - STN.market[1]) < 2.4 && (S.vcarry.length || S.mtill > 0)) { stockStall(S.vcarry); collectMarket(); cd.market = n + 600; } }
