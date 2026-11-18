@@ -390,7 +390,7 @@ const scene = new THREE.Scene();
   gr.addColorStop(0, '#9FCFE6'); gr.addColorStop(0.55, '#D9E9E6'); gr.addColorStop(1, '#F6DFB4'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; scene.background = t; }
 scene.fog = new THREE.Fog('#F2DDB6', 70, 150);
-const cam = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 260);
+const cam = new THREE.OrthographicCamera(-10, 10, 10, -10, -160, 420); /* plan proche négatif : rien n'est coupé devant la caméra quand on dézoome */
 const target = new THREE.Vector3(-64, 0, 2);
 let zoom = window.innerWidth / window.innerHeight < 0.75 ? 26 : 34;
 const OFF = new THREE.Vector3(26, 30, 26);
@@ -413,7 +413,7 @@ scene.add(sun);
 
 /* ---------------- the map: four quarters along one road ---------------- */
 // x grows to the east. Campagne (west) → bridge → porte « Petite France » → entrée et marché → centre-ville → bistrot. The château sits on a hill north of the centre.
-const BX0 = -104, BX1 = 68, BZ0 = -56, BZ1 = 28; // where you can walk
+const BX0 = -104, BX1 = 68, BZ0 = -98, BZ1 = 70; // where you can walk (carte doublée le 18/11/2026 : 42 m de plus au nord et au sud)
 const HILL = { x: 26, z: -39, top: 6.5, r0: 14, r1: 22 };
 /* ---- le relief : des paliers (plats, tenus par des murs de pierre, reliés par des rampes) et des pentes douces. On garde toujours le plus haut. ---- */
 const RELIEF = [
@@ -500,7 +500,7 @@ const AMBU = { uPh: { value: 0 }, uWind: { value: 0.1 }, uWindDir: { value: new 
   for (let k = 0; k < 46; k++) { const x = r() * 128, y = r() * 128, rad = 10 + r() * 22, a = 0.16 + r() * 0.22; for (let ox = -128; ox <= 128; ox += 128) for (let oy = -128; oy <= 128; oy += 128) { const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad); gr.addColorStop(0, 'rgba(255,255,255,' + a + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x + ox - rad, y + oy - rad, rad * 2, rad * 2); } }
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; AMBU.uCloudTex.value = t; }
 /* ---- the grass: every blade is drawn; the carpet follows the view and wraps around it, so it is dense where you look and costs nothing elsewhere ---- */
-const GRASS = { PU: 56, PV: 78, N: [9000, 15000, 22000], W: [1.3, 1.12, 1.0], box: [-113, -65, 77, 37], mw: 380, mh: 204, dirty: true, row: -1, wait: 0, mesh: null, data: null, tex: null };
+const GRASS = { PU: 56, PV: 78, N: [9000, 15000, 22000], W: [1.3, 1.12, 1.0], box: [-113, -107, 77, 79], mw: 380, mh: 372, dirty: true, row: -1, wait: 0, mesh: null, data: null, tex: null };
 Object.assign(AMBU, { uGT: { value: new THREE.Vector4() }, uGP: { value: new THREE.Vector2(GRASS.PU, GRASS.PV) }, uGBox: { value: new THREE.Vector4(GRASS.box[0], GRASS.box[1], 1 / (GRASS.box[2] - GRASS.box[0]), 1 / (GRASS.box[3] - GRASS.box[1])) }, uGPl: { value: new THREE.Vector3() }, uGFade: { value: 1 }, uGW: { value: 1 }, uGMask: { value: null }, uGH: { value: null } });
 const GRASS_HEAD = 'attribute vec2 aBase; attribute vec4 aRnd; uniform vec4 uGT, uGBox; uniform vec2 uGP; uniform vec3 uGPl; uniform float uGFade, uGW; uniform sampler2D uGMask, uGH, uCloudTex;\n';
 const GRASS_VERT = [
@@ -638,16 +638,16 @@ function hay(x, z, r) { const g = new THREE.Group(); g.position.set(x, 0, z); g.
 /* ---- ground, road, river, hill ---- */
 // the ground comes in two parts, so the river can run low between its stone quays
 const RMID = (RIVER.x0 + RIVER.x1) / 2, RW = RIVER.x1 - RIVER.x0, WY = -0.95;
-function groundPart(xa, xb) { const w = xb - xa, G = new THREE.PlaneGeometry(w, 170, Math.max(2, Math.round(w / 2)), 85); G.rotateX(-Math.PI / 2); G.translate((xa + xb) / 2, 0, 0); const P = G.attributes.position, col = [], c = new THREE.Color();
+function groundPart(xa, xb) { const w = xb - xa, G = new THREE.PlaneGeometry(w, 460, Math.max(2, Math.round(w / 2.5)), 184); G.rotateX(-Math.PI / 2); G.translate((xa + xb) / 2, 0, 0); const P = G.attributes.position, col = [], c = new THREE.Color();
   for (let i = 0; i < P.count; i++) { const x = P.getX(i), z = P.getZ(i); const n = Math.sin(x * 0.11) * Math.cos(z * 0.13) + Math.sin(x * 0.037 + z * 0.05);
     c.set(x < RIVER.x0 ? '#7FAE4C' : '#78AA49').offsetHSL(n * 0.012, 0, n * 0.022); col.push(c.r, c.g, c.b);
     const out = Math.max(0, Math.max(BX0 - 8 - x, x - BX1 - 8, BZ0 - 8 - z, z - BZ1 - 8)), rv = Math.min(1, Math.max(0, (Math.abs(x - RMID) - 3) / 10));
     P.setY(i, -0.02 + reliefY(x, z) + rv * (-out * 0.02 + (out > 0 ? Math.sin(x * 0.2) * Math.cos(z * 0.17) * Math.min(4, out * 0.25) : 0))); }
   G.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); G.computeVertexNormals();
   const gm = new THREE.Mesh(G, ambPatch(new THREE.MeshLambertMaterial({ vertexColors: true }), 'tint')); gm.receiveShadow = true; gm.userData.dyn = true; scene.add(gm); }
-groundPart(-150, RIVER.x0); groundPart(RIVER.x1, 150);
+groundPart(-230, RIVER.x0); groundPart(RIVER.x1, 230);
 // far hills all around, to close the world
-[[-130, -40, 22], [-125, 30, 18], [90, -30, 24], [95, 35, 20], [-40, -85, 26], [40, -88, 28], [0, 60, 24], [-70, 62, 20], [70, 62, 22]].forEach((h, i) => { const m = mesh(new THREE.IcosahedronGeometry(h[2], 2), i % 2 ? '#86B454' : '#93BF5E', h[0], -h[2] * 0.55, h[1], scene, { noShadow: true }); m.scale.y = 0.5; m.castShadow = false; });
+[[-150, -60, 22], [-145, 50, 18], [120, -50, 24], [125, 55, 20], [-40, -160, 26], [40, -165, 28], [0, 135, 24], [-70, 138, 20], [70, 138, 22]].forEach((h, i) => { const m = mesh(new THREE.IcosahedronGeometry(h[2], 2), i % 2 ? '#86B454' : '#93BF5E', h[0], -h[2] * 0.55, h[1], scene, { noShadow: true }); m.scale.y = 0.5; m.castShadow = false; });
 // the road
 // the road: a dirt track in the campagne, Paris cobblestones from the bridge on
 function rrect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
@@ -667,13 +667,13 @@ function paved(geo, x, y, z, rx, ry) { const m = new THREE.Mesh(geo, new THREE.M
 for (let i = BX0 - 10; i < RIVER.x0 - 1; i += 1.15) flat(0.55, 0.35, '#D2C3A4', i, -1.7 + (Math.abs(i * 7) % 3) * 1.6, 0.045);
 // the river and its bridge
 // the river runs low between Paris-style stone quays
-const water = new THREE.Mesh(new THREE.PlaneGeometry(RW, 220, 1, 40), new THREE.MeshLambertMaterial({ color: '#6FB3C8', emissive: '#2E6E86', emissiveIntensity: 0.25 }));
+const water = new THREE.Mesh(new THREE.PlaneGeometry(RW, 320, 1, 60), new THREE.MeshLambertMaterial({ color: '#6FB3C8', emissive: '#2E6E86', emissiveIntensity: 0.25 }));
 water.rotation.x = -Math.PI / 2; water.position.set(RMID, WY, 0); water.userData.dyn = true; scene.add(water);
 [[RIVER.x0, -1], [RIVER.x1, 1]].forEach(([wx, d]) => {
-  mesh(new THREE.BoxGeometry(0.4, 1.6, 220), '#CFC3A8', wx + d * 0.2, -0.75, 0, scene, { noShadow: true });
-  mesh(new THREE.BoxGeometry(0.56, 0.12, 220), STONE3, wx + d * 0.12, 0.08, 0, scene, { noShadow: true });
-  [-0.35, -0.68].forEach((y) => mesh(new THREE.BoxGeometry(0.02, 0.035, 220), '#B5A88E', wx - d * 0.005, y, 0, scene, { noShadow: true })); });
-{ const ripples = []; for (let k = 0; k < 26; k++) { const r = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.12), new THREE.MeshBasicMaterial({ color: '#D8F1F8', transparent: true, opacity: 0.7 })); r.rotation.x = -Math.PI / 2; r.position.set(RIVER.x0 + 0.5 + rnd() * 2, WY + 0.02, -55 + k * 3.3); r.userData.dyn = true; r.userData.z0 = r.position.z; scene.add(r); ripples.push(r); } water.userData.ripples = ripples; }
+  mesh(new THREE.BoxGeometry(0.4, 1.6, 320), '#CFC3A8', wx + d * 0.2, -0.75, 0, scene, { noShadow: true });
+  mesh(new THREE.BoxGeometry(0.56, 0.12, 320), STONE3, wx + d * 0.12, 0.08, 0, scene, { noShadow: true });
+  [-0.35, -0.68].forEach((y) => mesh(new THREE.BoxGeometry(0.02, 0.035, 320), '#B5A88E', wx - d * 0.005, y, 0, scene, { noShadow: true })); });
+{ const ripples = []; for (let k = 0; k < 26; k++) { const r = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.12), new THREE.MeshBasicMaterial({ color: '#D8F1F8', transparent: true, opacity: 0.7 })); r.rotation.x = -Math.PI / 2; r.position.set(RIVER.x0 + 0.5 + rnd() * 2, WY + 0.02, -98 + k * 6.4); r.userData.dyn = true; r.userData.z0 = r.position.z; scene.add(r); ripples.push(r); } water.userData.ripples = ripples; }
 // the bridge: one stone arch with voussoirs and a gilded keystone, a balustrade, gilded pillars with double candélabres
 { const L = RW + 1.8, D = 5.6, TOP = 0.04, rx = RW / 2, ry = 0.7, base = WY - 0.6, sh = new THREE.Shape();
   sh.moveTo(-L / 2, base); sh.lineTo(-rx, base); sh.lineTo(-rx, WY);
@@ -1717,7 +1717,7 @@ function toast(t, s) { rich($('toast-t'), t); rich($('toast-s'), s); $('toast').
 
 /* ---------------- the map and the 2CV ---------------- */
 function zoneOpen(z) { if (z.id === 'entree') return S.lv.mk > 0 ? '' : '🔒 Ouvre le marché (' + MKCOST[0] + ' pièces)'; if (z.id === 'chateau') return level() >= 3 ? '' : '🔒 Niveau 3'; if (z.id === 'bistrot') return ''; return ''; }
-const MAPW = 340, MAPH = 190, mx = (x) => ((x - (BX0 - 4)) / (BX1 - BX0 + 8)) * MAPW, mz = (z) => ((z - (BZ0 - 4)) / (BZ1 - BZ0 + 8)) * MAPH;
+const MAPW = 340, MAPH = Math.round(340 * (BZ1 - BZ0 + 8) / (BX1 - BX0 + 8)), mx = (x) => ((x - (BX0 - 4)) / (BX1 - BX0 + 8)) * MAPW, mz = (z) => ((z - (BZ0 - 4)) / (BZ1 - BZ0 + 8)) * MAPH;
 function renderMap() {
   const here = zoneOf(player.position.x, player.position.z);
   let svg = '<svg viewBox="0 0 ' + MAPW + ' ' + MAPH + '" role="img" aria-label="Carte du village"><rect width="' + MAPW + '" height="' + MAPH + '" rx="16" fill="#CFE3A6" stroke="#2B2535" stroke-width="3"/>';
@@ -3485,7 +3485,16 @@ const QUARTIERS = [
   { id: 'faubourg', n: 'Le Faubourg', ic: '☕', tier: 4, x0: 42, x1: 68, z0: -22, z1: 18, nx: 2, nz: 2, ch: 'le bistrot' },
   { id: 'coteau', n: 'Le Coteau', ic: '🍇', tier: 4, x0: -34, x1: 68, z0: 18, z1: 28, nx: 6, nz: 1, ch: 'les vignes' },
   { id: 'bois', n: 'Les Bois', ic: '🦌', tier: 5, x0: -104, x1: -50, z0: -56, z1: -20, nx: 3, nz: 2, ch: 'la faune' },
-  { id: 'butte', n: 'La Butte', ic: '🏰', tier: 6, x0: -2, x1: 68, z0: -56, z1: -22, nx: 4, nz: 2, ch: 'le château' }
+  { id: 'butte', n: 'La Butte', ic: '🏰', tier: 6, x0: -2, x1: 68, z0: -56, z1: -22, nx: 4, nz: 2, ch: 'le château' },
+  /* la carte doublée (18/11/2026) : une bande au nord, une au sud */
+  { id: 'pres', n: 'Les Prés', ic: '🌼', tier: 2, x0: -104, x1: -50, z0: -98, z1: -56, nx: 3, nz: 3, ch: 'les prés' },
+  { id: 'val', n: 'Le Val', ic: '🐄', tier: 3, x0: -104, x1: -50, z0: 28, z1: 70, nx: 3, nz: 3, ch: 'le val' },
+  { id: 'vergers', n: 'Les Vergers', ic: '🍎', tier: 4, x0: -34, x1: 14, z0: -98, z1: -56, nx: 3, nz: 3, ch: 'les vergers' },
+  { id: 'plateau', n: 'Le Plateau', ic: '🌻', tier: 4, x0: -34, x1: 14, z0: 28, z1: 70, nx: 3, nz: 3, ch: 'le plateau' },
+  { id: 'bief', n: 'Le Bief', ic: '🦆', tier: 5, x0: -50, x1: -34, z0: -98, z1: -56, nx: 1, nz: 3, ch: 'le bief' },
+  { id: 'rives', n: 'Les Rives', ic: '🎣', tier: 5, x0: -50, x1: -34, z0: 28, z1: 70, nx: 1, nz: 3, ch: 'les rives' },
+  { id: 'hauts', n: 'Les Hauts', ic: '⛰️', tier: 6, x0: 14, x1: 68, z0: -98, z1: -56, nx: 3, nz: 3, ch: 'les hauts' },
+  { id: 'vignes', n: 'Les Vignes', ic: '🍷', tier: 6, x0: 14, x1: 68, z0: 28, z1: 70, nx: 3, nz: 3, ch: 'les vignes' }
 ];
 const ILOTS = [];
 QUARTIERS.forEach((Q) => { const sp = (a, b, n) => { const o = []; for (let k = 0; k <= n; k++) o.push(a + 2 * Math.round(k * (b - a) / n / 2)); o[n] = b; return o; };
@@ -3570,7 +3579,9 @@ function renameQuartier(Q) { if (!S.started) return; const pre = nameInput(Q), s
 
 /* ================= le monument du quartier : un parmi trois, offert à l'ouverture, qui compte double pour la beauté ================= */
 const MONUMENTS = { bourg: ['vasques', 'kiosque_musique', 'coq'], campagne: ['puits', 'potager_carres', 'cadran_solaire'], quais: ['gloriette', 'allee_tilleuls', 'miroir_eau'], hautbourg: ['equestre', 'bassin_octogonal', 'tapis_vert'],
-  parvis: ['broderie', 'medicis', 'carrousel'], faubourg: ['petanque', 'bal', 'pavillon_treillage'], coteau: ['roseraie', 'jardin_topiaires', 'labyrinthe'], bois: ['lion', 'obelisque', 'pergola_glycine'], butte: ['bassin_rond', 'parterre', 'rang_orangers'] };
+  parvis: ['broderie', 'medicis', 'carrousel'], faubourg: ['petanque', 'bal', 'pavillon_treillage'], coteau: ['roseraie', 'jardin_topiaires', 'labyrinthe'], bois: ['lion', 'obelisque', 'pergola_glycine'], butte: ['bassin_rond', 'parterre', 'rang_orangers'],
+  pres: ['puits', 'cadran_solaire', 'pergola_glycine'], val: ['potager_carres', 'gloriette', 'allee_tilleuls'], vergers: ['rang_orangers', 'roseraie', 'kiosque_musique'], plateau: ['coq', 'tapis_vert', 'labyrinthe'],
+  bief: ['miroir_eau', 'lion', 'pavillon_treillage'], rives: ['bassin_octogonal', 'petanque', 'obelisque'], hauts: ['equestre', 'parterre', 'jardin_topiaires'], vignes: ['bal', 'broderie', 'medicis'] };
 const monumentOf = (Q) => S.city.items.find((it) => it.mon === Q.id);
 function placeMonument(Q, id, cost) {
   const I = Q.ilots.find((o) => landS().own[o.key]) || Q.ilots[0]; camTo(I.cx, I.cz); startPlace({ t: 'd', k: id, mon: Q.id, cost: cost || 0 }); toast('🗿 Pose le monument dans ' + qName(Q), ''); }
