@@ -172,7 +172,8 @@
   #stick, #dirs, #zone { display:none !important; }
   .res button { display:none; } .cause { display:none; }
   .side { top:auto; right:auto; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 10px); transform:translateX(-50%); flex-direction:row; gap:10px; }
-  #b-map, #b-shop, #b-ad { display:none; } body.building .side { display:none; }
+  #b-map, #b-shop, #b-ad, #b-up, #b-od, #b-build { display:none !important; } body.building .side { display:none; } /* un seul bouton : tout passe par le Menu (Romain, 18/11/2026) */
+  #b-menu { width:72px; height:72px; border-radius:24px; background:var(--gold); font-size:12px; } #b-menu span { font-size:30px; }
   .quest { bottom:auto; top:calc(env(safe-area-inset-top,0px) + 96px); left:calc(env(safe-area-inset-left,0px) + 10px); right:auto; max-width:min(320px, 72vw); padding:5px 10px 5px 6px; border-radius:999px; box-shadow:0 2px 0 var(--ink); gap:7px; }
   .quest .av { width:26px; height:26px; font-size:12px; } .quest b { display:none; } .quest p { font-size:12px; margin:0; } .quest:not(.open) p { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; } .quest.open { border-radius:16px; } .quest .btn { padding:5px 9px; font-size:11px; white-space:nowrap; }
   .toast { top:calc(env(safe-area-inset-top,0px) + 56px); width:auto; max-width:min(330px, 88vw); padding:6px 14px; border-radius:999px; box-shadow:0 2px 0 var(--ink); } .toast b { font-size:12.5px; } .toast span { display:none; }
@@ -215,7 +216,7 @@
   <button class="rb" id="b-shop" type="button"><span>🛒</span>Boutique</button>
   <button class="rb gold" id="b-build" type="button"><span>🏗️</span>Construire</button>
   <button class="rb" id="b-ad" type="button"><span>▶️</span>+20</button>
-  <button class="rb" id="b-menu" type="button"><span>☰</span>Menu</button>
+  <button class="rb" id="b-menu" type="button"><span>☰</span>Menu<i class="n" id="menu-n" hidden></i></button>
 </div>
 <div id="talk" hidden><div class="av" id="tk-av">O</div><div class="tx"><b id="tk-who"></b><p id="tk-say"></p></div></div>
 <div class="quest" id="quest"><div class="av" id="q-av">★</div><div class="tx"><b id="q-who">Objectif</b><p id="q-text"></p></div><button class="btn gold" id="q-btn" type="button" hidden></button></div>
@@ -498,7 +499,7 @@ const GLB = [];
 const VCOL = new THREE.MeshLambertMaterial({ vertexColors: true }), VCOLF = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), VLIT = new THREE.MeshBasicMaterial({ vertexColors: true });
 /* ---- ambiance: one shader hook shared by the still world (wind sway, seasons on leaves, snow on what faces the sky, lit windows at night, drifting cloud shadows) ---- */
 const AMBU = { uPh: { value: 0 }, uWind: { value: 0.1 }, uWindDir: { value: new THREE.Vector2(0.8, 0.6) }, uSnow: { value: 0 }, uNight: { value: 0 }, uLitT: { value: 0.2 }, uCloud: { value: 0.5 }, uCloudOff: { value: new THREE.Vector2() }, uCloudTex: { value: null },
-  uLeafMix: { value: 0 }, uLeafA: { value: new THREE.Color('#E08A2C') }, uLeafB: { value: new THREE.Color('#C9482E') }, uLeafC: { value: new THREE.Color('#E9B93A') }, uLeafT: { value: new THREE.Vector2(0.4, 0.7) }, uTint: { value: new THREE.Vector4(1, 1, 1, 0) }, uLand: { value: null }, uDew: { value: 0 }, uDewT: { value: 0 } };
+  uLeafMix: { value: 0 }, uLeafA: { value: new THREE.Color('#E08A2C') }, uLeafB: { value: new THREE.Color('#C9482E') }, uLeafC: { value: new THREE.Color('#E9B93A') }, uLeafT: { value: new THREE.Vector2(0.4, 0.7) }, uTint: { value: new THREE.Vector4(1, 1, 1, 0) }, uLand: { value: null }, uLandK: { value: 0 }, uDew: { value: 0 }, uDewT: { value: 0 } };
 { const t = new THREE.DataTexture(new Uint8Array([255]), 1, 1, THREE.RedFormat); t.needsUpdate = true; AMBU.uLand.value = t; }
 { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 128, 128); let sd = 7; const r = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
   for (let k = 0; k < 46; k++) { const x = r() * 128, y = r() * 128, rad = 10 + r() * 22, a = 0.16 + r() * 0.22; for (let ox = -128; ox <= 128; ox += 128) for (let oy = -128; oy <= 128; oy += 128) { const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad); gr.addColorStop(0, 'rgba(255,255,255,' + a + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x + ox - rad, y + oy - rad, rad * 2, rad * 2); } }
@@ -528,10 +529,10 @@ function ambPatch(m, f, x) { f = f || ''; const has = (k) => f.indexOf(k) >= 0;
       (has('leaf') ? 'if (vPfL > 0.0) { float ph = vPfL * 40.0 + uPh * 1.5 + pfW0.x * 0.2; float am = 0.015 + 0.14 * uWind; float sw = am * (sin(ph) + 0.35 * sin(ph * 2.3 + pfW0.y * 2.0)); transformed.x += uWindDir.x * sw; transformed.z += uWindDir.y * sw; transformed.y += 0.25 * am * sin(ph * 1.7 + pfW0.z); }\n' : '') +
       (has('sway') ? '{ float ph = dot(pfW0.xz, uWindDir) * 0.5 - uPh * 1.6; float am = position.y * (0.05 + 0.6 * uWind) * (0.25 * uWind + 0.7 * sin(ph) + 0.3 * sin(ph * 2.7 + pfW0.x)); transformed.x += am * uWindDir.x; transformed.z += am * uWindDir.y; }\n' : '') +
       (has('glowattr') ? 'vPfG = aGlow * step(uLitT, fract(sin(dot(floor(modelMatrix[3].xz), vec2(12.9898, 78.233))) * 43758.5453));\n' : '') + (has('glowall') ? 'vPfG = 1.0;\n' : ''));
-    sh.fragmentShader = 'uniform float uSnow, uNight, uCloud, uLeafMix, uDew, uDewT; uniform vec2 uCloudOff, uLeafT; uniform vec3 uLeafA, uLeafB, uLeafC; uniform vec4 uTint, uGBox; uniform sampler2D uCloudTex, uLand; varying vec3 vPfW; varying float vPfL; varying float vPfG;\n' + sh.fragmentShader
+    sh.fragmentShader = 'uniform float uSnow, uNight, uCloud, uLeafMix, uDew, uDewT, uLandK; uniform vec2 uCloudOff, uLeafT; uniform vec3 uLeafA, uLeafB, uLeafC; uniform vec4 uTint, uGBox; uniform sampler2D uCloudTex, uLand; varying vec3 vPfW; varying float vPfL; varying float vPfG;\n' + sh.fragmentShader
       .replace('#include <color_fragment>', '#include <color_fragment>\n' +
         (has('leaf') ? 'if (vPfL > 0.0) { vec3 pc = vPfL < uLeafT.x ? uLeafA : (vPfL < uLeafT.y ? uLeafB : uLeafC); float pl = dot(diffuseColor.rgb, vec3(0.3, 0.6, 0.1)); diffuseColor.rgb = mix(diffuseColor.rgb, pc * (0.7 + pl * 1.1), uLeafMix); }\n' : '') +
-        (has('tint') ? 'diffuseColor.rgb = mix(diffuseColor.rgb, uTint.rgb, uTint.a); { float pl = texture2D(uLand, (vPfW.xz - uGBox.xy) * uGBox.zw).r; diffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.3, 0.6, 0.1))) * vec3(0.8, 0.85, 0.9), diffuseColor.rgb, pl); }\n' : ''))
+        (has('tint') ? 'diffuseColor.rgb = mix(diffuseColor.rgb, uTint.rgb, uTint.a); { float pl = mix(1.0, texture2D(uLand, (vPfW.xz - uGBox.xy) * uGBox.zw).r, uLandK); diffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.3, 0.6, 0.1))) * vec3(0.8, 0.85, 0.9), diffuseColor.rgb, pl); }\n' : ''))
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + (x ? x.frag : '') + (has('nosnow') ? '' : '{ vec3 pn = inverseTransformDirection(normal, viewMatrix); float ps = smoothstep(0.5, 0.82, pn.y) * uSnow * (0.72 + 0.5 * texture2D(uCloudTex, vPfW.xz * 0.11).r);' + (has('tint') ? '' : ' ps *= smoothstep(0.07, 0.16, vPfW.y);') + ' diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.94, 1.0), clamp(ps, 0.0, 1.0)); }\n'))
       .replace('#include <opaque_fragment>', '{ float pc2 = texture2D(uCloudTex, vPfW.xz * 0.009 + uCloudOff).r; outgoingLight *= 1.0 - uCloud * smoothstep(0.42, 0.75, pc2) * 0.32; }\noutgoingLight += vPfG * uNight * vec3(1.0, 0.66, 0.3) * 1.5;\n' + (has('grass') || has('tint') ? 'if (uDew > 0.0) { vec2 dq = vPfW.xz * 4.0; vec2 dg = fract(dq) - 0.5; float dh = fract(sin(dot(floor(dq), vec2(127.1, 311.7))) * 43758.5453); float dt2 = 0.5 + 0.5 * sin(uDewT * (1.2 + dh * 3.0) + dh * 60.0); float dr = 1.0 - smoothstep(0.05, 0.26, length(dg)); outgoingLight += uDew * step(0.972, dh) * dr * dt2 * dt2 * dt2 * vec3(1.0, 0.97, 0.88) * 1.3; outgoingLight *= mix(vec3(1.0), vec3(0.93, 1.02, 1.0), uDew * 0.6); }\n' : '') + '#include <opaque_fragment>'); };
   return m; }
@@ -1323,7 +1324,8 @@ function ups() {
   { const ms = S.masons || 1; a.push({ ic: '🧱', t: 'Équipe de maçons · ' + ms + (ms > 1 ? ' équipes' : ' équipe'), s: ms < 5 ? 'Une équipe de plus : un chantier de maison de plus en même temps.' : 'Au maximum.', cost: ms < 5 ? MASONCOST[ms] : null, buy: () => { S.masons = ms + 1; } }); }
   if (reserveOn() && !S.garde) a.push({ ic: '🧑‍🌾', t: 'Gaspard, le garde forestier', s: 'Il veille sur la réserve naturelle : plus aucun animal ne s\'en échappe.', cost: 1500, buy: () => { S.garde = true; } });
   if ((S.popMax || S.pop || 0) >= 60) { const nf = S.fetes || 0, fc = feteCost(nf); a.push({ ic: '🎉', t: 'Fête du village' + (nf ? ' · ' + nf + ' donnée' + (nf > 1 ? 's' : '') : ''), s: 'Bal, lampions et grande tablée sur la place. +' + feteRenom(fc) + ' de renommée, et +5 % de beauté pendant une heure. Une fête toutes les 20 minutes au plus.', cost: fc, wait: (S.feteNext || 0) > now() ? 'Dans ' + Math.ceil((S.feteNext - now()) / 60000) + ' min' : '', buy: () => { S.feteNext = now() + 1200000; S.feteB = now() + 3600000; S.fetes = nf + 1; S.renom = (S.renom || 0) + feteRenom(fc); S.feteUntil = now() + 240000; toast('🎉 Fête du village', 'Renommée : ' + fmt(S.renom) + ' ⭐'); }, noXp: true }); }
-  if (!S.dog) a.push({ ic: '🐕', t: 'Médor, le chien de garde', s: 'Chasse les lapins et les sangliers tout seul.', cost: 100, buy: () => { S.dog = true; dog.position.copy(DOGHOME); } });
+  { const o = nextHouseUp(), nf = S.city ? S.city.items.filter((it) => it.t === 'h' && it.l >= 1 && it.l < 3 && !(it.end > 0)).length : 0; if (o) a.push({ ic: '🌷', t: 'Embellir les maisons · ' + nf + ' à embellir', s: (o.it.l === 1 ? 'Fleurir' : 'Faire une maison de maître de') + ' « ' + HOUSE_T[o.it.m].n + ' » : +' + Math.round(HOUSE_T[o.it.m].cap * 0.3) + ' habitants et de la beauté.' + (busyMasons() >= S.masons ? ' Maçons occupés.' : ''), cost: o.c, wait: busyMasons() >= S.masons ? 'Maçons occupés' : '', buy: () => upHouse(o), noXp: true }); }
+  if (!S.dog) a.push({ ic: '🐕', t: 'Médor, le chien du village', s: 'Il fait la tournée des maisons et te rapporte les loyers toutes les 3 minutes.', cost: 150, buy: () => { S.dog = true; dog.position.copy(DOGHOME); } });
   return a.filter(upVisible);
 }
 /* La fête du village : une dépense toujours disponible, qui transforme les pièces en renommée (la note du village dans le futur classement). */
@@ -1500,7 +1502,10 @@ $('c-mairie').addEventListener('click', () => { if (S.started) stationGo('mairie
 const labelsEl = $('labels');
 const labels = [];
 function label(obj, dy, cls) { const el = document.createElement('div'); el.className = 'lb ' + (cls || ''); labelsEl.appendChild(el); const l = { obj, dy, el, txt: '', cls: cls || '', act: null }; el.addEventListener('click', () => { if (l.act && S.started) { try { window.focus(); } catch (e) {} l.act(); } }); labels.push(l); return l; }
-function setLabel(l, txt, cls) { if (l.txt !== txt) { rich(l.el, txt); l.txt = txt; l.far = false; } const c = 'lb ' + (cls || ''); if (l.el.className !== c) l.el.className = c; const d = txt ? '' : 'none'; if (l.el.style.display !== d) l.el.style.display = d; }
+/* sur les ateliers, l'étiquette se réduit à l'icône et au chiffre : l'écran reste dégagé (Romain, 18/11/2026) */
+const PICT = /\p{Extended_Pictographic}|[0-9+×✓]/u;
+function compactTxt(t, ic) { if (!t) return t; const tk = (x) => x.split(/\s+/).filter((w) => PICT.test(w)).join(' ').trim(); let r = tk(t.split(' · ')[0]); if (!/[0-9✓]/.test(r) && t.indexOf(' · ') > 0) r = tk(t); if (!/\p{Extended_Pictographic}/u.test(r) && ic) r = ic + ' ' + r; return r.trim(); }
+function setLabel(l, txt, cls) { if (l.st && GOD) txt = compactTxt(txt, l.ic); if (l.txt !== txt) { rich(l.el, txt); l.txt = txt; l.far = false; } const c = 'lb ' + (cls || ''); if (l.el.className !== c) l.el.className = c; const d = txt ? '' : 'none'; if (l.el.style.display !== d) l.el.style.display = d; }
 const fieldAnchor = new THREE.Object3D(); fieldAnchor.position.set(-72, 0, 4.2); scene.add(fieldAnchor);
 const L = {
   plots: plotMeshes.map((p) => { const l = label(p, 0.9); l.plot = true; return l; }), field: label(fieldAnchor, 1.6), mill: label(mill, 8.4), oven: label(oven, 3.9), shop: label(shop, 7.2),
@@ -1508,6 +1513,7 @@ const L = {
   lucie: label(crew.lucie, 2.3, 'name'), camille: label(crew.camille, 2.3, 'name'), paul: label(crew.paul, 2.3, 'name'), jules: label(crew.jules, 2.3, 'name'), leo: label(crew.leo, 2.3, 'name'), ines: label(crew.ines, 2.3, 'name'), margot: label(crew.margot, 2.3, 'name')
 };
 const PL = {}; PKEYS.forEach((k) => { PL[k] = label(PEN[k].g, 3.1); PL[k].act = () => penGo(k); });
+['field', 'mill', 'oven', 'shop', 'chateau', 'market', 'cake', 'bq', 'mairie', 'church', 'bistrot'].forEach((k) => { if (L[k]) L[k].st = true; }); L.field.ic = '🌾'; PKEYS.forEach((k) => { PL[k].st = true; });
 const GL = gardens.map((g, k) => { const l = label(g, 1.25); l.act = () => gardenGo(k); return l; });
 const vtmp = new THREE.Vector3();
 function placeLabels() {
@@ -1558,13 +1564,13 @@ function millStart() { if (S.farine >= stockCap() / 3) return false; const n = M
 function tapMill() {
   if (S.mill && now() >= S.mill.end) { S.farine += S.mill.out; S.farineTot += S.mill.out; floatAt(mill, '+' + S.mill.out + ' farine'); gain(3 * S.mill.out); S.mill = null; SFX.done(); pop(mill); burst(MILLP[0], 1.6, MILLP[1] + 2, '#FFFDF8', 10); buzz(15); return; }
   if (S.mill) return openSkip('Le moulin', 'Le moulin moud ton blé.', () => S.mill.end, () => { S.mill.end = now(); });
-  if (!millStart()) { SFX.no(); if (S.farine >= stockCap() / 3) toast('La réserve de farine est pleine', 'Cuis du pain au four, ou agrandis les réserves dans « Améliorer ».'); else toast('Pas assez de blé', 'Il faut 2 bottes de blé pour un sac de farine.'); }
+  if (!millStart()) { SFX.no(); if (QUIET) return; if (S.farine >= stockCap() / 3) toast('La réserve de farine est pleine', 'Cuis du pain au four, ou agrandis les réserves dans « Améliorer ».'); else toast('Pas assez de blé', 'Il faut 2 bottes de blé pour un sac de farine.'); }
 }
 function ovenStart() { if (S.pain >= stockCap()) return false; const n = Math.min(OVENCAP[S.lv.oven - 1], S.farine); if (!n) return false; S.farine -= n; S.oven = { end: now() + dur(9000 * Math.pow(0.8, S.lv.oven - 1) * n), out: 4 * n }; dirty = true; SFX.start(); pop(oven); burst(OVENP[0], 1.6, OVENP[1] + 1.6, '#F6A04A', 6); return true; }
 function tapOven() {
   if (S.oven && now() >= S.oven.end) { if (WORKER) WORKER.bag = (WORKER.bag || 0) + S.oven.out; else if (S.hired.ines && !S.tasks.ines) crew.ines.userData.bag = (crew.ines.userData.bag || 0) + S.oven.out; /* once Inès is hired, every batch is hers to shelve, even one you take out yourself */ else S.carry += S.oven.out; S.fournees++; floatAt(oven, '+' + S.oven.out + ' 🥖'); gain(5 * S.oven.out / 4); S.oven = null; SFX.done(); pop(oven); burst(OVENP[0], 1.8, OVENP[1] + 1.6, ['#E3A73C', '#F3CF7A'], 12); buzz(15); return; }
   if (S.oven) return openSkip('Le four', 'La fournée cuit.', () => S.oven.end, () => { S.oven.end = now(); });
-  if (!ovenStart()) { SFX.no(); if (S.pain >= stockCap()) toast('La vitrine est pleine', 'Attends les clients, ou agrandis les réserves dans « Améliorer ».'); else toast('Pas de farine', 'Passe d\'abord par le moulin, dans la campagne.'); }
+  if (!ovenStart()) { SFX.no(); if (QUIET) return; if (S.pain >= stockCap()) toast('La vitrine est pleine', 'Attends les clients, ou agrandis les réserves dans « Améliorer ».'); else toast('Pas de farine', 'Passe d\'abord par le moulin, dans la campagne.'); }
 }
 function tapShop() {
   if (S.shop > 0) { S.coins += S.shop; S.encaisse += S.shop; floatAt(shop, '+' + S.shop + ' ' + C); S.shop = 0; dirty = true; SFX.coin(); burst(SHOPP[0], 1.4, SHOPP[1] + 3.4, ['#E3A73C', '#F3CF7A'], 14, 5); buzz(20); return; }
@@ -1602,12 +1608,12 @@ function autoWork(k, c, u, n, dt) {
     const i = best >= 0 ? best : sw;
     if (i >= 0) { u.target.set(PLOT_POS[i][0], 0, PLOT_POS[i][1]); u.job = () => { const p = S.plots[i]; if (plotRipe(p)) harvest(i, true); if (p.s === 'empty') sow(i); }; } else u.target.copy(HOME.leo);
   } else if (k === 'jules') {
-    if (S.mill ? n >= S.mill.end : S.ble >= 2) { u.target.copy(SPOT.mill); u.job = () => { if (S.mill ? now() >= S.mill.end : S.ble >= 2) tapMill(); }; } else u.target.copy(HOME.jules);
+    if (S.mill ? n >= S.mill.end : S.ble >= 2 && S.farine < stockCap() / 3) { u.target.copy(SPOT.mill); u.job = () => { if (S.mill ? now() >= S.mill.end : S.ble >= 2 && S.farine < stockCap() / 3) tapMill(); }; } else u.target.copy(HOME.jules);
   } else if (k === 'ines') {
     if (S.carry > 0) { u.bag = (u.bag || 0) + S.carry; S.carry = 0; dirty = true; } // she takes over the loaves the baker still carries
     c.userData.carry.visible = u.bag > 0;
     if (u.bag > 0) { u.target.copy(SPOT.shop); u.job = () => { stockBread(u.bag); u.bag = 0; }; }
-    else if (S.oven ? n >= S.oven.end : S.farine >= 1) { u.target.copy(SPOT.oven); u.job = () => { if (S.oven ? now() >= S.oven.end : S.farine >= 1) tapOven(); }; } else u.target.copy(HOME.ines);
+    else if (S.oven ? n >= S.oven.end : S.farine >= 1 && S.pain < stockCap()) { u.target.copy(SPOT.oven); u.job = () => { if (S.oven ? now() >= S.oven.end : S.farine >= 1 && S.pain < stockCap()) tapOven(); }; } else u.target.copy(HOME.ines);
   } else if (k === 'paul') {
     if (!u.bagV) u.bagV = [];
     let best = -1, bd = 1e9, sw = -1;
@@ -1770,7 +1776,7 @@ const Q = [
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Les clients font la queue ! Vends 4 baguettes.', say: 'Regarde, ils reviennent ! Madame Rabier est déjà là. Elle arrive toujours la première… pour avoir le temps de critiquer.', at: () => (S.pain > 0 ? null : flowAt()), goal: () => S.vendus >= 4, xp: 10, coins: 10 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Touche les pièces au-dessus de la boulangerie pour les ramasser.', say: 'Les sous, on les ramasse tout de suite, sinon c\'est le chat qui joue avec.', at: SH, goal: () => S.encaisse > 0, xp: 6, coins: 0 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Ouvre 🏗️ Construire et bâtis 3 maisons.', say: 'Bonnefoy, maire de cette commune depuis 31 ans ! Un village sans habitants, c\'est une mairie sans électeurs. Bâtissez, que diable !', build: 1, goal: () => cityHouses() >= 3, xp: 12, coins: 20 },
-  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Trace une rue pavée qui touche ta nouvelle maison.', say: 'Une maison sans rue ? Et le facteur, il passe par la fenêtre ? Pavez-moi ça !', build: 1, goal: () => cityLinked() >= 3, xp: 12, coins: 20 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Trace 3 cases de rue pavée devant tes maisons.', say: 'De la boue jusqu\'aux chevilles ? Dans MA commune ? Pavez-moi ça, que diable !', build: 1, goal: () => Object.keys(S.city.roads).length >= 3, xp: 12, coins: 20 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Achète le vélo du boulanger.', say: 'À mon âge je faisais la tournée à vélo. En côte. Avec 40 baguettes. Et sans me plaindre.', up: 1, goal: () => S.bike, xp: 8, coins: 10 },
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Embauche Léo : il récoltera le champ à ta place.', say: 'Salut ! Moi c\'est Léo. Je fauche, je sème, je parle aux vaches. Enfin surtout je fauche. Tu m\'embauches ?', up: 1, goal: () => S.hired.leo, xp: 10, coins: 10 },
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Achète une nouvelle parcelle.', say: 'Plus de champ, plus de blé, plus de pain. C\'est pas compliqué, l\'agriculture. Enfin, si. Mais là non.', up: 1, goal: () => S.unlocked >= 5, xp: 10, coins: 15 },
@@ -2025,6 +2031,7 @@ function tap(x, y) {
     while (o && !(o.userData && o.userData.kind)) o = o.parent;
     if (!o) continue;
     const u = o.userData;
+    if (u.kind === 'npc') return npcTap(u.id);
     if (u.kind === 'crew') { if (!S.hired[u.id]) continue; return tapCrew(u.id); }
     if (u.kind === 'plot') return plotGo(u.id);
     if (u.kind === 'garden') return gardenGo(u.id);
@@ -3225,7 +3232,7 @@ function roadNetwork() { const R = (S.city && S.city.roads) || {}, net = new Set
 const nearMainRoad = (x, z) => Math.abs(z) < 3.6;
 function houseLinked(it) { const [w, d] = itemFp(it); if (!roadNet) roadNet = roadNetwork(); const x0 = it.x - w / 2 - 1, x1 = it.x + w / 2 + 1, z0 = it.z - d / 2 - 1, z1 = it.z + d / 2 + 1;
   for (let x = x0; x <= x1; x += 1) for (let z = z0; z <= z1; z += 1) { const edge = x <= x0 + 0.01 || x >= x1 - 0.99 || z <= z0 + 0.01 || z >= z1 - 0.99; if (edge && (nearMainRoad(x, z) || roadNet.has(tileKey(tileOf(x), tileOf(z))))) return true; } return false; }
-function computeLinks() { roadNet = roadNetwork(); links = S.city.items.map((it) => it.t === 'h' && houseLinked(it)); }
+function computeLinks() { roadNet = roadNetwork(); links = S.city.items.map((it) => it.t === 'h'); } /* 18/11/2026 : plus besoin de rue pour habiter une maison (Romain : le panneau « travaux » donnait l'impression qu'elle n'était jamais finie) ; les rues embellissent */
 /* un beau décor cher rapporte plus de beauté qu'un petit massif (jusqu'à +25 %) */
 const decoB = (d) => d.b * (1 + 0.25 * Math.min(1, Math.max(0, (d.c - 40) / 360)));
 function beauty() { let b = 0; S.city.items.forEach((it) => { if (it.t === 'd' && DECOS[it.k]) b += it.mon ? DECOS[it.k].b * 1.5 : decoB(DECOS[it.k]); else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
@@ -3249,7 +3256,6 @@ function tickCity(n, dt) {
     const key = (it.l || 0) + '|' + (it.end > 0); if (v.look !== key) { v.look = key; v.sc.visible = it.end > 0; v.fl.visible = it.l >= 2; v.gd.visible = it.l >= 3; }
     const lb = g.userData.lb;
     if (it.end > 0) setLabel(lb, '🏗️ ' + clock(it.end - n), 'timer');
-    else if (links && !links[i]) setLabel(lb, '🚧 Pas de rue', 'warn mini');
     else if ((it.rent || 0) >= 5 && zoom < 40) setLabel(lb, '🪙 +' + Math.floor(it.rent), 'coin'); /* de loin, un seul bouton « loyers » au lieu de cinquante pastilles */
     else setLabel(lb, '', ''); });
   { let tot = 0, full = false; S.city.items.forEach((it, i) => { if (it.t === 'h' && it.l > 0 && !(it.end > 0)) { tot += Math.floor(it.rent || 0); if ((it.rent || 0) >= capOf(it) * RENT_K * rm * 119) full = true; } });
@@ -3273,6 +3279,10 @@ let popT = 0;
 function collectRents() { let tot = 0; S.city.items.forEach((it, i) => { if (it.t !== 'h') return; const r = Math.floor(it.rent || 0); if (r >= 1) { it.rent -= r; tot += r; if (cityObjs[i] && tot < 4000) burst(it.x, 2.5, it.z, ['#E3A73C', '#F3CF7A'], 3, 3); } }); if (!tot) return 0; S.coins += tot; dirty = true; SFX.coin(); buzz(25); toast('🪙 Loyers ramassés', '+' + fmt(tot) + ' pièces'); return tot; }
 $('b-rents').addEventListener('click', () => collectRents());
 /* ---- tapping a house in play mode: rent, level up ---- */
+/* embellir l'existant, depuis « Améliorer » : la maison la moins chère à fleurir (ou à passer maison de maître) */
+function upHouseCost(it) { return Math.round(housePrice(it.m) * (it.l === 1 ? 0.5 : 1)); }
+function nextHouseUp() { let best = -1, bc = 1e18; if (!S.city) return null; S.city.items.forEach((it, i) => { if (it.t !== 'h' || it.end > 0 || !(it.l >= 1) || it.l >= 3) return; const c = upHouseCost(it); if (c < bc) { bc = c; best = i; } }); return best < 0 ? null : { i: best, it: S.city.items[best], c: bc }; }
+function upHouse(o) { const it = o.it, T = HOUSE_T[it.m]; it.end = now() + dur(T.t * 60000 * (it.l === 1 ? 1 : 2) * timeMul()); it.l++; dirty = true; floatAt(cityObjs[o.i], it.l === 2 ? '🌷' : '✨'); }
 function tapCityHouse(i) {
   if (!S.started) return; const it = S.city.items[i]; if (!it) return; const T = HOUSE_T[it.m];
   const r = Math.floor(it.rent || 0); if (r >= 1) { it.rent -= r; S.coins += r; dirty = true; floatAt(cityObjs[i], '+' + r + ' ' + C); burst(it.x, 2.5, it.z, ['#E3A73C', '#F3CF7A'], 8, 4); }
@@ -3292,6 +3302,7 @@ function groundHit(sx, sy) { ndc.set(sx / window.innerWidth * 2 - 1, -(sy / wind
 // is a w×d rectangle centred on x,z free? (own collisions excluded by the caller)
 function cellFree(px, pz) {
   if (!landOwned(px, pz)) return false; // on ne bâtit que sur un terrain acheté
+  { const M = MOV.champ; if (M && !(PLC && PLC.t === 'p' && PLC.k === 'champ') && Math.abs(px - M.x) < M.fp[0] / 2 + 0.6 && Math.abs(pz - M.z) < M.fp[1] / 2 + 0.6) return false; } /* jamais de maison sur le champ de blé */
   if (px < BX0 + 1 || px > BX1 - 1 || pz < BZ0 + 1 || pz > BZ1 - 1) return false;
   if (px > RIVER.x0 - 1.5 && px < RIVER.x1 + 1.5) return false;
   if (px > PARK.x0 - 1 && px < PARK.x1 + 1 && pz > PARK.z - 2.6 && pz < PARK.z + 2.6) return false;
@@ -3505,7 +3516,11 @@ function tickVisit(dt) { const V = VISIT; if (!V.on) return; const s = V.stops[V
   villagers.forEach((g) => { g.visible = Math.hypot(g.position.x - V.pos.x, g.position.z - V.pos.z) > 2; }); /* pas de tête collée à l'objectif */
   target.set(V.pos.x, 0, V.pos.z); }
 $('v-quit').addEventListener('click', () => endVisit(false)); $('v-build').addEventListener('click', () => endVisit(true));
-$('b-menu').addEventListener('click', () => { if (!S.started) return; openSheet('Menu', 'Village de ' + vil().n, [
+$('b-menu').addEventListener('click', () => { if (!S.started || VISIT.on) return; const na = ups().filter((u) => u.cost !== null && !u.wait && S.coins >= u.cost).length, nd = S.orders.filter(canDeliver).length, nm = missionsReady(); openSheet('Menu', 'Village de ' + vil().n, [
+  { t: '🏗️ Construire', s: 'Maisons, rues, bâtiments, jardins et décor.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openBuild(); } },
+  { t: '🔨 Améliorer' + (na ? ' · ' + na + ' possible' + (na > 1 ? 's' : '') : ''), s: 'Employés, ateliers, réserves, maisons à embellir, fête du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } },
+  { t: '📜 Missions' + (nm ? ' · ' + nm + ' à faire' : ''), s: 'Les habitants de chaque quartier ont besoin de toi.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); missionsSheet(); } },
+  { t: '📋 Commandes' + (nd ? ' · ' + nd + ' prête' + (nd > 1 ? 's' : '') : ''), s: 'Ce que le village te commande.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-od').click(); } },
   { t: '🛡️ Mon village', s: 'Le nom, le blason et la devise de ton village.', btn: 'Modifier', ok: true, run: () => { closeSheet(); villageSheet(); } },
   { t: '🚶 Visiter le village', s: 'La caméra descend dans les rues et se promène de maison en maison, comme un habitant.', btn: 'Visiter', ok: true, run: () => { closeSheet(); startVisit(); } },
   { t: '🗺️ Carte', s: 'Voir les quartiers du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-map').click(); } },
@@ -3676,6 +3691,108 @@ function villageSheet() { if (!S.started) return; const v = Object.assign({}, vi
   redraw();
   openSheet('Mon village', 'Son nom, son blason et sa devise : ils s\'affichent à l\'entrée du village.' + (S.renom ? ' Renommée : ' + fmt(S.renom) + ' ⭐ (' + (S.fetes || 0) + ' fête' + ((S.fetes || 0) > 1 ? 's' : '') + ' donnée' + ((S.fetes || 0) > 1 ? 's' : '') + ').' : ''), [{ t: '💾 Enregistrer', s: 'Tu pourras tout changer plus tard, gratuitement.', btn: 'Valider', ok: true,
     run: () => { v.n = cleanName(w.querySelector('[data-k=n]').value, 'Petite France').slice(0, 22); v.dv = (w.querySelector('[data-k=dv]').value || '').replace(/[<>]/g, '').trim().slice(0, 40); S.village = v; { const bv = (w.querySelector('[data-k=bourg]').value || '').replace(/[<>]/g, '').trim().slice(0, 22); if (bv) landS().names.bourg = bv; else delete landS().names.bourg; try { landRefresh(); } catch (e) {} } dirty = true; closeSheet(); villageApply(); toast('🛡️ ' + v.n, ''); } }], null, w); }
+
+/* ================= les missions de quartier (18/11/2026) =================
+   Chaque quartier a son personnage, qui se tient dans le quartier. Il confie trois missions (retrouver un objet perdu, apporter du pain,
+   faire venir du monde), puis, de temps en temps, une petite trouvaille à aller chercher. Les missions font gagner des pièces dès le début
+   et obligent à se promener dans toute la carte. Un « ❗ » au-dessus du personnage dit qu'il a quelque chose à demander. */
+const NPC = {
+  bourg: { who: 'Firmin, le facteur', av: 'F', c: '#3E6EA8', look: ['#3E6EA8', '#FFFDF8', 'cap'], obj: ['✉️', 'une lettre recommandée'], hi: 'Firmin, facteur depuis 1987. Je connais toutes les boîtes aux lettres. Et tous les chiens.', more: [['📦', 'un colis'], ['🧦', 'une chaussette'], ['🗞️', 'le journal du maire']] },
+  campagne: { who: 'Ginette, la laitière', av: 'G', c: '#B98A3A', look: ['#E9D8B4', '#5E8F3E', null, '#8A5A30'], obj: ['🪣', 'son seau à lait'], hi: 'Ginette ! Mes vaches me connaissent par mon prénom. Moi, je les confonds toutes.', more: [['🥚', 'un œuf échappé'], ['🧀', 'un fromage'], ['🐓', 'le coq fugueur']] },
+  quais: { who: 'Capitaine Yvon', av: 'Y', c: '#2F4B7C', look: ['#2F4B7C', '#FFFDF8', 'cap', '#DDDDDD'], obj: ['🧢', 'sa casquette de marinier'], hi: 'Capitaine Yvon, marinier. Trente ans sur ce canal, et jamais tombé à l\'eau. Enfin, presque jamais.', more: [['⚓', 'une petite ancre'], ['🪢', 'une amarre'], ['🐟', 'un poisson trop curieux']] },
+  hautbourg: { who: 'Maître Delorme, notaire', av: 'D', c: '#4A4A5A', look: ['#4A4A5A', '#FFFDF8', null, '#9A9A9A'], obj: ['👓', 'ses lunettes'], hi: 'Maître Delorme. Je ne signe rien sans mes lunettes, et je ne trouve jamais mes lunettes.', more: [['🖋️', 'son stylo plume'], ['📜', 'un vieux testament'], ['🔑', 'la clé du cadastre']] },
+  parvis: { who: 'Sœur Agathe', av: 'A', c: '#6A6A72', look: ['#3A3A44', '#FFFDF8', null, '#3A3A44'], obj: ['📿', 'son chapelet'], hi: 'Sœur Agathe. Je prie pour le village, et pour que le père Anselme arrive à l\'heure.', more: [['🕯️', 'un cierge'], ['🔔', 'la clochette'], ['📖', 'le livre de chants']] },
+  faubourg: { who: 'Dédé, le garagiste', av: 'D', c: '#C0703A', look: ['#4E6A8A', '#2B2535', 'cap', '#2B2535'], obj: ['🔧', 'sa clé à molette'], hi: 'Dédé ! Je répare les 2CV, les vélos et parfois le moral des gens.', more: [['🛞', 'une roue de vélo'], ['🪛', 'un tournevis'], ['🛢️', 'un bidon d\'huile']] },
+  coteau: { who: 'Augustin, le vigneron', av: 'A', c: '#7A2E4A', look: ['#7A2E4A', '#8A5A30', 'beret', '#6B4A2E'], obj: ['✂️', 'son sécateur'], hi: 'Augustin. Ma vigne a deux cents ans, mon caractère à peu près pareil.', more: [['🍇', 'une grappe dorée'], ['🪵', 'un vieux tonneau'], ['🧺', 'une hotte de vendange']] },
+  bois: { who: 'Gaspard, le garde', av: 'G', c: '#4F6B3A', look: ['#4F6B3A', '#8A5A30', 'cap', '#6B4A2E'], obj: ['🔭', 'ses jumelles'], hi: 'Gaspard, garde forestier. Les biches me disent bonjour. Les sangliers, moins.', more: [['🍄', 'un cèpe énorme'], ['🦊', 'un renardeau perdu'], ['🌰', 'des châtaignes']] },
+  butte: { who: 'Baptiste, le majordome', av: 'B', c: '#7B5EA7', look: ['#2B2535', '#FFFDF8', null, '#D8D8D8'], obj: ['🗝️', 'la clé du grand salon'], hi: 'Baptiste, au service de Madame la comtesse depuis quarante ans. Elle m\'appelle encore Bertrand.', more: [['🫖', 'la théière en argent'], ['🕰️', 'une pendule'], ['🧤', 'un gant de Madame']] },
+  pres: { who: 'Lili, l\'apicultrice', av: 'L', c: '#E3A73C', look: ['#F3CF7A', '#FFFDF8', null, '#B9634A'], obj: ['🐝', 'la reine de la ruche'], hi: 'Lili, j\'ai neuf ans et trois ruches. Les abeilles m\'obéissent. Mon frère, non.', more: [['🍯', 'un pot de miel'], ['🌼', 'une fleur rare'], ['🦋', 'un papillon bleu']] },
+  val: { who: 'Raymond, le berger', av: 'R', c: '#8A7A5E', look: ['#8A7A5E', '#5E4630', 'beret', '#DDDDDD'], obj: ['🐑', 'un agneau égaré'], hi: 'Raymond. Je compte mes moutons pour m\'endormir. Le problème, c\'est qu\'ils sont vrais.', more: [['🔔', 'une sonnaille'], ['🦯', 'son bâton'], ['🐕', 'son chien Pastis']] },
+  vergers: { who: 'Colette, la cueilleuse', av: 'C', c: '#C9573F', look: ['#C9573F', '#FFFDF8', null, '#8A5A30'], obj: ['🧺', 'son panier'], hi: 'Colette ! Une pomme par jour, et le médecin reste chez lui. Il m\'en veut un peu.', more: [['🍎', 'une pomme d\'or'], ['🍐', 'une poire tombée'], ['🪜', 'son échelle']] },
+  plateau: { who: 'Albert, l\'astronome', av: 'A', c: '#2E3A6A', look: ['#2E3A6A', '#D9CDB4', null, '#9A9A9A'], obj: ['🔭', 'sa lunette'], hi: 'Albert. Du plateau, on voit Saturne. Et le linge de la voisine, mais je ne regarde pas.', more: [['🗺️', 'une carte du ciel'], ['☄️', 'un caillou tombé du ciel'], ['📓', 'son carnet']] },
+  bief: { who: 'Pierrot, le pêcheur', av: 'P', c: '#4E8C93', look: ['#4E8C93', '#5E4630', 'cap', '#6B4A2E'], obj: ['🎣', 'sa canne à pêche'], hi: 'Pierrot. J\'ai pêché un brochet d\'un mètre. Il mesure plus à chaque fois que je le raconte.', more: [['🪱', 'sa boîte d\'asticots'], ['🦆', 'un caneton'], ['🥾', 'une botte']] },
+  rives: { who: 'Madeleine, la lavandière', av: 'M', c: '#B5546B', look: ['#E6DCC6', '#B5546B', null, '#B9804A'], obj: ['👕', 'une chemise envolée'], hi: 'Madeleine. Je lave le linge de tout le village, je connais donc tous ses secrets.', more: [['🧼', 'un savon de Marseille'], ['🧺', 'son panier à linge'], ['🧣', 'une écharpe']] },
+  hauts: { who: 'Edmond, le peintre', av: 'E', c: '#5D7BAE', look: ['#5D7BAE', '#E6DCC6', 'beret', '#2B2535'], obj: ['🖌️', 'son pinceau'], hi: 'Edmond, artiste peintre. Je peins le village depuis les Hauts. Il change si vite que je n\'arrive pas à finir.', more: [['🎨', 'sa palette'], ['🖼️', 'un cadre doré'], ['🧑‍🎨', 'son béret de rechange']] },
+  vignes: { who: 'Simone, la sommelière', av: 'S', c: '#7A2E4A', look: ['#7A2E4A', '#FFFDF8', null, '#2B2535'], obj: ['🍾', 'son tire-bouchon'], hi: 'Simone. Je reconnais un millésime les yeux fermés. Les gens, j\'ai plus de mal.', more: [['🥂', 'une flûte en cristal'], ['🍇', 'une grappe rare'], ['📒', 'la cave du château']] }
+};
+const MISSION_EVERY = 900000; // une trouvaille toutes les 15 minutes par personnage, une fois ses trois missions faites
+const misS = () => S.mis || (S.mis = {});
+const qById = (id) => QUARTIERS.find((q) => q.id === id);
+const qUnlocked = (Q) => (Math.max(S.popMax || 0, S.pop || 0)) >= TIER_POP[Q.tier] || Q.tier === 0;
+const inQ = (Q, x, z) => x >= Q.x0 && x < Q.x1 && z >= Q.z0 && z < Q.z1;
+const housesIn = (Q) => S.city ? S.city.items.filter((it) => it.t === 'h' && !(it.end > 0) && inQ(Q, it.x, it.z)).length : 0;
+const misReward = (Q, base) => Math.round(base * (Q.tier + 1) * (1 + Math.max(S.popMax || 0, S.pop || 0) / 500));
+/* la mission en cours d'un personnage : 0 = objet perdu, 1 = du pain, 2 = des habitants, 3+ = trouvailles */
+function missionOf(id) { const Q = qById(id), N = NPC[id], m = misS()[id] || (misS()[id] = { k: 0 }); if (!Q || !N || !qUnlocked(Q)) return null;
+  if (m.k === 0) return { kind: 'find', obj: N.obj, t: 'Retrouver ' + N.obj[1], say: N.hi + ' Dites, j\'ai perdu ' + N.obj[1] + ' quelque part dans le quartier. Vous voulez bien m\'aider ?', coins: misReward(Q, 40), xp: 10 };
+  if (m.k === 1) { const n = 4 + Q.tier * 3; return { kind: 'pain', n, t: 'Apporter ' + n + ' baguettes', say: 'Merci encore ! J\'aurais besoin de ' + n + ' baguettes pour recevoir la famille. Vous en avez en vitrine ?', coins: misReward(Q, 30) + n * 6, xp: 14 }; }
+  if (m.k === 2) { const n = 1 + Math.floor(Q.tier / 2); return { kind: 'houses', n, t: 'Bâtir ' + n + ' maison' + (n > 1 ? 's' : '') + ' dans le quartier', say: 'Le quartier est bien calme… Une maison ou deux de plus, et on aurait des voisins pour la belote !', coins: misReward(Q, 60), xp: 20 }; }
+  if (now() < (m.next || 0)) return null; const o = N.more[(m.k - 3) % N.more.length];
+  return { kind: 'find', obj: o, t: 'Retrouver ' + o[1], say: 'Ah, vous tombez bien ! J\'ai encore perdu ' + o[1] + ' par ici. Je ne sais pas ce que je ferais sans vous.', coins: misReward(Q, 15), xp: 6 }; }
+function missionDone(id, M) { const m = misS()[id], N = NPC[id]; m.k++; m.seen = false; m.spot = null; m.next = now() + MISSION_EVERY; S.coins += M.coins; gain(M.xp); dirty = true; S.misDone = (S.misDone || 0) + 1;
+  SFX.done(); buzz(30); toast('📜 Mission réussie · ' + N.who.split(',')[0], '+' + fmt(M.coins) + ' pièces'); const g = NPCG[id]; if (g) { floatAt(g, '+' + fmt(M.coins) + ' ' + C); burst(g.position.x, 2.2, g.position.z, ['#E3A73C', '#F3CF7A', N.c], 14, 5); } }
+function missionReady(id) { const M = missionOf(id); if (!M) return 0; if (M.kind === 'pain') return S.pain >= M.n ? 1 : 0; if (M.kind === 'houses') return housesIn(qById(id)) >= M.n ? 1 : 0; return misS()[id].seen ? 0 : 1; }
+function missionsReady() { let n = 0; Object.keys(NPC).forEach((id) => { n += missionReady(id); }); return n; }
+/* the lost object: somewhere free in the quartier, never in the river or on the road */
+function findSpot(Q) { for (let k = 0; k < 200; k++) { const x = Q.x0 + 2 + Math.random() * (Q.x1 - Q.x0 - 4), z = Q.z0 + 2 + Math.random() * (Q.z1 - Q.z0 - 4);
+  if (x < BX0 + 2 || x > BX1 - 2 || z < BZ0 + 2 || z > BZ1 - 2 || (x > RIVER.x0 - 2 && x < RIVER.x1 + 2) || Math.abs(z) < 3 || blocked(x, z, 0.6) || roadAt(x, z) || Math.hypot(x - HILL.x, z - HILL.z) < HILL.r1 - 4) continue; return [x, z]; } return [(Q.x0 + Q.x1) / 2, (Q.z0 + Q.z1) / 2]; }
+/* the characters stand in their quartier */
+const NPCG = {}, NPCL = {}, FINDG = {}, FINDL = {};
+function npcHome(Q) { const I = Q.ilots.reduce((b, i) => (!b || Math.hypot(i.cx, i.cz) < Math.hypot(b.cx, b.cz) ? i : b), null); let x = I.cx, z = I.cz;
+  for (let r = 0; r < 14 && (blocked(x, z, 0.5) || roadAt(x, z) || Math.abs(z) < 3); r += 1) { const a = r * 2.4; x = I.cx + Math.cos(a) * r; z = I.cz + Math.sin(a) * r; } return [x, z]; }
+function npcBoot() { Object.keys(NPC).forEach((id) => { const Q = qById(id), N = NPC[id]; if (!Q) return; const L0 = N.look, g = person(L0[0], L0[1], L0[2], L0[3]); g.scale.setScalar(1.1); g.userData.kind = 'npc'; g.userData.id = id; g.visible = false; NPCG[id] = g;
+  const l = label(g, 2.5, 'name'); l.act = () => npcTap(id); NPCL[id] = l;
+  const f = new THREE.Group(); f.userData.dyn = true; const ring = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.6, 24), new THREE.MeshBasicMaterial({ color: '#F3CF7A', transparent: true, opacity: 0.85, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; f.add(ring); f.visible = false; scene.add(f); FINDG[id] = f;
+  const fl = label(f, 1.2); fl.act = () => findGo(id); FINDL[id] = fl; }); npcPlace(); }
+function npcPlace() { Object.keys(NPCG).forEach((id) => { const Q = qById(id), g = NPCG[id]; const [x, z] = npcHome(Q); g.position.set(x, groundY(x, z), z); g.userData.home = [x, z]; }); }
+function npcTap(id) { if (!S.started || VISIT.on) return; const N = NPC[id], M = missionOf(id), m = misS()[id] || (misS()[id] = { k: 0 });
+  if (!M) { const Q = qById(id); return talk({ who: N.who, av: N.av, c: N.c, say: qUnlocked(Q) ? 'Rien pour l\'instant, merci ! Repassez me voir un peu plus tard.' : N.hi + ' Revenez quand le village comptera ' + TIER_POP[Q.tier] + ' habitants.' }); }
+  m.seen = true; dirty = true; talk({ who: N.who, av: N.av, c: N.c, say: M.say });
+  if (M.kind === 'find') { if (!m.spot) m.spot = findSpot(qById(id)); return; }
+  if (M.kind === 'pain' && S.pain >= M.n) { S.pain -= M.n; return missionDone(id, M); }
+  if (M.kind === 'houses' && housesIn(qById(id)) >= M.n) return missionDone(id, M); }
+function findGo(id) { const m = misS()[id]; if (!m || !m.spot) return; goTo(m.spot[0], m.spot[1], 0.6, null); }
+function missionsSheet() { const opts = []; Object.keys(NPC).forEach((id) => { const Q = qById(id), N = NPC[id]; if (!Q || !qUnlocked(Q)) return; const M = missionOf(id), m = misS()[id] || {};
+  if (!M) { opts.push({ t: N.who + ' · ' + qName(Q), s: 'Rien pour l\'instant. Prochaine trouvaille dans ' + Math.max(1, Math.ceil(((m.next || 0) - now()) / 60000)) + ' min.', btn: 'Voir', ok: true, run: () => { closeSheet(); const g = NPCG[id]; camTo(g.position.x, g.position.z); } }); return; }
+  const ready = missionReady(id) && M.kind !== 'find', prog = M.kind === 'pain' ? ' (' + Math.min(S.pain, M.n) + '/' + M.n + ')' : M.kind === 'houses' ? ' (' + Math.min(housesIn(Q), M.n) + '/' + M.n + ')' : '';
+  opts.push({ t: N.obj && M.kind === 'find' ? M.obj[0] + ' ' + M.t : (M.kind === 'pain' ? '🥖 ' : '🏡 ') + M.t + prog, s: N.who + ' · ' + qName(Q) + ' · +' + fmt(M.coins) + ' ' + C, btn: ready ? 'Valider' : M.kind === 'find' ? 'Y aller' : 'Voir', ok: true,
+    run: () => { closeSheet(); const g = NPCG[id]; if (ready) return npcTap(id); if (M.kind === 'find') { if (!m.spot) { misS()[id].spot = findSpot(Q); misS()[id].seen = true; dirty = true; } const sp = misS()[id].spot; camTo(sp[0], sp[1]); goTo(sp[0], sp[1], 0.6, null); return; } camTo(g.position.x, g.position.z); } }); });
+  if (!opts.length) opts.push({ t: 'Pas encore de mission', s: 'Les habitants arrivent avec le village.', btn: 'OK', ok: true, run: closeSheet });
+  openSheet('📜 Missions', 'Chaque quartier a son habitant. Touchez-le, ou choisissez ici.', opts); }
+let npcT = 0, npcPT = 0;
+function tickNpc(dt, t) { if (!S.started || !S.city) return; if ((npcPT += dt) > 20) { npcPT = 0; Object.keys(NPCG).forEach((id) => { const g = NPCG[id], h = g.userData.home; if (h && (blocked(h[0], h[1], 0.5) || roadAt(h[0], h[1]))) npcPlace(); }); }
+  Object.keys(NPCG).forEach((id) => { const g = NPCG[id]; if (g.visible) g.rotation.y = Math.sin(t * 0.4 + g.position.x) * 0.6; const f = FINDG[id]; if (f.visible) f.children[0].scale.setScalar(1 + 0.12 * Math.sin(t * 5)); });
+  if ((npcT += dt) < 0.4) return; npcT = 0;
+  const px = player.position.x, pz = player.position.z;
+  Object.keys(NPC).forEach((id) => { const Q = qById(id), g = NPCG[id], m = misS()[id] || { k: 0 }; if (!Q || !g) return; const on = qUnlocked(Q); g.visible = on; const M = on ? missionOf(id) : null, rd = on ? missionReady(id) : 0;
+    setLabel(NPCL[id], !on ? '' : M ? (rd ? '❗ ' : '💬 ') + NPC[id].who.split(',')[0] : (zoom < 40 ? NPC[id].who.split(',')[0] : ''), M ? (rd ? 'name ready' : 'name') : 'name');
+    const f = FINDG[id], fl = FINDL[id], showF = !!(M && M.kind === 'find' && m.spot);
+    f.visible = showF; if (showF) { f.position.set(m.spot[0], groundY(m.spot[0], m.spot[1]), m.spot[1]); setLabel(fl, M.obj[0], 'ready'); if (!P.work && Math.hypot(px - m.spot[0], pz - m.spot[1]) < 1.3) startWork('garden', () => { const M2 = missionOf(id); if (M2 && M2.kind === 'find') missionDone(id, M2); }, m.spot); } else setLabel(fl, '', ''); }); }
+
+/* Médor fait la tournée des loyers (18/11/2026 : les animaux sauvages n'abîment plus rien, il lui fallait un rôle) */
+function tickDog(n) { if (!S.dog || !S.started || !S.city || n < (S.dogAt || 0)) return; S.dogAt = n + 180000; let tot = 0; S.city.items.forEach((it) => { if (it.t !== 'h') return; const r = Math.floor(it.rent || 0); if (r >= 1) { it.rent -= r; tot += r; } }); if (!tot) return; S.coins += tot; dirty = true; floatAt(dog, 'Wouf ! +' + fmt(tot) + ' ' + C); burst(dog.position.x, 1.2, dog.position.z, ['#E3A73C', '#F3CF7A'], 8, 3); }
+
+/* les habitants vivent : ils sortent de chez eux (la porte s'éclaire et s'ouvre), vont voir un voisin ou la boulangerie, rentrent,
+   et s'arrêtent pour bavarder quand ils se croisent */
+const RES = [], RESPOOL = [], DOORS = [], RESMAX = 9; let resT = 3;
+const doorMat = new THREE.MeshBasicMaterial({ color: '#FFD58A', transparent: true, opacity: 0, depthWrite: false });
+for (let k = 0; k < 4; k++) { const d = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 1.35), doorMat.clone()); d.visible = false; d.userData.dyn = true; d.raycast = () => {}; scene.add(d); DOORS.push({ m: d, t: 0 }); }
+function doorAt(x, z, rot) { const D = DOORS.find((o) => o.t <= 0) || DOORS[0]; D.t = 1.2; D.m.visible = true; D.m.position.set(x, groundY(x, z) + 0.7, z); D.m.rotation.set(0, rot, 0); }
+function houseDoor(it) { const fp = itemFp(it), r = it.r || 0, d = fp[1] / 2 + 0.15; return [it.x + Math.sin(r) * d, it.z + Math.cos(r) * d, r, it.x + Math.sin(r) * (d + 1.1), it.z + Math.cos(r) * (d + 1.1)]; }
+function resSpawn() { const H = S.city.items.filter((it) => it.t === 'h' && !(it.end > 0) && it.l > 0); if (H.length < 2) return; const a = H[Math.floor(Math.random() * H.length)]; let b = H[Math.floor(Math.random() * H.length)]; if (b === a) b = null;
+  const da = houseDoor(a), to = b ? houseDoor(b) : null, dest = to ? [to[3], to[4]] : [SH[0] + (Math.random() - 0.5) * 3, SH[1] + 1.5]; if (Math.hypot(dest[0] - da[3], dest[1] - da[4]) > 60) return;
+  const g = RESPOOL.pop() || person(VCOLS[Math.floor(Math.random() * VCOLS.length)], null, Math.random() < 0.4 ? 'beret' : null, Math.random() < 0.5 ? '#2B2535' : '#8A5A30');
+  g.visible = true; g.scale.setScalar(0.01); g.position.set(da[0], groundY(da[0], da[1]), da[1]); g.userData.nav = null; g.userData.r = { ph: 'out', t: 0, door: da, dest, to, chat: 0, cd: 4 }; doorAt(da[0], da[1], da[2]); RES.push(g); }
+function resGone(i) { const g = RES[i]; g.visible = false; RES.splice(i, 1); RESPOOL.push(g); }
+function tickResidents(dt, t, n) { DOORS.forEach((D) => { if (D.t > 0) { D.t -= dt; D.m.material.opacity = Math.min(1, D.t * 2) * 0.85; D.m.scale.x = Math.min(1, (1.2 - D.t) * 4); if (D.t <= 0) D.m.visible = false; } });
+  if (!S.started || !S.city) return; if ((resT -= dt) <= 0) { resT = 4 + Math.random() * 5; if (RES.length < RESMAX) resSpawn(); }
+  for (let i = RES.length - 1; i >= 0; i--) { const g = RES[i], R = g.userData.r; R.t += dt; R.cd -= dt;
+    if (R.ph === 'out') { g.scale.setScalar(Math.min(1, R.t * 2.5)); stepToward(g, navV.set(R.door[3], 0, R.door[4]), 1.4, dt); if (R.t > 0.9) { R.ph = 'walk'; R.t = 0; } continue; }
+    if (R.ph === 'chat') { R.chat -= dt; g.position.y = groundY(g.position.x, g.position.z) + Math.abs(Math.sin(t * 6)) * 0.03; if (R.chat <= 0) { R.ph = 'walk'; R.cd = 12; } continue; }
+    if (R.ph === 'in') { g.scale.setScalar(Math.max(0.01, 1 - R.t * 2.5)); if (R.t > 0.45) resGone(i); continue; }
+    if (walkTo(g, R.dest[0], R.dest[1], 1.6, dt) || R.t > 60) { if (R.to) { R.ph = 'in'; R.t = 0; doorAt(R.to[0], R.to[1], R.to[2]); g.position.set(R.to[0], groundY(R.to[0], R.to[1]), R.to[1]); } else { R.ph = 'in'; R.t = 0; } continue; }
+    if (R.cd <= 0) for (let j = 0; j < RES.length; j++) { const h = RES[j]; if (h === g) continue; const Q = h.userData.r; if (Q.ph !== 'walk' || Q.cd > 0 || Math.hypot(h.position.x - g.position.x, h.position.z - g.position.z) > 1.5) continue;
+      R.ph = Q.ph = 'chat'; R.chat = Q.chat = 2.5 + Math.random() * 2.5; g.rotation.y = Math.atan2(h.position.x - g.position.x, h.position.z - g.position.z); h.rotation.y = g.rotation.y + Math.PI; if (zoom < 60) floatAt(g, ['💬', '😄', '👋', '☕ ?', '🥖 !'][Math.floor(Math.random() * 5)]); break; } } }
 /* ================= ambiance : l'heure qu'il est en France, les saisons, la météo, le vent, la vie ================= */
 // La saison suit la date de Paris ; la journée du village dure 15 minutes. __pf.amb.set({ day (0 à 1), hour, season, wind }) force une valeur pour essayer ; set(null) revient au réel.
 const AMB = { hour: 12, h: 1, season: 'ete', weather: 'clair', wind: 0.1, night: 0, force: {}, rain: 0, snow: 0, mist: 0, cloud: 0.4, cover: 0 };
@@ -3904,7 +4021,7 @@ function tickAmb(dt, t) {
   if ((ambSlow += dt) > 0.4) { ambRefresh(ambSlow); ambSlow = 0; }
   const S0 = SEASON[AMB.season]; tickWind(dt, S0);
   AMBU.uCloudOff.value.x += dt * 0.004 * (1 + AMB.wind * 3) * AMBU.uWindDir.value.x; AMBU.uCloudOff.value.y += dt * 0.004 * (1 + AMB.wind * 3) * AMBU.uWindDir.value.y;
-  AMBU.uDewT.value = t; tickGrass(dt); tickLeaves(dt, S0); tickSmoke(dt, t, S0); tickFlies(t); tickBirds(dt, t);
+  AMBU.uDewT.value = t; AMBU.uLandK.value += ((BUILD ? 1 : 0) - AMBU.uLandK.value) * Math.min(1, dt * 4); /* les terrains non achetés ne se voient qu'en mode construction */ tickGrass(dt); tickLeaves(dt, S0); tickSmoke(dt, t, S0); tickFlies(t); tickBirds(dt, t);
 }
 function ambBoot() {
   GRASS.row = 0; grassRows(0); GRASS.dirty = false;
@@ -4067,7 +4184,7 @@ function step() {
   else if (level() < 3) setLabel(L.chateau, '🔒 Château · niveau 3', 'lock');
   else if (S.cst < 5) setLabel(L.chateau, '🏰 Bâtir · étape ' + (S.cst + 1) + '/5 · ' + CCOST[S.cst] + ' ' + C, S.coins >= CCOST[S.cst] ? 'ready' : '');
   else setLabel(L.chateau, '🏰 Le château', '');
-  tickTourists(dt); tickGarden(t, n); tickOrders(n); tickFarm(t, n, dt); tickCity(n, dt); tickAmb(dt, t); tickFaune(dt, t, n); tickLand(dt); tickFete(dt, n);
+  tickTourists(dt); tickGarden(t, n); tickOrders(n); tickFarm(t, n, dt); tickCity(n, dt); tickAmb(dt, t); tickFaune(dt, t, n); tickLand(dt); tickFete(dt, n); tickNpc(dt, t); tickDog(n); tickResidents(dt, t, n);
   for (let i = 0; i < loaves.length; i++) loaves[i].visible = i < S.pain; emptySign.visible = S.pain <= 0;
   if (standPop > 0) { standPop = Math.max(0, standPop - dt * 3); const b = Math.sin(standPop * Math.PI); stand.scale.set(1.22 * (1 + 0.12 * b), 1.22 * (1 + 0.2 * b), 1.22 * (1 + 0.12 * b)); }
   setLabel(L.church, MOV.church.placed ? '⛪ L\'église' : '🔒 Église · à bâtir', MOV.church.placed ? '' : 'lock'); setLabel(L.bistrot, MOV.bistrot.placed ? '☕ Le bistrot' : '🔒 Bistrot · à bâtir', MOV.bistrot.placed ? '' : 'lock');
@@ -4132,7 +4249,7 @@ function step() {
     { const nd = DAILY.filter((d, i) => S.day.done.indexOf(i) < 0 && canDeliver(d.mk(level()))).length; chip('c-mairie', !S.day.basket ? 'Panier du jour !' : nd + ' commande' + (nd > 1 ? 's' : '') + ' du jour prête' + (nd > 1 ? 's' : ''), S.q >= 10 && (!S.day.basket || nd > 0)); }
     { const nd = S.orders.filter(canDeliver).length; $('od-n').hidden = !S.orders.length; $('od-n').textContent = nd || S.orders.length; $('od-n').style.background = nd ? '#5E8F3E' : '#6E6578'; }
     $('freq').textContent = Math.round(S.freq); $('freqbar').style.width = S.freq + '%'; $('freqbar').style.background = S.freq < 25 ? '#C9573F' : S.freq < 50 ? '#E3A73C' : '#5E8F3E';
-    const na = ups().filter((u) => u.cost !== null && S.coins >= u.cost).length; $('up-n').hidden = !na; $('up-n').textContent = na;
+    const na = ups().filter((u) => u.cost !== null && !u.wait && S.coins >= u.cost).length; $('up-n').hidden = !na; $('up-n').textContent = na; { const nd2 = S.orders.filter(canDeliver).length, nm = typeof missionsReady === 'function' ? missionsReady() : 0, tot = na + nd2 + nm; $('menu-n').hidden = !tot; $('menu-n').textContent = tot; }
   }
   questTick();
   tickVisit(dt);
@@ -4228,6 +4345,7 @@ function boot(loaded, hot) {
   try { cityBoot(); } catch (e) { showErr('village', e); }
   try { ambBoot(); } catch (e) { showErr('ambiance', e); }
   try { fauneBoot(); } catch (e) { showErr('faune', e); }
+  try { npcBoot(); } catch (e) { showErr('missions', e); }
   resize(); placeCam(); frame(); loadNear();
   let auto = null; try { auto = sessionStorage.getItem('pf-autostart'); sessionStorage.removeItem('pf-autostart'); } catch (e) {}
   if (auto) startPlay(auto); else if (hot) startPlay();
