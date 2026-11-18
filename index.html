@@ -11,6 +11,12 @@
   html, body { margin:0; height:100%; overflow:hidden; background:var(--sky); font-family:Nunito, system-ui, sans-serif; color:var(--ink); }
   [hidden] { display:none !important; }
   #c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #talk { position:fixed; left:50%; bottom:calc(88px + env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(440px, calc(100vw - 24px)); box-sizing:border-box; display:flex; gap:12px; align-items:flex-start; padding:12px 14px; background:#FFFDF8; border:3px solid var(--ink, #2B2535); border-radius:20px; box-shadow:0 5px 0 rgba(43,37,53,.25); z-index:30; cursor:pointer; }
+  #talk.in { animation:talkin .35s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes talkin { from { transform:translate(-50%, 30px) scale(.9); opacity:0; } to { transform:translate(-50%, 0) scale(1); opacity:1; } }
+  #talk .av { flex:none; width:46px; height:46px; border-radius:50%; border:3px solid var(--ink, #2B2535); color:#fff; font:900 22px Fraunces, Georgia, serif; display:flex; align-items:center; justify-content:center; }
+  #talk b { display:block; font:900 13px Nunito, sans-serif; letter-spacing:.02em; margin-bottom:3px; }
+  #talk p { margin:0; font:700 14px/1.35 Nunito, sans-serif; }
   #ambfx { position:fixed; inset:0; pointer-events:none; transition:background 2s linear; }
   #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
   .cn { display:inline-block; width:1em; height:1em; border-radius:50%; background:radial-gradient(circle at 35% 32%, #FCE7A6 0 18%, #EDB84A 45%, #B9802A 100%); border:.11em solid var(--ink); vertical-align:-.16em; font-style:normal; }
@@ -207,6 +213,7 @@
   <button class="rb" id="b-ad" type="button"><span>▶️</span>+20</button>
   <button class="rb" id="b-menu" type="button"><span>☰</span>Menu</button>
 </div>
+<div id="talk" hidden><div class="av" id="tk-av">O</div><div class="tx"><b id="tk-who"></b><p id="tk-say"></p></div></div>
 <div class="quest" id="quest"><div class="av" id="q-av">★</div><div class="tx"><b id="q-who">Objectif</b><p id="q-text"></p></div><button class="btn gold" id="q-btn" type="button" hidden></button></div>
 <div class="toast" id="toast" hidden><b id="toast-t"></b><span id="toast-s"></span></div>
 <div class="nosave" id="nosave" hidden>Progression gardée sur cet appareil seulement</div>
@@ -366,17 +373,17 @@ function gain(xp, coins) {
 /* ---------------- renderer, camera, light ---------------- */
 const canvas = $('c');
 const TOUCH = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: !TOUCH || (window.devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }); /* lissage des bords toujours actif : presque gratuit sur les puces de téléphone */
 let quality = TOUCH ? 1 : 2, perfN = 0, perfT = 0;
-const RATIOS = [1, 1.5, 2];
+const RATIOS = [1.5, 2, 2.5]; /* définition de l'image : jamais en dessous de 1,5 pixel par point, même quand le téléphone peine */
 function applyQuality() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, RATIOS[quality]));
-  if (typeof sun !== 'undefined') { sun.castShadow = quality > 0; const sz = quality === 2 ? 2048 : 1024; if (sun.shadow.mapSize.x !== sz) { sun.shadow.mapSize.set(sz, sz); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } } }
+  if (typeof sun !== 'undefined') { sun.castShadow = quality > 0; const sz = quality === 2 ? 4096 : 2048; if (sun.shadow.mapSize.x !== sz) { sun.shadow.mapSize.set(sz, sz); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } } }
   if (typeof resize === 'function' && typeof cam !== 'undefined') resize();
 }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, RATIOS[quality]));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = TOUCH ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
 const scene = new THREE.Scene();
 { const cv = document.createElement('canvas'); cv.width = 4; cv.height = 256; const g = cv.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 256);
@@ -399,7 +406,7 @@ window.addEventListener('resize', resize);
 const hemi = new THREE.HemisphereLight('#F3F1E6', '#A9B86E', 1.25); scene.add(hemi);
 const sun = new THREE.DirectionalLight('#FFD9A2', 3.0);
 const SUN = new THREE.Vector3(18, 26, 9); sun.position.copy(SUN); sun.castShadow = true; scene.add(sun.target);
-sun.shadow.mapSize.set(quality === 2 ? 2048 : 1024, quality === 2 ? 2048 : 1024);
+sun.shadow.mapSize.set(quality === 2 ? 4096 : 2048, quality === 2 ? 4096 : 2048);
 Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 120 });
 sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02;
 scene.add(sun);
@@ -756,7 +763,7 @@ const gardens = GPOS.map((p, k) => { const g = group(p[0], p[1], 0, 'garden', k)
   const leaf = mesh(new THREE.SphereGeometry(0.46, 8, 6), '#5E8F3E', 0, 0.28, 0, g); const fr = [];
   for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.12, 7, 5), new THREE.MeshLambertMaterial({ color: '#fff' })); const a = i * 1.05; m.position.set(Math.cos(a) * 0.3, 0.52 + (i % 2) * 0.12, Math.sin(a) * 0.3); m.castShadow = true; g.add(m); fr.push(m); }
   const lockT = box(1.3, 0.06, 1.3, '#B9D683', 0, 0, 0, g); lockT.castShadow = false; g.userData.parts = { leaf, fr, lockT }; return g; });
-[[-92, 11, 0.9], [-94, 15, 1], [-92, 19, 0.95], [-96, 21, 1], [-90, 22, 0.9], [-85, 21.5, 1], [-80, 21, 0.9], [-97, 9, 0.85]].forEach((t) => tree(t[0], t[1], t[2], 'fruit'));
+/* arbres retirés le 18/11/2026 : toute la carte se bâtit, la forêt est au-delà des limites */
 const PEN = {
   hen: { x: -61, z: 16, e: '🥚', name: 'Poulailler', every: 14000, max: 4, cost: [75, 125, 225, 400], one: 'poule', hut: '#C9935A', roof: '#C9573F', glb: 'poulailler' },
   cow: { x: -53, z: 16, e: '🥛', name: 'Étable', every: 26000, max: 3, cost: [150, 300, 550], one: 'vache', hut: '#B9634A', roof: '#5B6B85', glb: 'etable' },
@@ -791,7 +798,7 @@ wheatField(-78, -36, 22, 9, 0.08, 'wheat'); wheatField(-55, -32, 14, 8, -0.1, 'l
 for (let x = -100; x < -44; x += 5) { if (x > -78 && x < -60) continue; tree(x, -3.6, 1.05, 'peuplier'); }
 for (let x = -100; x < -44; x += 6) { if (x > -79 && x < -42) continue; tree(x + 2, 3.8, 1, 'peuplier'); }
 stoneWall(-100, -13.5, -78, -13.5); stoneWall(-58, -13.5, -46, -13.5); hedge(-100, 13, -92, 13); hedge(-63.5, 19, -42.5, 19);
-[[-98, -28, 1.1], [-84, -30, 1], [-64, -28, 1.2], [-46, -24, 1.1], [-44, -40, 1], [-66, -44, 1.2], [-90, -46, 1.1], [-102, -10, 1], [-58, 6, 0.9], [-48, 8, 1], [-100, 18, 1], [-46, -6, 1], [-82, 3.6, 0.9]].forEach((t) => tree(t[0], t[1], t[2]));
+/* arbres retirés le 18/11/2026 : toute la carte se bâtit, la forêt est au-delà des limites */
 
 /* ---------------- L'ENTRÉE ET LE MARCHÉ ---------------- */
 const GATEX = -35.5;
@@ -1046,7 +1053,43 @@ RELIEF.forEach((f) => { const ST = ['#CFC3A8', '#C4B79B', '#D8CDB6'];
   if (f.t === 'rampe') { const L = f.z1 - f.z0, n = Math.round(L / 1.1), an = Math.atan2(f.h, L), w = f.x1 - f.x0 - 0.6; for (let k = 0; k < n; k++) { const z = f.z0 + (k + 0.5) * L / n, s = mesh(new THREE.BoxGeometry(w, 0.09, L / n + 0.12), k % 2 ? '#E3D6BC' : '#DCCDAF', (f.x0 + f.x1) / 2, reliefY((f.x0 + f.x1) / 2, z) + 0.05, z, scene, { noShadow: true }); s.castShadow = false; s.rotation.x = an; }
     GCOVER.push([(f.x0 + f.x1) / 2, (f.z0 + f.z1) / 2, w / 2 + 0.2, L / 2 + 1.2, 0, 1]); } });
 // les Bois : des arbres sur les buttes du nord-ouest
-[[-95, -50, 1.2], [-90, -53, 1], [-88, -48, 1.1], [-93, -46, 0.9], [-76, -52, 1.2], [-71, -48, 1.1], [-68, -53, 1], [-74, -46, 0.95], [-66, -49, 1.15], [-60, -47, 1], [-56, -50, 1.1], [-54, -45, 0.9], [-82, -51, 1], [-63, -53, 1.05], [-98, -53, 1.1], [-85, -47, 0.9]].forEach((t, k) => tree(t[0], t[1], t[2], k % 3 === 0 ? 'cypres' : undefined));
+/* arbres retirés le 18/11/2026 : toute la carte se bâtit, la forêt est au-delà des limites */
+
+/* ---- the forest all around the village: dense, dark, impenetrable; the world ends where it begins ---- */
+{ let fs = 11; const fr2 = () => (fs = (fs * 16807) % 2147483647) / 2147483647;
+  const outY = (x, z) => { const out = Math.max(0, Math.max(BX0 - 8 - x, x - BX1 - 8, BZ0 - 8 - z, z - BZ1 - 8)), rv = Math.min(1, Math.max(0, (Math.abs(x - RMID) - 3) / 10)); return -0.02 + reliefY(x, z) + rv * (-out * 0.02 + (out > 0 ? Math.sin(x * 0.2) * Math.cos(z * 0.17) * Math.min(4, out * 0.25) : 0)); };
+  const T = [], DEPTH = 30;
+  for (let x = BX0 - DEPTH; x <= BX1 + DEPTH; x += 1) for (let z = BZ0 - DEPTH; z <= BZ1 + DEPTH; z += 1) {
+    const e = Math.max(BX0 - x, x - BX1, BZ0 - z, z - BZ1); if (e < 0.9) continue; // distance outside the village
+    if ((x < BX0 || x > BX1) && Math.abs(z) < 3.4 + Math.max(0, e - 20) * 0.1) continue; // the road goes through
+    if ((z < BZ0 || z > BZ1) && x > RIVER.x0 - 2.6 && x < RIVER.x1 + 2.6) continue; // and so does the river
+    const keep = e < 6 ? 0.32 : e < 15 ? 0.16 : 0.085; if (fr2() > keep) continue;
+    const jx = x + (fr2() - 0.5) * 0.9, jz = z + (fr2() - 0.5) * 0.9; T.push([jx, jz, e, fr2(), fr2(), fr2()]); }
+  const N = T.length, conifer = T.filter((t) => t[3] < 0.3), leafy = T.filter((t) => t[3] >= 0.3);
+  const G = ['#3E6B33', '#4B7A38', '#557F3B', '#355F2E', '#5E8A40', '#2F5629'].map((c) => new THREE.Color(c)), col = new THREE.Color();
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), Sc = new THREE.Vector3(), E = new THREE.Euler();
+  const inst = (geo, mat, list, per, setter) => { const n = list.length * per, leafA = new Float32Array(n), m = new THREE.InstancedMesh(geo, mat, n); let k = 0;
+    list.forEach((t) => { for (let j = 0; j < per; j++) { setter(t, j); m.setMatrixAt(k, M); m.setColorAt(k, col); leafA[k] = 0.05 + 0.95 * ((t[4] * 7.31 + j * 0.37) % 1); k++; } });
+    geo.setAttribute('aLeaf', new THREE.InstancedBufferAttribute(leafA, 1)); m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    m.castShadow = !TOUCH; m.receiveShadow = true; m.frustumCulled = false; m.userData.dyn = true; m.raycast = () => {}; scene.add(m); return m; };
+  const leafMat = ambPatch(new THREE.MeshLambertMaterial({ flatShading: true }), 'leaf leafattr nosnow');
+  const trunkMat = new THREE.MeshLambertMaterial({ color: '#5E4630' }), pineMat = ambPatch(new THREE.MeshLambertMaterial({ flatShading: true }), 'nosnow'); /* les résineux restent verts toute l'année */
+  // deciduous: a trunk and two or three blobs of leaves, bigger the deeper in the wood
+  inst(new THREE.CylinderGeometry(0.16, 0.24, 1.6, 6).translate(0, 0.8, 0), trunkMat, leafy, 1, (t) => { const s = 0.9 + t[5] * 0.6 + Math.min(0.5, t[2] * 0.02); M.compose(V.set(t[0], outY(t[0], t[1]), t[1]), Q.identity(), Sc.set(s, s, s)); col.set('#5E4630'); });
+  inst(new THREE.IcosahedronGeometry(1, 1), leafMat, leafy, 3, (t, j) => { const s = (0.9 + t[5] * 0.6 + Math.min(0.5, t[2] * 0.02)) * [1.55, 1.05, 0.9][j], a = t[4] * 6.28 + j * 2.1, r = j ? 0.75 * s : 0;
+    M.compose(V.set(t[0] + Math.cos(a) * r, outY(t[0], t[1]) + (j ? 2.2 : 2.7) * s / [1.55, 1.05, 0.9][j] + (j === 2 ? 0.6 : 0), t[1] + Math.sin(a) * r), Q.setFromEuler(E.set(t[5] * 3, t[4] * 3, 0)), Sc.set(s, s * 0.88, s));
+    col.copy(G[Math.floor((t[4] * 13 + j) % 6)]).offsetHSL(0, 0, (t[5] - 0.5) * 0.05 - Math.min(0.06, t[2] * 0.003)); });
+  // conifers: dark spires that break the line of the canopy
+  inst(new THREE.ConeGeometry(1, 1, 7).translate(0, 0.5, 0), pineMat, conifer, 3, (t, j) => { const s = 1 + t[5] * 0.7 + Math.min(0.6, t[2] * 0.025), w = [1.5, 1.15, 0.8][j] * s;
+    M.compose(V.set(t[0], outY(t[0], t[1]) + 0.6 * s + j * 1.5 * s, t[1]), Q.identity(), Sc.set(w, 2.4 * s, w)); col.copy(G[(j + Math.floor(t[4] * 6)) % 2 ? 5 : 3]).offsetHSL(0, 0, (t[5] - 0.5) * 0.04); });
+  inst(new THREE.CylinderGeometry(0.14, 0.2, 1, 6).translate(0, 0.5, 0), trunkMat, conifer, 1, (t) => { const s = 1 + t[5] * 0.7; M.compose(V.set(t[0], outY(t[0], t[1]), t[1]), Q.identity(), Sc.set(s, s, s)); col.set('#5E4630'); });
+  // the shade under the trees: a darker floor so that no light gets through
+  { const g = new THREE.BufferGeometry(), P = [], C2 = [], c0 = new THREE.Color('#2E4A26'), c1 = new THREE.Color('#5D8A44'), ring = (e) => [[BX0 - e, BZ0 - e], [BX1 + e, BZ0 - e], [BX1 + e, BZ1 + e], [BX0 - e, BZ1 + e]];
+    const steps = [0.4, 2.5, DEPTH + 4]; for (let s = 0; s < steps.length - 1; s++) { const A = ring(steps[s]), B = ring(steps[s + 1]), ca = s === 0 ? c1 : c0;
+      for (let k = 0; k < 4; k++) { const a0 = A[k], a1 = A[(k + 1) % 4], b0 = B[k], b1 = B[(k + 1) % 4]; [[a0, ca], [b0, c0], [b1, c0], [a0, ca], [b1, c0], [a1, ca]].forEach(([p, c]) => { P.push(p[0], outY(p[0], p[1]) + 0.04, p[1]); C2.push(c.r, c.g, c.b); }); } }
+    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C2, 3)); g.computeVertexNormals();
+    const fl = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false })); fl.receiveShadow = true; fl.userData.dyn = true; fl.raycast = () => {}; fl.renderOrder = 1; scene.add(fl); }
+  window.__forestN = N; }
 HOUSES.forEach((h) => { h.userData.keep = true; });
 mergeStatic();
 
@@ -1101,7 +1144,16 @@ const bike = baked((b) => { [-0.55, 0.55].forEach((z) => { const w = mesh(new TH
 bike.visible = false; player.add(bike);
 const pRing = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 24), new THREE.MeshBasicMaterial({ color: '#F3CF7A', transparent: true, opacity: 0.85 })); pRing.rotation.x = -Math.PI / 2; scene.add(pRing);
 const stack = []; for (let i = 0; i < 10; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.13, 0.22), new THREE.MeshLambertMaterial({ color: '#E8B94A' })); m.position.set(0, 0.42 + i * 0.14, -0.4); m.castShadow = true; m.visible = false; player.add(m); stack.push(m); }
-const P = { vx: 0, vz: 0, walk: 0, path: [], usedPath: false, goal: null, goalR: 0.3, act: null, stuck: 0, step: 0, combo: 0, comboT: 0 };
+const P = { vx: 0, vz: 0, walk: 0, path: [], usedPath: false, goal: null, goalR: 0.3, act: null, stuck: 0, step: 0, combo: 0, comboT: 0, work: null };
+/* the baker really works: he stops, bends, swings the scythe or throws the seed, and only then is the job done */
+const tool = new THREE.Group(); { const h = cyl(0.025, 0.025, 1.1, '#8A5A30', 0, 0.55, 0, tool, 5); h.rotation.z = 0.15; const bl = mesh(new THREE.TorusGeometry(0.32, 0.03, 4, 10, Math.PI * 0.9), '#D8DDE2', 0.08, 1.05, 0, tool); bl.rotation.set(Math.PI / 2, 0, 0.3); }
+tool.position.set(0.32, 0.25, 0.18); tool.visible = false; player.add(tool);
+const WORK = { cut: 0.42, sow: 0.32, mill: 0.55, oven: 0.55, cake: 0.5, pen: 0.45, garden: 0.4, shop: 0.3, market: 0.4, bq: 0.35 };
+function startWork(kind, fn, at) { if (P.work) return false; P.work = { t: 0, d: WORK[kind] || 0.4, kind, fn }; if (at) player.rotation.y = Math.atan2(at[0] - player.position.x, at[1] - player.position.z); return true; }
+function tickWork(dt) { const w = P.work, b = player.userData.body; w.t += dt; const u = Math.min(1, w.t / w.d), s = Math.sin(Math.PI * u);
+  b.rotation.x = 0.42 * s; tool.visible = w.kind === 'cut'; if (tool.visible) tool.rotation.y = 1.2 - 2.4 * u;
+  if (w.kind === 'sow' && !w.seed && u > 0.5) { w.seed = 1; burst(player.position.x + Math.sin(player.rotation.y) * 0.8, player.position.y + 0.6, player.position.z + Math.cos(player.rotation.y) * 0.8, ['#C9A55A', '#8A6A3A'], 6, 2); }
+  if (u >= 1) { P.work = null; b.rotation.x = 0; tool.visible = false; w.fn(); } }
 const cd = {}, plotCd = new Array(PLOTS).fill(0);
 const goRing = new THREE.Mesh(new THREE.RingGeometry(0.82, 1, 32), new THREE.MeshBasicMaterial({ color: '#E3A73C', transparent: true, opacity: 0.9, depthWrite: false })); goRing.rotation.x = -Math.PI / 2; goRing.visible = false; scene.add(goRing);
 const ripple = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.4, 20), new THREE.MeshBasicMaterial({ color: '#FFFDF8', transparent: true, opacity: 0, depthWrite: false })); ripple.rotation.x = -Math.PI / 2; scene.add(ripple); let rippleT = 1;
@@ -1257,7 +1309,7 @@ function ups() {
   a.push({ ic: '⚙️', t: 'Moulin · niveau ' + L2.mill, s: L2.mill < 8 ? 'Niveau suivant : ' + MILLCAP[L2.mill] + ' sacs à la fois, 20 % plus rapide.' : 'Au maximum.', cost: L2.mill < 8 ? LVCOST.mill[L2.mill - 1] : null, buy: () => { L2.mill++; pop(mill); } });
   a.push({ ic: '🔥', t: 'Four · niveau ' + L2.oven, s: L2.oven < 8 ? 'Niveau suivant : ' + OVENCAP[L2.oven] * 4 + ' baguettes par fournée, 20 % plus rapide.' : 'Au maximum.', cost: L2.oven < 8 ? LVCOST.oven[L2.oven - 1] : null, buy: () => { L2.oven++; pop(oven); } });
   a.push({ ic: '🥖', t: 'Boulangerie · niveau ' + L2.shop, s: L2.shop < 5 ? 'Niveau suivant : ' + PRICES[L2.shop] + ' pièces la baguette, plus de clients.' : 'Au maximum.', cost: L2.shop < 5 ? LVCOST.shop[L2.shop - 1] : null, buy: () => { L2.shop++; pop(shop); } });
-  a.push({ ic: '🚧', t: 'Barrière · niveau ' + L2.fence, s: L2.fence < 3 ? 'Niveau suivant : arrête ' + (L2.fence + 1) + ' sanglier' + (L2.fence ? 's' : '') + ' à chaque attaque.' : 'Au maximum.', cost: L2.fence < 3 ? LVCOST.fence[L2.fence] : null, buy: () => { L2.fence++; } });
+  if (FAUNE_RAIDS) a.push({ ic: '🚧', t: 'Barrière · niveau ' + L2.fence, s: L2.fence < 3 ? 'Niveau suivant : arrête ' + (L2.fence + 1) + ' sanglier' + (L2.fence ? 's' : '') + ' à chaque attaque.' : 'Au maximum.', cost: L2.fence < 3 ? LVCOST.fence[L2.fence] : null, buy: () => { L2.fence++; } });
   if (L2.mk > 0) a.push({ ic: '🥕', t: L2.mk ? 'Marché · niveau ' + L2.mk : 'Ouvrir le marché (quartier de l\'entrée)', s: L2.mk === 0 ? 'Débloque l\'entrée du village et un carré de potager : des carottes à ' + PROD[0].p + ' pièces la cagette.' : L2.mk < 4 ? 'Niveau suivant : des ' + PROD[L2.mk].n + ' à ' + PROD[L2.mk].p + ' pièces la cagette.' : 'Au maximum.', cost: L2.mk < 4 ? MKCOST[L2.mk] : null, buy: () => { L2.mk++; if (S.gun < 1) S.gun = 1; pop(stallG); if (L2.mk === 1) toast('Quartier débloqué : l\'entrée !', 'Le marché ouvre, juste après la porte « Petite France ».'); } });
   if (L2.mk > 0 && S.gun > 0) a.push({ ic: '🥬', t: 'Nouveau carré de potager', s: S.gun + ' sur 6 · plus cher qu\'une parcelle de blé, mais bien plus rentable.', cost: S.gun < 6 ? GCOST[S.gun] : null, buy: () => { S.gun++; } });
   PKEYS.forEach((k) => { const Pn = PEN[k], l = L2[k]; if (l < 1) return; a.push({ ic: Pn.e === '🥚' ? '🐔' : k === 'cow' ? '🐄' : '🐑', t: l ? Pn.name + ' · ' + l + ' ' + Pn.one + (l > 1 ? 's' : '') : 'Construire ' + (k === 'cow' ? 'l\'étable' : k === 'hen' ? 'le poulailler' : 'la bergerie'), s: l >= Pn.max ? 'Au maximum.' : k === 'hen' ? 'Des œufs pour les gâteaux. Une ' + Pn.one + ' de plus.' : k === 'cow' ? 'Du lait à vendre au marché (12 pièces). Une ' + Pn.one + ' de plus.' : 'De la laine pour les vêtements. Un ' + Pn.one + ' de plus.', cost: l < Pn.max ? Pn.cost[l] : null, buy: () => { L2[k]++; pop(Pn.g); } }); });
@@ -1336,7 +1388,7 @@ function stockStall(list) { let n = 0; while (list.length && S.stall.length < 24
 function collectMarket() { if (!(S.mtill > 0)) return false; S.coins += S.mtill; floatAt(stallG, '+' + S.mtill + ' ' + C); S.mtill = 0; dirty = true; SFX.coin(); burst(MKSQ.x, 1.4, MKSQ.z + 2, ['#E3A73C', '#F3CF7A'], 12, 5); buzz(20); return true; }
 function tapMarket() { if (S.lv.mk < 1) return openUp(); const a = stockStall(S.vcarry), b = collectMarket(); if (!a && !b) toast('Le marché', S.stall.length ? S.stall.length + ' cagettes à l\'étal. Les clients passent.' : 'Étal vide : récolte le potager, dans la campagne, derrière la ferme.'); }
 function gardenRun() { let best = -1, bd = 1e9; for (let k = 0; k < S.gun; k++) if (gRipe(S.garden[k])) { const d = Math.hypot(player.position.x - GPOS[k][0], player.position.z - GPOS[k][1]); if (d < bd) { bd = d; best = k; } } if (best >= 0) return goTo(GPOS[best][0], GPOS[best][1], 0.45, gardenRun); if (S.vcarry.length) stationGo('market'); }
-function gardenGo(k) { if (S.lv.mk < 1 || k >= S.gun) return openUp(); const p = S.garden[k]; if (GOD) { if (gRipe(p)) gHarvest(k); else if (p.s === 'empty' && now() > gardenCd[k]) gSow(k); return; } if (gRipe(p)) return goTo(GPOS[k][0], GPOS[k][1], 0.45, gardenRun); goTo(GPOS[k][0], GPOS[k][1], 0.5, () => { if (S.garden[k].s === 'empty') gSow(k); }); }
+function gardenGo(k) { if (S.lv.mk < 1 || k >= S.gun) return openUp(); const p = S.garden[k]; if (GOD && S.hired.paul) { if (gRipe(p)) gHarvest(k); else if (p.s === 'empty' && now() > gardenCd[k]) gSow(k); return; } if (gRipe(p)) return goTo(GPOS[k][0], GPOS[k][1], 0.45, gardenRun); goTo(GPOS[k][0], GPOS[k][1], 0.5, () => { if (S.garden[k].s === 'empty') gSow(k); }); }
 function tickGarden(t, n) {
   const open = S.lv.mk > 0; tarps.forEach((tp) => { tp.visible = !open; });
   for (let k = 0; k < GN; k++) { const g = gardens[k], p = S.garden[k], P2 = g.userData.parts, mine = open && k < S.gun; g.visible = open; if (!open) { setLabel(GL[k], '', ''); continue; }
@@ -1402,7 +1454,7 @@ function tapMairie() {
 function penCollect(k, w) { const Pn = PEN[k], st = S.pen[k]; if (!(st.n > 0)) return false; const n = st.n; st.n = 0;
   if (k === 'hen') S.eggs += n; else if (k === 'sheep') S.wool += n; else { const bag = w ? w.bagV : S.vcarry; for (let i = 0; i < n; i++) bag.push(4); }
   gain(2 * n); dirty = true; floatAt(Pn.g, '+' + n + ' ' + Pn.e); SFX.pick(3); buzz(12); burst(Pn.x, 0.8, Pn.z, ['#FFFDF8', '#F3CF7A'], w ? 3 : 8); return true; }
-function penGo(k) { if (S.lv[k] < 1) return openUp(); if (GOD) { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); return; } goTo(PEN[k].x + 0.4, PEN[k].z - 2.9, 0.5, () => { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); }); }
+function penGo(k) { if (S.lv[k] < 1) return openUp(); if (GOD && S.hired.lucie) { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); return; } goTo(PEN[k].x + 0.4, PEN[k].z - 2.9, 0.5, () => { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); }); }
 
 /* ---------------- the pastry shop ---------------- */
 function cakeStart() { const n = Math.min(CAKECAP[S.lv.cake], S.farine, Math.floor(S.eggs / 2)); if (n < 1) return false; S.farine -= n; S.eggs -= 2 * n; S.cakeJob = { end: now() + dur(10000 * n), out: n }; dirty = true; SFX.start(); pop(cakeG); return true; }
@@ -1707,42 +1759,46 @@ function flowAt() {
 }
 const QC = '#E3A73C';
 const Q = [
-  { who: 'Objectif', av: '★', c: QC, t: 'Touche le blé mûr, ou glisse le doigt sur le champ : récolte 4 parcelles.', at: FI, goal: () => S.recoltes >= 4, xp: 6, coins: 6 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Touche le moulin : 2 blés font 1 sac de farine.', at: MI, goal: () => S.farineTot >= 1, xp: 8, coins: 6 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Porte la farine au four, à côté de la boulangerie, et cuis ta première fournée.', at: OV, goal: () => S.fournees >= 1, xp: 8, coins: 6 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Les baguettes sont dans ton dos : pose-les en vitrine, juste à côté.', at: SH, goal: () => (S.posees || 0) >= 1, xp: 6, coins: 4 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Les clients font la queue ! Vends 4 baguettes.', at: () => (S.pain > 0 ? null : flowAt()), goal: () => S.vendus >= 4, xp: 10, coins: 10 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Tes ventes s\'empilent en pièces au-dessus de la boulangerie : touche-la pour les ramasser.', at: SH, goal: () => S.encaisse > 0, xp: 6, coins: 0 },
-  { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Ouvre 🏗️ Construire et bâtis une maison : de nouveaux habitants viendront s\'installer.', build: 1, goal: () => cityHouses() >= 3, xp: 12, coins: 20 },
-  { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Trace une rue pavée qui touche ta nouvelle maison : seules les maisons desservies par une rue sont habitées.', build: 1, goal: () => cityLinked() >= 3, xp: 12, coins: 20 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Achète le vélo du boulanger : le village est grand !', up: 1, goal: () => S.bike, xp: 8, coins: 10 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Embauche Léo : il récoltera le champ à ta place.', up: 1, goal: () => S.hired.leo, xp: 10, coins: 10 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Achète une nouvelle parcelle : plus de blé, plus de pain.', up: 1, goal: () => S.unlocked >= 5, xp: 10, coins: 15 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Un client qui attend trop repart fâché et la fréquentation 👥 baisse. Vends 15 baguettes.', goal: () => S.vendus >= 15, xp: 12, coins: 20 },
-  { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Construis la mairie (🏗️ Construire → Bâtiments), puis passe me voir : lettre du jour, panier et commandes du jour.', build: 1, at: () => [STN.mairie[0], STN.mairie[1], 1.4], goal: () => !!(S.day && S.day.id && S.day.basket), xp: 10, coins: 10 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Embauche Jules, le meunier.', up: 1, goal: () => S.hired.jules, xp: 12, coins: 20 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Les sangliers rôdent autour du champ ! Chasse-en un en courant dessus, ou achète une barrière.', goal: () => (S.chased || 0) >= 1 || S.lv.fence >= 1, xp: 12, coins: 20 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Livre une commande du village : bouton 📋 Commandes.', goal: () => (S.livrees || 0) >= 1, xp: 14, coins: 20 },
-  { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Au niveau 3, monte sur la colline et lance la première étape du château.', at: () => (level() >= 3 && !S.cbuild ? [GATEP[0], GATEP[1], 1.5] : null), goal: () => S.cst >= 1 || S.cbuild > 0, xp: 0, coins: 30 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Construis le marché (🏗️ Construire → Bâtiments). Il lui faut une place libre de 16 m sur 6, par exemple derrière le parking.', build: 1, goal: () => S.lv.mk >= 1, xp: 14, coins: 30 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Construis le potager, récolte-le et pose les cagettes à l\'étal du marché.', at: () => (S.vcarry.length ? [STN.market[0], STN.market[1], 1.6] : [GPOS[0][0], GPOS[0][1], 1.2]), goal: () => S.mtill > 0 || S.stall.length > 0, xp: 14, coins: 30 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Embauche Inès, la boulangère.', up: 1, goal: () => S.hired.ines, xp: 14, coins: 30 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Construis le poulailler (🏗️ Construire) : les poules pondent des œufs.', build: 1, goal: () => S.lv.hen >= 1, xp: 14, coins: 30 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Construis la pâtisserie : 1 farine + 2 œufs = 1 gâteau.', build: 1, goal: () => S.lv.cake >= 1, xp: 14, coins: 30 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Ramasse les œufs, prépare des gâteaux et pose-les à la boulangerie. Vends-en 3.', at: () => (S.carryC > 0 ? SH : S.cakeJob || (S.farine >= 1 && S.eggs >= 2) ? [STN.cake[0], STN.cake[1], 1.3] : S.pen.hen.n > 0 ? [PEN.hen.x + 0.4, PEN.hen.z - 2.9, 1.2] : null), goal: () => (S.cakeSold || 0) >= 3, xp: 16, coins: 40 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Construis la bergerie, puis la boutique de vêtements : 2 laines = 1 pull.', build: 1, goal: () => S.lv.bq >= 1, xp: 16, coins: 40 },
-  { who: 'Objectif', av: '★', c: QC, t: 'Construis l\'étable : le lait se vend au marché.', build: 1, goal: () => S.lv.cow >= 1, xp: 16, coins: 40 },
-  { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Le village atteint 100 habitants : bâtis des maisons et trace des rues.', build: 1, goal: () => (S.pop || 0) >= 100, xp: 30, coins: 100 },
-  { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Cap sur 1 000 habitants : il faudra une église, un bistrot et de beaux manoirs.', build: 1, goal: () => (S.pop || 0) >= 1000, xp: 80, coins: 500 },
-  { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Dernière ligne droite : 3 000 habitants, et Petite France sera une vraie ville !', build: 1, goal: () => (S.pop || 0) >= 3000, xp: 200, coins: 2000 },
-  { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Termine les 5 étapes du château : ce sera la fierté du village.', goal: () => S.cst >= 5, xp: 0, coins: 200 },
-  { who: 'Le maire', av: 'M', c: '#4E5D78', t: 'Bravo, 3 000 habitants ! Continue d\'embellir le village : la prochaine région arrive bientôt.', goal: () => false, xp: 0, coins: 0 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Touche le blé mûr : ton boulanger va le faucher.', say: 'Bonjour, petit ! J\'ai tenu ce fournil cinquante ans. Il est à toi maintenant… Commence par le blé, il n\'attend que toi.', at: FI, goal: () => S.recoltes >= 4, xp: 6, coins: 6 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Touche le moulin : 2 blés font 1 sac de farine.', say: 'Le blé, ça ne se mange pas tout cru, hein. Au moulin ! Et ne laisse pas la porte ouverte, les pigeons adorent.', at: MI, goal: () => S.farineTot >= 1, xp: 8, coins: 6 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Porte la farine au four et cuis ta première fournée.', say: 'Le four, c\'est le cœur de la maison. Mon défunt Marcel lui parlait tous les matins. Il ne répondait pas, mais il cuisait bien.', at: OV, goal: () => S.fournees >= 1, xp: 8, coins: 6 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Pose les baguettes en vitrine, juste à côté.', say: 'Ça sent bon ! Ça faisait des années que le village n\'avait pas senti ça. Vite, en vitrine !', at: SH, goal: () => (S.posees || 0) >= 1, xp: 6, coins: 4 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Les clients font la queue ! Vends 4 baguettes.', say: 'Regarde, ils reviennent ! Madame Rabier est déjà là. Elle arrive toujours la première… pour avoir le temps de critiquer.', at: () => (S.pain > 0 ? null : flowAt()), goal: () => S.vendus >= 4, xp: 10, coins: 10 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Touche les pièces au-dessus de la boulangerie pour les ramasser.', say: 'Les sous, on les ramasse tout de suite, sinon c\'est le chat qui joue avec.', at: SH, goal: () => S.encaisse > 0, xp: 6, coins: 0 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Ouvre 🏗️ Construire et bâtis une maison.', say: 'Bonnefoy, maire de cette commune depuis 31 ans ! Un village sans habitants, c\'est une mairie sans électeurs. Bâtissez, que diable !', build: 1, goal: () => cityHouses() >= 3, xp: 12, coins: 20 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Trace une rue pavée qui touche ta nouvelle maison.', say: 'Une maison sans rue ? Et le facteur, il passe par la fenêtre ? Pavez-moi ça !', build: 1, goal: () => cityLinked() >= 3, xp: 12, coins: 20 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Achète le vélo du boulanger.', say: 'À mon âge je faisais la tournée à vélo. En côte. Avec 40 baguettes. Et sans me plaindre.', up: 1, goal: () => S.bike, xp: 8, coins: 10 },
+  { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Embauche Léo : il récoltera le champ à ta place.', say: 'Salut ! Moi c\'est Léo. Je fauche, je sème, je parle aux vaches. Enfin surtout je fauche. Tu m\'embauches ?', up: 1, goal: () => S.hired.leo, xp: 10, coins: 10 },
+  { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Achète une nouvelle parcelle.', say: 'Plus de champ, plus de blé, plus de pain. C\'est pas compliqué, l\'agriculture. Enfin, si. Mais là non.', up: 1, goal: () => S.unlocked >= 5, xp: 10, coins: 15 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Vends 15 baguettes sans faire attendre les clients.', say: 'Un client qui attend trop s\'en va chez le voisin. Et le voisin, c\'est à 14 kilomètres. Alors il revient fâché.', goal: () => S.vendus >= 15, xp: 12, coins: 20 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis la mairie, puis passe me voir.', say: 'Je travaille actuellement depuis le banc de la place. C\'est très bien pour le teint, mais pas pour les dossiers. Une mairie, vite !', build: 1, at: () => [STN.mairie[0], STN.mairie[1], 1.4], goal: () => !!(S.day && S.day.id && S.day.basket), xp: 10, coins: 10 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Embauche Jules, le meunier.', say: 'Le petit Jules, je l\'ai connu haut comme une miche. Il fait tourner un moulin comme personne.', up: 1, goal: () => S.hired.jules, xp: 12, coins: 20 },
+  { who: 'Gégé, du bistrot', av: 'G', c: '#C0703A', t: 'Ouvre le Menu et touche « Visiter le village ».', say: 'Gégé, du bistrot ! Enfin, du futur bistrot. Fais donc un tour dans les rues, à hauteur d\'homme. Tu verras, c\'est pas pareil vu d\'en bas.', goal: () => (S.visited || 0) >= 1, xp: 12, coins: 20 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Livre une commande du village : bouton 📋 Commandes.', say: 'L\'école, la cantine, les pompiers : tout le monde réclame du pain ! Je promets tout, vous livrez. C\'est ça, la politique.', goal: () => (S.livrees || 0) >= 1, xp: 14, coins: 20 },
+  { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Au niveau 3, lance la première étape du château.', say: 'Hortense de Rocheval. Ce château est à ma famille depuis 1612, et il tombe en ruine depuis 1613. Aidez-moi à lui rendre son éclat.', at: () => (level() >= 3 && !S.cbuild ? [GATEP[0], GATEP[1], 1.5] : null), goal: () => S.cst >= 1 || S.cbuild > 0, xp: 0, coins: 30 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis le marché, sur une place de 16 m sur 6.', say: 'Un marché le dimanche matin, voilà ce qui fait une vraie commune ! Et des électeurs de bonne humeur.', build: 1, goal: () => S.lv.mk >= 1, xp: 14, coins: 30 },
+  { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Construis le potager, récolte-le et garnis l\'étal.', say: 'Des carottes, des tomates, des fraises… Tout pousse ici. Sauf les cheveux du maire.', at: () => (S.vcarry.length ? [STN.market[0], STN.market[1], 1.6] : [GPOS[0][0], GPOS[0][1], 1.2]), goal: () => S.mtill > 0 || S.stall.length > 0, xp: 14, coins: 30 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Embauche Inès, la boulangère.', say: 'Inès a des mains en or. Et une patience d\'ange. Il en faut, avec le four de Marcel.', up: 1, goal: () => S.hired.ines, xp: 14, coins: 30 },
+  { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Construis le poulailler : les poules pondent des œufs.', say: 'Des poules ! Attention, Germaine pince. C\'est la cheffe.', build: 1, goal: () => S.lv.hen >= 1, xp: 14, coins: 30 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Construis la pâtisserie : 1 farine + 2 œufs = 1 gâteau.', say: 'Le pain, c\'est la vie. Les gâteaux, c\'est le bonheur. J\'ai encore la recette du flan de ma mère.', build: 1, goal: () => S.lv.cake >= 1, xp: 14, coins: 30 },
+  { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Prépare des gâteaux et vends-en 3.', say: 'Un flan, une tarte, un éclair… Madame Rabier n\'a rien trouvé à redire. C\'est une première historique.', at: () => (S.carryC > 0 ? SH : S.cakeJob || (S.farine >= 1 && S.eggs >= 2) ? [STN.cake[0], STN.cake[1], 1.3] : S.pen.hen.n > 0 ? [PEN.hen.x + 0.4, PEN.hen.z - 2.9, 1.2] : null), goal: () => (S.cakeSold || 0) >= 3, xp: 16, coins: 40 },
+  { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Construis la bergerie, puis la boutique de vêtements.', say: 'Des moutons, de la laine, des pulls. L\'hiver arrive, et le maire tricote très mal.', build: 1, goal: () => S.lv.bq >= 1, xp: 16, coins: 40 },
+  { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Construis l\'étable : le lait se vend au marché.', say: 'Une vache ! Je vais l\'appeler Marguerite. Toutes les vaches s\'appellent Marguerite, c\'est la règle.', build: 1, goal: () => S.lv.cow >= 1, xp: 16, coins: 40 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Le village atteint 100 habitants : bâtis et trace des rues.', say: 'Cent habitants ! J\'ai préparé un discours de quarante minutes. Non ? Bon, vingt.', build: 1, goal: () => (S.pop || 0) >= 100, xp: 30, coins: 100 },
+  { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Cap sur 1 000 habitants : église, bistrot et beaux manoirs.', say: 'Père Anselme. Mes cloches n\'ont pas sonné depuis dix ans. Avec mille âmes au village, elles sonneront de nouveau.', build: 1, goal: () => (S.pop || 0) >= 1000, xp: 80, coins: 500 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Dernière ligne droite : 3 000 habitants.', say: 'Trois mille ! On parlera de nous jusqu\'à la préfecture. Peut-être même au journal de 13 heures !', build: 1, goal: () => (S.pop || 0) >= 3000, xp: 200, coins: 2000 },
+  { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Termine les 5 étapes du château.', say: 'Mes ancêtres vous regardent depuis leurs portraits. Ils ont l\'air sévères, mais ils sont ravis. Enfin je crois.', goal: () => S.cst >= 5, xp: 0, coins: 200 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Continue d\'embellir le village : la prochaine région arrive bientôt.', say: 'Mes amis, Petite France est sauvée. Je vais pouvoir prendre ma retraite. Non, je plaisante, je me représente.', goal: () => false, xp: 0, coins: 0 },
 ];
 function questAt() { const bb = boars.find((x) => x.phase !== 'flee'); if (bb) return [bb.g.position.x, bb.g.position.z, 1.1]; const q = Q[Math.min(S.q, Q.length - 1)]; if (q.at === undefined) return flowAt(); return typeof q.at === 'function' ? q.at() : q.at; }
+/* the villagers speak: a portrait, a name, one line, as in the best village games */
+let talkT = 0;
+function talk(q) { const el = $('talk'); if (!el || !q || !q.say) return; $('tk-av').textContent = q.av; $('tk-av').style.background = q.c; $('tk-who').textContent = q.who; $('tk-say').textContent = q.say; el.hidden = false; el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); clearTimeout(talkT); talkT = setTimeout(() => { el.hidden = true; }, 11000); }
 function questTick() {
   const q = Q[Math.min(S.q, Q.length - 1)];
   if (q.goal()) { S.q++; gain(q.xp, q.coins); SFX.done(); if (q.coins) toast('Objectif réussi', '+' + q.coins + ' pièces'); dirty = true; return questTick(); }
   $('q-who').textContent = q.who; $('q-av').textContent = q.av; $('q-av').style.background = q.c;
+  if (q.say && S.said !== S.q && S.started) { S.said = S.q; dirty = true; talk(q); }
   if ($('q-text').textContent !== q.t) $('q-text').textContent = q.t;
   const b = $('q-btn');
   if (q.up) { b.hidden = false; b.textContent = '🔨 Améliorer'; b.onclick = openUp; }
@@ -1848,7 +1904,7 @@ stickEl.addEventListener('pointermove', (e) => { if (stick.on && e.pointerId ===
 stickEl.addEventListener('pointerup', stickUp); stickEl.addEventListener('pointercancel', stickUp);
 function setLefty(v) { document.body.classList.toggle('lefty', !!v); $('lefty').checked = !!v; try { localStorage.setItem('pf-lefty', v ? '1' : '0'); } catch (e) {} }
 { let l = false; try { l = localStorage.getItem('pf-lefty') === '1'; } catch (e) {} setLefty(l); $('lefty').addEventListener('change', () => setLefty($('lefty').checked)); }
-$('quest').addEventListener('click', (e) => { if (!e.target.closest('button')) $('quest').classList.toggle('open'); }); // on a phone the objective is two lines; a tap unfolds it
+$('quest').addEventListener('click', (e) => { if (e.target.closest('button')) return; $('quest').classList.toggle('open'); const q = Q[Math.min(S.q, Q.length - 1)]; if (q && q.say) talk(q); }); $('talk').addEventListener('click', () => { $('talk').hidden = true; }); // on a phone the objective is two lines; a tap unfolds it
 function joyOff() { joy.on = false; joy.id = -1; joy.x = joy.y = 0; joyEl.hidden = true; }
 canvas.addEventListener('pointerdown', (e) => {
   try { canvas.setPointerCapture(e.pointerId); window.focus(); } catch (err) {}
@@ -1864,7 +1920,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (e.pointerId !== joy.id) return;
   // one finger (or the mouse) drags the view; the baker stays where he is (tap the ground to send him somewhere)
   const dx = e.clientX - joy.ox, dy = e.clientY - joy.oy, d = Math.hypot(dx, dy); moved = Math.max(moved, d);
-  if (swipe && swipe.mode) { if (moved > 8) { const i = plotAt(e.clientX, e.clientY); if (i >= 0) { const p = S.plots[i]; if (swipe.mode === 'cut' && plotRipe(p)) harvest(i); else if (swipe.mode === 'sow' && p.s === 'empty' && now() > plotCd[i]) sow(i); } } } // a finger dragged across the field reaps (or sows) everything it crosses
+  if (swipe && swipe.mode) { if (moved > 8) { if (!S.hired.leo) { if (!swipe.sent) { swipe.sent = true; if (swipe.mode === 'cut') harvestRun(); else sowRun(); } } else { const i = plotAt(e.clientX, e.clientY); if (i >= 0) { const p = S.plots[i]; if (swipe.mode === 'cut' && plotRipe(p)) harvest(i); else if (swipe.mode === 'sow' && p.s === 'empty' && now() > plotCd[i]) sow(i); } } } } // a finger dragged across the field reaps (or sows) everything it crosses
   else if (moved > 8 && S.started && !VISIT.on) camPan(e.clientX - joy.lx, e.clientY - joy.ly);
   joy.lx = e.clientX; joy.ly = e.clientY;
 });
@@ -1952,11 +2008,12 @@ function tap(x, y) {
     if (!GOD) camFree = false; goTo(Math.max(BX0, Math.min(BX1, hitP.x)), Math.max(BZ0, Math.min(BZ1, hitP.z)), 0.25, null); }
 }
 function harvestRun() { let best = -1, bd = 1e9; for (let i = 0; i < PLOTS; i++) if (i < S.unlocked && plotRipe(S.plots[i])) { const d = Math.hypot(player.position.x - PLOT_POS[i][0], player.position.z - PLOT_POS[i][1]); if (d < bd) { bd = d; best = i; } } if (best < 0) return; goTo(PLOT_POS[best][0], PLOT_POS[best][1], 0.5, harvestRun); }
+function sowRun() { let best = -1, bd = 1e9; for (let i = 0; i < S.unlocked; i++) if (S.plots[i].s === 'empty' && now() > plotCd[i]) { const d = Math.hypot(player.position.x - PLOT_POS[i][0], player.position.z - PLOT_POS[i][1]); if (d < bd) { bd = d; best = i; } } if (best < 0) return; goTo(PLOT_POS[best][0], PLOT_POS[best][1], 0.5, sowRun); }
 function plotGo(i) { const p = S.plots[i], pp = PLOT_POS[i];
   if (i >= S.unlocked) return openUp();
-  if (GOD) { if (plotRipe(p)) harvest(i); else if (p.s === 'empty') { if (now() > plotCd[i]) sow(i); } else tapPlot(i); return; }
+  if (GOD && S.hired.leo) { if (plotRipe(p)) harvest(i); else if (p.s === 'empty') { if (now() > plotCd[i]) sow(i); } else tapPlot(i); return; } /* avec Léo, un toucher suffit ; sans lui, le boulanger y va et travaille */
   if (plotRipe(p)) return goTo(pp[0], pp[1], 0.5, harvestRun);
-  if (p.s === 'empty') return goTo(pp[0], pp[1], 0.6, () => { if (S.plots[i].s === 'empty') sow(i); });
+  if (p.s === 'empty') return goTo(pp[0], pp[1], 0.6, sowRun);
   if (p.s === 'growing') return goTo(pp[0], pp[1], 0.9, () => { if (S.plots[i].s === 'growing' && !plotRipe(S.plots[i])) tapPlot(i); });
 }
 function stationGo(kind) {
@@ -1965,12 +2022,13 @@ function stationGo(kind) {
     gate: () => toast('Bienvenue à ' + vil().n, 'La campagne derrière toi, le marché et le centre-ville devant.'),
     church: () => toast('L\'église · saison 4', 'Bientôt : restaure les vitraux et fais sonner les cloches.'),
     bistrot: () => toast('Le bistrot · bientôt un quartier', 'Le café de la place rouvre bientôt : terrasse, pétanque, concerts du samedi.') }[kind];
-  if (GOD) { cd[kind] = now() + 900; act(); goTo(S.carry > 0 ? SH[0] : s[0], S.carry > 0 ? SH[1] : s[1], S.carry > 0 ? 1.6 : s[2], null); return; } // touched = done; the baker strolls over by himself (and carries the loaves to the shop)
+  const helper = { mill: 'jules', oven: 'ines', shop: 'margot', market: 'paul', cake: 'camille' }[kind], menu = /^(chateau|mairie|gate|church|bistrot)$/.test(kind);
+  if (GOD && (menu || (helper && S.hired[helper]))) { cd[kind] = now() + 900; act(); goTo(S.carry > 0 ? SH[0] : s[0], S.carry > 0 ? SH[1] : s[1], S.carry > 0 ? 1.6 : s[2], null); return; } // touched = done; the baker strolls over by himself (and carries the loaves to the shop)
   cd[kind] = now() + 60000;
-  return goTo(s[0], s[1], s[2], () => { cd[kind] = now() + 900; act(); });
+  return goTo(s[0], s[1], s[2], () => { const go = () => { cd[kind] = now() + 900; act(); }; if (menu || !startWork(kind, go, [s[0], s[1]])) go(); });
 }
-L.field.act = () => { if (GOD) { let k = 0; const ripe = S.plots.some((p, i) => i < S.unlocked && plotRipe(p)); for (let i = 0; i < S.unlocked; i++) { const p = S.plots[i]; if (ripe ? plotRipe(p) : p.s === 'empty') setTimeout(() => { const q = S.plots[i]; if (ripe ? plotRipe(q) : q.s === 'empty') { if (ripe) harvest(i, true); else sow(i); } }, 70 * k++); } return; }
-  if (S.plots.some((p, i) => i < S.unlocked && plotRipe(p))) harvestRun(); else { const i = S.plots.findIndex((p, k) => k < S.unlocked && p.s === 'empty'); if (i >= 0) plotGo(i); else goTo(FI[0], FI[1], 0.5, null); } };
+L.field.act = () => { if (GOD && S.hired.leo) { let k = 0; const ripe = S.plots.some((p, i) => i < S.unlocked && plotRipe(p)); for (let i = 0; i < S.unlocked; i++) { const p = S.plots[i]; if (ripe ? plotRipe(p) : p.s === 'empty') setTimeout(() => { const q = S.plots[i]; if (ripe ? plotRipe(q) : q.s === 'empty') { if (ripe) harvest(i, true); else sow(i); } }, 70 * k++); } return; }
+  if (S.plots.some((p, i) => i < S.unlocked && plotRipe(p))) harvestRun(); else if (S.plots.some((p, i) => i < S.unlocked && p.s === 'empty')) sowRun(); else goTo(FI[0], FI[1], 0.5, null); };
 L.plots.forEach((l, i) => { l.act = () => plotGo(i); });
 ['mill', 'oven', 'shop', 'chateau', 'church', 'bistrot', 'market', 'cake', 'bq', 'mairie'].forEach((k) => { L[k].act = () => stationGo(k); });
 ['leo', 'ines', 'margot', 'jules', 'paul', 'lucie', 'camille'].forEach((k) => { L[k].act = () => { if (S.hired[k]) tapCrew(k); }; });
@@ -2853,6 +2911,7 @@ function wildDamage(a) { const T = a.target, SP = WSPEC[a.sp], n = now(); let do
 
 /* ---- une visite : quelques animaux quittent leur coin et viennent se servir ---- */
 function wildDev() { return 1 + (S.pop || 0) / 150 + (level() - 1) / 12; }
+const FAUNE_RAIDS = false;
 function wildInterval(res) { const base = (S.mode === 'comp' ? 130 : 200) / wildDev(), s = Math.max(S.mode === 'comp' ? 40 : 55, base) * (0.7 + Math.random() * 0.6) * (res ? 2.6 : 1); return (fast ? s / 3 : s) * 1000; }
 function startWildRaid(res, force) {
   const T = wildTargets(); if (!T.length) return false; const kinds = {}; T.forEach((t) => { kinds[t.kind] = 1; });
@@ -2872,7 +2931,7 @@ function tickWildRaids(n, res) {
   if (!S.started || S.over || !(S.q >= 9 || level() >= 4)) return;
   if (res && S.garde) { WR.at = 0; return; }
   if (!WR.at) WR.at = n + wildInterval(res) * 0.6;
-  if (n > WR.at) { WR.at = n + wildInterval(res); startWildRaid(res); }
+  if (FAUNE_RAIDS && n > WR.at) { WR.at = n + wildInterval(res); startWildRaid(res); } /* mis de côté le 18/11/2026 : les animaux vivent autour du village sans plus rien abîmer */
 }
 
 function tickWildGround(a, dt, t, n) {
@@ -3083,7 +3142,7 @@ function hideGrass() { grassChanged(); }
 /* ---- city state ---- */
 function ensureCity() {
   if (S.city && S.city.v === 1) return;
-  const homes = [{ t: 'h', m: 'maison_a', x: 3, z: 5.8, r: Math.PI, l: 1, end: 0, rent: 0, tt: now() }, { t: 'h', m: 'maison_a', x: 9, z: 5.8, r: Math.PI, l: 1, end: 0, rent: 0, tt: now() }];
+  const homes = []; /* plus de maisons de départ devant la boulangerie (Romain, 18/11/2026) : les dix anciens du village logent dans le vieux bourg */
   const prods = {}; PROD_KEYS.forEach((k) => { const L0 = START_LAYOUT[k]; prods[k] = L0 ? [L0[0], L0[1], L0[2], 1] : [MOV[k].x, MOV[k].z, 0, 0]; });
   S.city = { v: 1, prods, items: homes, roads: {} }; S.pop = 10; S.masons = S.masons || 1; dirty = true;
 }
@@ -3143,7 +3202,7 @@ const rentMult = () => 1 + Math.min(1.5, beauty() / 150);
 function capOf(it) { if (it.t !== 'h') return 0; const l = it.end > 0 ? (it.l || 1) - 1 : it.l || 1; return HOUSE_T[it.m].cap * [0, 1, 1.3, 1.6][l]; } // pendant qu'on l'embellit, elle garde les habitants de son niveau précédent
 function capTotal() { if (!links) computeLinks(); return S.city.items.reduce((a, it, i) => a + (links[i] ? capOf(it) : 0), 0); }
 function servCap() { for (const [n, k, lb] of SERV) { const ok = k === 'chateau' ? S.cst >= 3 : MOV[k].placed; if (!ok) return [n, k, lb]; } return [Infinity, null, '']; }
-function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.4 + 0.6 * Math.min(1, b / (cap + 1)); return Math.min(Math.max(Math.min(cap, 10), cap * fill), servCap()[0]); }
+function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.4 + 0.6 * Math.min(1, b / (cap + 1)); return Math.min(Math.max(10, 10 + cap * fill), servCap()[0]); } /* les dix anciens du village n'ont pas besoin de maison */
 function cityBoost() { return 0.7 + Math.min(3, (S.pop || 0) / 150); }
 const busyMasons = () => S.city.items.filter((it) => it.end > 0).length;
 // équilibrage 16/11 (beta14/equilibrage/simu.py) : le prix suit la taille du village, la durée grandit doucement et plafonne
@@ -3231,7 +3290,7 @@ function renderBuild() {
   if (BTAB === 'logements') { let teaser = false; Object.keys(HOUSE_T).sort((a, b) => HOUSE_T[a].lvl - HOUSE_T[b].lvl).forEach((k) => { const T = HOUSE_T[k]; if (T.glb && !GLB_OK[k]) return; if (lv < T.lvl) { if (teaser) return; teaser = true; } const c = housePrice(k); row(T.ic, T.n, T.cap + ' habitants · chantier ' + longT(dur(T.t * 60000 * timeMul())), c + ' ' + C, S.coins >= c, lv < T.lvl ? 'niveau ' + T.lvl : '', () => startPlace({ t: 'h', m: k })); }); }
   else if (BTAB === 'rues') { ROAD_T.forEach((T, i) => row(T.ic, T.n, 'Touche ou glisse pour tracer · ' + T.c + ' ' + C + ' la case de 2 m', T.c + ' ' + C, S.coins >= T.c, '', () => startRoad(i)));
     row('🧽', 'Gomme', 'Retire des cases de rue (remboursées à moitié)', 'Gommer', true, '', () => startRoad(-1)); }
-  else if (BTAB === 'batiments') PROD_KEYS.forEach((k) => { const M = MOV[k], need = M.placed ? '' : M.need(); row(M.ic, M.n, M.placed ? 'Déjà construit · en mode construction, touche-le pour le déplacer' : M.desc, M.placed ? 'Déplacer' : M.c + ' ' + C, M.placed || S.coins >= M.c, need ? 'il faut ' + need : '', () => M.placed ? startMoveProd(k) : startPlace({ t: 'p', k })); });
+  else if (BTAB === 'batiments') PROD_KEYS.forEach((k) => { if (k === 'reserve' && !MOV.reserve.placed) return; const M = MOV[k], need = M.placed ? '' : M.need(); row(M.ic, M.n, M.placed ? 'Déjà construit · en mode construction, touche-le pour le déplacer' : M.desc, M.placed ? 'Déplacer' : M.c + ' ' + C, M.placed || S.coins >= M.c, need ? 'il faut ' + need : '', () => M.placed ? startMoveProd(k) : startPlace({ t: 'p', k })); });
   else { let teasers = 0; Object.values(DECOS).filter((d) => d.cat === BTAB && !d.hide).sort((a, b) => a.lvl - b.lvl || a.c - b.c).forEach((d) => { if (lv < (d.lvl || 1) && ++teasers > 2) return; const cnt = S.city.items.filter((it) => it.k === d.id).length, c = decoPrice(d.id); row(d.ic, d.n, '+' + d.b + ' beauté' + (cnt ? ' · ' + cnt + ' posé' + (cnt > 1 ? 's' : '') : ''), c + ' ' + C, S.coins >= c, lv < (d.lvl || 1) ? 'niveau ' + d.lvl : '', () => startPlace({ t: 'd', k: d.id })); }); }
 }
 function enterBuild() { BUILD = true; $('build').hidden = true; $('buildbar').hidden = false; document.body.classList.add('building'); P.goal = null; }
@@ -3396,7 +3455,7 @@ const VISIT = { on: false, cam: new THREE.PerspectiveCamera(60, 1, 0.15, 230), s
 function visitStops() { const L = [[MOV.shop.x, MOV.shop.z]]; cityObjs.forEach((g) => { if (g && g.userData.kind === 'cityhouse') L.push([g.position.x, g.position.z]); }); PROD_KEYS.forEach((k) => { const M = MOV[k]; if (M.placed && k !== 'shop' && k !== 'champ') L.push([M.x, M.z]); });
   const out = [L.shift()]; while (L.length) { const c = out[out.length - 1]; let bi = 0, bd = 1e9; L.forEach((q, i) => { const d = Math.hypot(q[0] - c[0], q[1] - c[1]); if (d < bd) { bd = d; bi = i; } }); out.push(L.splice(bi, 1)[0]); } return out; }
 function visitLeg() { const V = VISIT, s = V.stops[V.k % V.stops.length]; let p = []; try { p = roadPath(V.pos.x, V.pos.z, s[0], s[1]) || []; } catch (e) { p = []; } if (p.length) p.pop(); V.path = p; if (!p.length) V.pause = 2.6; }
-function startVisit() { const V = VISIT; if (V.on || BUILD || !S.started) return; V.stops = visitStops(); V.k = 0; V.path = []; V.pos.set(STN.shop[0], 0, STN.shop[1] + 3.6); V.yaw = Math.atan2(MOV.shop.x - V.pos.x, MOV.shop.z - V.pos.z); V.pause = 2.6; V.on = true; P.goal = null; document.body.classList.add('visiting'); }
+function startVisit() { const V = VISIT; if (V.on || BUILD || !S.started) return; S.visited = (S.visited || 0) + 1; dirty = true; V.stops = visitStops(); V.k = 0; V.path = []; V.pos.set(STN.shop[0], 0, STN.shop[1] + 3.6); V.yaw = Math.atan2(MOV.shop.x - V.pos.x, MOV.shop.z - V.pos.z); V.pause = 2.6; V.on = true; P.goal = null; document.body.classList.add('visiting'); }
 function endVisit(build) { const V = VISIT; if (!V.on) return; V.on = false; document.body.classList.remove('visiting'); target.set(V.pos.x, 0, V.pos.z); placeCam(); if (build) openBuild(); }
 function tickVisit(dt) { const V = VISIT; if (!V.on) return; const s = V.stops[V.k % V.stops.length]; let want = V.yaw, stop = V.pause > 0;
   if (stop) { V.pause -= dt; want = Math.atan2(s[0] - V.pos.x, s[1] - V.pos.z); if (V.pause <= 0) { V.k++; visitLeg(); } }
@@ -3821,7 +3880,8 @@ function step() {
     if (keys.KeyW || keys.ArrowUp) iy -= 1; if (keys.KeyS || keys.ArrowDown) iy += 1; if (keys.KeyA || keys.ArrowLeft) ix -= 1; if (keys.KeyD || keys.ArrowRight) ix += 1;
     let il = Math.hypot(ix, iy); if (il > 1) { ix /= il; iy /= il; il = 1; }
     const px0 = player.position.x, pz0 = player.position.z;
-    if (S.started && il > 0.12) {
+    if (P.work) tickWork(dt);
+    else if (S.started && il > 0.12) {
       if (P.goal) { P.goal = null; P.act = null; Object.keys(cd).forEach((k) => { if (cd[k] > n + 2000) cd[k] = 0; }); }
       wx = (ix + iy) * 0.7071 * il; wz = (iy - ix) * 0.7071 * il;
     } else if (P.goal) {
@@ -3833,7 +3893,7 @@ function step() {
         if (act) act();
       } else { const w = P.path[0] || [P.goal.x, P.goal.z], ex = w[0] - px0, ez = w[1] - pz0, dw = Math.hypot(ex, ez) || 1, k = P.path.length > 1 ? 1 : Math.min(1, 0.35 + d / 1.2); wx = ex / dw * k; wz = ez / dw * k; if (P.path.length === 1 && dw < 0.3) P.path.shift(); }
     }
-    const SPEED = S.bike ? 11.2 : 7, wl = Math.hypot(wx, wz);
+    const SPEED = S.bike ? 8.5 : 5.2, wl = Math.hypot(wx, wz);
     if (wl > 0.01) {
       const pp2 = pushOut(px0 + wx * SPEED * dt, pz0 + wz * SPEED * dt), nx = pp2[0], nz = pp2[1];
       const made = Math.hypot(nx - px0, nz - pz0);
@@ -3857,23 +3917,23 @@ function step() {
       for (let i = 0; i < stack.length; i++) { const m = stack[i]; m.visible = i < e; if (m.visible) m.material.color.set(i < a ? '#C98A2E' : i < b ? '#F0A6B8' : i < c ? PROD[S.vcarry[i - b]].c : i < d ? '#FFFDF8' : '#E8B94A'); m.position.y = 0.42 + lift + i * 0.14; } }
     if (wl > 0.01 && (stick.on || keys.KeyW || keys.KeyS || keys.KeyA || keys.KeyD || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight)) camFree = false;
     if (!camFree && !GOD) { vtmp.set(player.position.x + wx * 1.6, player.position.y * 0.7, player.position.z + wz * 1.6); target.lerp(vtmp, 1 - Math.exp(-dt * 4.5)); } placeCam();
-    vtmp.set(Math.round(target.x / 2) * 2, 0, Math.round(target.z / 2) * 2); sun.position.copy(vtmp).add(SUN); sun.target.position.copy(vtmp); sun.target.updateMatrixWorld();
+    vtmp.set(Math.round(target.x / 2) * 2, 0, Math.round(target.z / 2) * 2); sun.position.copy(vtmp).add(SUN); sun.target.position.copy(vtmp); sun.target.updateMatrixWorld(); { const hs = Math.max(18, Math.min(48, zoom * 0.9)), sc = sun.shadow.camera; if (Math.abs(sc.right - hs) > 1.5) { sc.left = sc.bottom = -hs; sc.right = sc.top = hs; sc.updateProjectionMatrix(); } } /* ombres plus fines quand on zoome */
     // quarters: name on arrival, models load around you
     { const z = zoneOf(player.position.x, player.position.z); if (z.id !== zoneId) { const first = zoneId !== ''; zoneId = z.id; if (S.started) musicTo(z.id); if (first || S.started) { const el = $('zone'); el.textContent = z.ic + ' ' + z.name; el.hidden = false; el.style.opacity = '1'; zoneT = 2.6; } } if (zoneT > 0) { zoneT -= dt; if (zoneT <= 0) $('zone').style.opacity = '0'; } }
     if ((loadT += dt) > 1.5) { loadT = 0; loadNear(); }
     // walking close is enough: harvest, sow, mill, bake, cash in
-    if (S.started) {
+    if (S.started && !P.work) {
       const px = player.position.x, pz = player.position.z;
-      for (let i = 0; i < S.unlocked; i++) { const pp = PLOT_POS[i]; if (Math.hypot(px - pp[0], pz - pp[1]) < 1.05) { const p = S.plots[i]; if (plotRipe(p)) harvest(i); else if (p.s === 'empty' && n > plotCd[i]) sow(i); } }
-      if (n > (cd.mill || 0) && Math.hypot(px - MI[0], pz - MI[1]) < MI[2] && (S.mill ? n >= S.mill.end : S.ble >= 2)) { tapMill(); cd.mill = n + 450; }
-      if (!(S.hired.ines && !S.tasks.ines) && n > (cd.oven || 0) && Math.hypot(px - OV[0], pz - OV[1]) < OV[2] && (S.oven ? n >= S.oven.end : S.farine >= 1)) { tapOven(); cd.oven = n + 450; } // with Inès at work, walking past the oven no longer takes her batch
+      for (let i = 0; i < S.unlocked; i++) { const pp = PLOT_POS[i]; if (Math.hypot(px - pp[0], pz - pp[1]) < 1.05) { const p = S.plots[i]; if (plotRipe(p)) { startWork('cut', () => { if (plotRipe(S.plots[i])) harvest(i); }, pp); break; } else if (p.s === 'empty' && n > plotCd[i]) { plotCd[i] = n + 900; startWork('sow', () => { if (S.plots[i].s === 'empty') sow(i); }, pp); break; } } }
+      if (!P.work && n > (cd.mill || 0) && Math.hypot(px - MI[0], pz - MI[1]) < MI[2] && (S.mill ? n >= S.mill.end : S.ble >= 2)) { cd.mill = n + 450; startWork('mill', tapMill, MI); }
+      if (!P.work && !(S.hired.ines && !S.tasks.ines) && n > (cd.oven || 0) && Math.hypot(px - OV[0], pz - OV[1]) < OV[2] && (S.oven ? n >= S.oven.end : S.farine >= 1)) { cd.oven = n + 450; startWork('oven', tapOven, OV); } // with Inès at work, walking past the oven no longer takes her batch
       if (S.shop > 0 && n > (cd.shop || 0) && Math.hypot(px - SH[0], pz - SH[1]) < 2.6) tapShop();
       if (S.carry > 0 && Math.hypot(px - SH[0], pz - SH[1]) < 2.8) { stockBread(S.carry); S.carry = 0; }
       if (S.carryC > 0 && Math.hypot(px - SH[0], pz - SH[1]) < 2.8) { stockCake(S.carryC); S.carryC = 0; }
-      PKEYS.forEach((k) => { if (S.lv[k] > 0 && S.pen[k].n > 0 && Math.hypot(px - PEN[k].x, pz - PEN[k].z) < 3.2) penCollect(k); });
-      if (S.lv.cake > 0 && n > (cd.cake || 0) && Math.hypot(px - STN.cake[0], pz - STN.cake[1]) < 2.3 && (S.cakeJob ? n >= S.cakeJob.end : (S.farine >= 1 && S.eggs >= 2))) { tapCake(); cd.cake = n + 500; }
+      PKEYS.forEach((k) => { if (!P.work && S.lv[k] > 0 && S.pen[k].n > 0 && Math.hypot(px - PEN[k].x, pz - PEN[k].z) < 3.2) startWork('pen', () => penCollect(k), [PEN[k].x, PEN[k].z]); });
+      if (S.lv.cake > 0 && n > (cd.cake || 0) && Math.hypot(px - STN.cake[0], pz - STN.cake[1]) < 2.3 && (S.cakeJob ? n >= S.cakeJob.end : (S.farine >= 1 && S.eggs >= 2)) && !P.work) { cd.cake = n + 500; startWork('cake', tapCake, STN.cake); }
       if (S.btill > 0 && Math.hypot(px - BQDOOR[0], pz - BQDOOR[1]) < 2.6) collectBq();
-      if (S.lv.mk > 0) { for (let k = 0; k < S.gun; k++) if (Math.hypot(px - GPOS[k][0], pz - GPOS[k][1]) < 0.95) { const p = S.garden[k]; if (gRipe(p)) gHarvest(k); else if (p.s === 'empty' && n > gardenCd[k]) gSow(k); }
+      if (S.lv.mk > 0) { for (let k = 0; k < S.gun; k++) if (!P.work && Math.hypot(px - GPOS[k][0], pz - GPOS[k][1]) < 0.95) { const p = S.garden[k]; if (gRipe(p)) startWork('garden', () => { if (gRipe(S.garden[k])) gHarvest(k); }, GPOS[k]); else if (p.s === 'empty' && n > gardenCd[k]) { gardenCd[k] = n + 900; startWork('sow', () => { if (S.garden[k].s === 'empty') gSow(k); }, GPOS[k]); } }
         if (n > (cd.market || 0) && Math.hypot(px - STN.market[0], pz - STN.market[1]) < 2.4 && (S.vcarry.length || S.mtill > 0)) { stockStall(S.vcarry); collectMarket(); cd.market = n + 600; } }
       if (S.gate > 0 && Math.hypot(px - GATEP[0], pz - GATEP[1]) < 2.8) collectGate();
       if (!croOn && n > croNext) { let sp = null; for (let k = 0; k < 10 && !sp; k++) { const c = CSPOTS[Math.floor(Math.random() * CSPOTS.length)], d = Math.hypot(px - c[0], pz - c[1]); if (d > 7 && d < 30) sp = c; } if (sp) { croissant.position.set(sp[0], groundY(sp[0], sp[1]) + 0.9, sp[1]); croOn = true; } else croNext = n + 3000; }
