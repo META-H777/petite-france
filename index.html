@@ -334,10 +334,11 @@ function rich(el, txt) { if (txt.indexOf(C) < 0) { el.textContent = txt; return;
 
 /* ---------------- state ---------------- */
 const PLOTS = 24;
-const LEVELS = [0, 20, 55, 110, 180, 270, 380, 520, 700, 900, 1150, 1450, 1800, 2200, 2700, 3300, 4000, 4800, 5700, 6700];
+const LEVELS = [0,25,55,91,134,186,248,323,413,520,649,804,990,1213,1480,1801,2186,2648,3203,3869,4668,5626,6776,8156,9812,11799,14184,17046,20480,24601,29546,35480,42601,51147,61402,73708,88475,106195,127459,152976]; // 40 niveaux, chacun 20 % plus long que le précédent
+const XPK = 0.35; // l'expérience vient moins vite : un niveau doit rester un événement
 const MILLCAP = [3, 4, 5, 6, 8, 10, 12, 16], OVENCAP = [2, 3, 4, 5, 6, 8, 10, 12], PRICES = [3, 4, 5, 6, 8], PLOTCOST = [8, 10, 15, 20, 28, 35, 45, 55, 68, 80, 95, 110, 130, 150, 175, 200, 230, 260, 300, 350], GROW = 20000;
 const GOAL = 25;
-const RID = 'b14a';
+const RID = 'b14e';   /* b14e = économie V2 (18/11/2026) : les parties d'avant repartent de zéro */
 function fresh() {
   return { v: 14, coins: 20, xp: 0, ble: 0, farine: 0, pain: 0, shop: 0, cagnotte: 0, spent: 0,
     recoltes: 0, farineTot: 0, fournees: 0, vendus: 0, encaisse: 0, tasksDone: 0,
@@ -356,7 +357,7 @@ const boosted = () => S.pass || now() < S.boostUntil || now() < (S.trialUntil ||
 const dur = (ms) => Math.round(ms * (boosted() ? 0.5 : 1) * (fast ? 0.1 : 1));
 function gain(xp, coins) {
   const before = level();
-  S.xp += xp * (fast ? 3 : 1); if (coins) S.coins += coins; dirty = true;
+  S.xp += xp * XPK * (fast ? 3 : 1); if (coins) S.coins += coins; dirty = true;
   const after = level();
   if (after > before) { SFX.level(); burst(player.position.x, player.position.y + 1.6, player.position.z, ['#E3A73C', '#2F4B7C', '#C9573F', '#FFFDF8'], 26, 6); buzz(40);
     toast('Niveau ' + after + ' !', after === 2 ? 'Regarde « Améliorer » : il y a du nouveau.' : after === 3 ? 'Le chemin du château s\'ouvre, sur la colline.' : after === 4 ? 'Les clients viennent plus nombreux.' : 'Continue comme ça.'); }
@@ -486,7 +487,7 @@ const GLB = [];
 const VCOL = new THREE.MeshLambertMaterial({ vertexColors: true }), VCOLF = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), VLIT = new THREE.MeshBasicMaterial({ vertexColors: true });
 /* ---- ambiance: one shader hook shared by the still world (wind sway, seasons on leaves, snow on what faces the sky, lit windows at night, drifting cloud shadows) ---- */
 const AMBU = { uPh: { value: 0 }, uWind: { value: 0.1 }, uWindDir: { value: new THREE.Vector2(0.8, 0.6) }, uSnow: { value: 0 }, uNight: { value: 0 }, uLitT: { value: 0.2 }, uCloud: { value: 0.5 }, uCloudOff: { value: new THREE.Vector2() }, uCloudTex: { value: null },
-  uLeafMix: { value: 0 }, uLeafA: { value: new THREE.Color('#E08A2C') }, uLeafB: { value: new THREE.Color('#C9482E') }, uLeafC: { value: new THREE.Color('#E9B93A') }, uLeafT: { value: new THREE.Vector2(0.4, 0.7) }, uTint: { value: new THREE.Vector4(1, 1, 1, 0) }, uLand: { value: null } };
+  uLeafMix: { value: 0 }, uLeafA: { value: new THREE.Color('#E08A2C') }, uLeafB: { value: new THREE.Color('#C9482E') }, uLeafC: { value: new THREE.Color('#E9B93A') }, uLeafT: { value: new THREE.Vector2(0.4, 0.7) }, uTint: { value: new THREE.Vector4(1, 1, 1, 0) }, uLand: { value: null }, uDew: { value: 0 }, uDewT: { value: 0 } };
 { const t = new THREE.DataTexture(new Uint8Array([255]), 1, 1, THREE.RedFormat); t.needsUpdate = true; AMBU.uLand.value = t; }
 { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 128, 128); let sd = 7; const r = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
   for (let k = 0; k < 46; k++) { const x = r() * 128, y = r() * 128, rad = 10 + r() * 22, a = 0.16 + r() * 0.22; for (let ox = -128; ox <= 128; ox += 128) for (let oy = -128; oy <= 128; oy += 128) { const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad); gr.addColorStop(0, 'rgba(255,255,255,' + a + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(x + ox - rad, y + oy - rad, rad * 2, rad * 2); } }
@@ -516,12 +517,12 @@ function ambPatch(m, f, x) { f = f || ''; const has = (k) => f.indexOf(k) >= 0;
       (has('leaf') ? 'if (vPfL > 0.0) { float ph = vPfL * 40.0 + uPh * 1.5 + pfW0.x * 0.2; float am = 0.015 + 0.14 * uWind; float sw = am * (sin(ph) + 0.35 * sin(ph * 2.3 + pfW0.y * 2.0)); transformed.x += uWindDir.x * sw; transformed.z += uWindDir.y * sw; transformed.y += 0.25 * am * sin(ph * 1.7 + pfW0.z); }\n' : '') +
       (has('sway') ? '{ float ph = dot(pfW0.xz, uWindDir) * 0.5 - uPh * 1.6; float am = position.y * (0.05 + 0.6 * uWind) * (0.25 * uWind + 0.7 * sin(ph) + 0.3 * sin(ph * 2.7 + pfW0.x)); transformed.x += am * uWindDir.x; transformed.z += am * uWindDir.y; }\n' : '') +
       (has('glowattr') ? 'vPfG = aGlow * step(uLitT, fract(sin(dot(floor(modelMatrix[3].xz), vec2(12.9898, 78.233))) * 43758.5453));\n' : '') + (has('glowall') ? 'vPfG = 1.0;\n' : ''));
-    sh.fragmentShader = 'uniform float uSnow, uNight, uCloud, uLeafMix; uniform vec2 uCloudOff, uLeafT; uniform vec3 uLeafA, uLeafB, uLeafC; uniform vec4 uTint, uGBox; uniform sampler2D uCloudTex, uLand; varying vec3 vPfW; varying float vPfL; varying float vPfG;\n' + sh.fragmentShader
+    sh.fragmentShader = 'uniform float uSnow, uNight, uCloud, uLeafMix, uDew, uDewT; uniform vec2 uCloudOff, uLeafT; uniform vec3 uLeafA, uLeafB, uLeafC; uniform vec4 uTint, uGBox; uniform sampler2D uCloudTex, uLand; varying vec3 vPfW; varying float vPfL; varying float vPfG;\n' + sh.fragmentShader
       .replace('#include <color_fragment>', '#include <color_fragment>\n' +
         (has('leaf') ? 'if (vPfL > 0.0) { vec3 pc = vPfL < uLeafT.x ? uLeafA : (vPfL < uLeafT.y ? uLeafB : uLeafC); float pl = dot(diffuseColor.rgb, vec3(0.3, 0.6, 0.1)); diffuseColor.rgb = mix(diffuseColor.rgb, pc * (0.7 + pl * 1.1), uLeafMix); }\n' : '') +
         (has('tint') ? 'diffuseColor.rgb = mix(diffuseColor.rgb, uTint.rgb, uTint.a); { float pl = texture2D(uLand, (vPfW.xz - uGBox.xy) * uGBox.zw).r; diffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.3, 0.6, 0.1))) * vec3(0.8, 0.85, 0.9), diffuseColor.rgb, pl); }\n' : ''))
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + (x ? x.frag : '') + (has('nosnow') ? '' : '{ vec3 pn = inverseTransformDirection(normal, viewMatrix); float ps = smoothstep(0.5, 0.82, pn.y) * uSnow * (0.72 + 0.5 * texture2D(uCloudTex, vPfW.xz * 0.11).r);' + (has('tint') ? '' : ' ps *= smoothstep(0.07, 0.16, vPfW.y);') + ' diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.94, 1.0), clamp(ps, 0.0, 1.0)); }\n'))
-      .replace('#include <opaque_fragment>', '{ float pc2 = texture2D(uCloudTex, vPfW.xz * 0.009 + uCloudOff).r; outgoingLight *= 1.0 - uCloud * smoothstep(0.42, 0.75, pc2) * 0.32; }\noutgoingLight += vPfG * uNight * vec3(1.0, 0.66, 0.3) * 1.5;\n#include <opaque_fragment>'); };
+      .replace('#include <opaque_fragment>', '{ float pc2 = texture2D(uCloudTex, vPfW.xz * 0.009 + uCloudOff).r; outgoingLight *= 1.0 - uCloud * smoothstep(0.42, 0.75, pc2) * 0.32; }\noutgoingLight += vPfG * uNight * vec3(1.0, 0.66, 0.3) * 1.5;\n' + (has('grass') || has('tint') ? 'if (uDew > 0.0) { vec2 dq = vPfW.xz * 4.0; vec2 dg = fract(dq) - 0.5; float dh = fract(sin(dot(floor(dq), vec2(127.1, 311.7))) * 43758.5453); float dt2 = 0.5 + 0.5 * sin(uDewT * (1.2 + dh * 3.0) + dh * 60.0); float dr = 1.0 - smoothstep(0.05, 0.26, length(dg)); outgoingLight += uDew * step(0.972, dh) * dr * dt2 * dt2 * dt2 * vec3(1.0, 0.97, 0.88) * 1.3; outgoingLight *= mix(vec3(1.0), vec3(0.93, 1.02, 1.0), uDew * 0.6); }\n' : '') + '#include <opaque_fragment>'); };
   return m; }
 ambPatch(VCOLF, 'glowattr');
 const VSTAT = ambPatch(new THREE.MeshLambertMaterial({ vertexColors: true }), 'leafattr');
@@ -965,7 +966,7 @@ let scaffold = new THREE.Group(); chateau.add(scaffold);
   for (let k = 0; k < 3; k++) box(7.2, 0.08, 1.1, '#C9935A', 0, 1.3 + k * 1.6, 3.6 * S2 + 0.5, scaffold); }
 solidRect(CASTLE[0], CASTLE[1] - 1, 17, 11.5);
 const CSTAGE = ['Relever les remparts et la porte', 'Bâtir la tour ouest', 'Bâtir la tour est', 'Élever le donjon', 'Bannières, drapeaux et jardins'];
-const CCOST = [75, 200, 450, 1000, 2250], CTIME = [3600000, 7200000, 14400000, 21600000, 28800000], CFEE = [0, 4, 6, 9, 13, 20], CINT = [0, 14, 11, 9, 7, 5];
+const CCOST = [150, 3000, 15000, 50000, 150000], CTIME = [3600000, 7200000, 14400000, 21600000, 28800000], CFEE = [0, 2, 5, 12, 30, 60], CINT = [0, 20, 15, 12, 10, 8];
 [[14, -34, 1], [12, -42, 1.1], [38, -36, 1], [36, -46, 1.1], [24, -54, 1.2], [16, -48, 1], [30, -52, 1]].forEach((t) => tree(t[0], t[1], t[2], 'cypres'));
 lamp(33, -14); lamp(30.5, -25);
 
@@ -1244,8 +1245,8 @@ function tickBoars(dt, t, n) {
 const HIRE = { lucie: [110, 'Lucie, la fermière', 'Ramasse les œufs, le lait et la laine.', '🧑‍🌾'], camille: [130, 'Camille, la pâtissière', 'Prépare les gâteaux et les porte en vitrine.', '🧁'], paul: [160, 'Paul, le maraîcher', 'Cultive le potager et garnit l\'étal du marché.', '🥬'], leo: [20, 'Léo, le fermier', 'Récolte et sème tout seul.', '👨‍🌾'], jules: [45, 'Jules, le meunier', 'Fait tourner le moulin tout seul.', '⚙️'], ines: [80, 'Inès, la boulangère', 'Enfourne et pose le pain en vitrine.', '👩‍🍳'], margot: [130, 'Margot, la vendeuse', 'Sert 2 fois plus vite, ramasse la caisse toute seule, +1 pièce par baguette.', '🧾'] };
 const LVCOST = { seed: [60, 175, 450], team: [100, 250, 600], mill: [30, 70, 150, 300, 550, 950, 1600], oven: [40, 90, 190, 375, 650, 1100, 1800], shop: [50, 110, 225, 450], fence: [25, 75, 200] };
 const GCOST = [0, 75, 130, 210, 350, 550], MKCOST = [125, 250, 550, 1200], GGROW = 26000, gardenCd = [0, 0, 0, 0, 0, 0];
-const CAKECAP = [0, 2, 3, 4, 6], CAKEPR = [0, 14, 17, 20, 24], CAKECOST = [125, 225, 400, 700];
-const BQPR = [0, 35, 45, 60], BQCOST = [175, 350, 650];
+const CAKECAP = [0, 2, 3, 4, 6], CAKEPR = [0, 8, 10, 12, 14], CAKECOST = [125, 225, 400, 700];
+const BQPR = [0, 15, 20, 25], BQCOST = [175, 350, 650];
 function ups() {
   const a = [], L2 = S.lv;
   if (!S.bike) a.push({ ic: '🚲', t: 'Le vélo du boulanger', s: 'Tu roules 60 % plus vite dans tout le village.', cost: 30, buy: () => { S.bike = true; } });
@@ -1262,15 +1263,21 @@ function ups() {
   PKEYS.forEach((k) => { const Pn = PEN[k], l = L2[k]; if (l < 1) return; a.push({ ic: Pn.e === '🥚' ? '🐔' : k === 'cow' ? '🐄' : '🐑', t: l ? Pn.name + ' · ' + l + ' ' + Pn.one + (l > 1 ? 's' : '') : 'Construire ' + (k === 'cow' ? 'l\'étable' : k === 'hen' ? 'le poulailler' : 'la bergerie'), s: l >= Pn.max ? 'Au maximum.' : k === 'hen' ? 'Des œufs pour les gâteaux. Une ' + Pn.one + ' de plus.' : k === 'cow' ? 'Du lait à vendre au marché (12 pièces). Une ' + Pn.one + ' de plus.' : 'De la laine pour les vêtements. Un ' + Pn.one + ' de plus.', cost: l < Pn.max ? Pn.cost[l] : null, buy: () => { L2[k]++; pop(Pn.g); } }); });
   if (L2.cake > 0) a.push({ ic: '🧁', t: L2.cake ? 'Pâtisserie · niveau ' + L2.cake : 'Ouvrir la pâtisserie', s: L2.cake < 4 ? '1 farine + 2 œufs = 1 gâteau, vendu ' + CAKEPR[L2.cake + 1] + ' pièces à la boulangerie. ' + CAKECAP[L2.cake + 1] + ' gâteaux à la fois.' : 'Au maximum.', cost: L2.cake < 4 ? CAKECOST[L2.cake] : null, buy: () => { L2.cake++; pop(cakeG); } });
   if (L2.bq > 0) a.push({ ic: '👕', t: L2.bq ? 'Boutique de vêtements · niveau ' + L2.bq : 'Ouvrir la boutique de vêtements', s: L2.bq < 3 ? '2 laines = 1 pull, vendu ' + BQPR[L2.bq + 1] + ' pièces. Elle tricote et vend toute seule.' : 'Au maximum.', cost: L2.bq < 3 ? BQCOST[L2.bq] : null, buy: () => { L2.bq++; pop(bqG); } });
-  { const ms = S.masons || 1; a.push({ ic: '🧱', t: 'Équipe de maçons · ' + ms + (ms > 1 ? ' équipes' : ' équipe'), s: ms < 3 ? 'Une équipe de plus : un chantier de maison de plus en même temps.' : 'Au maximum.', cost: ms < 3 ? MASONCOST[ms] : null, buy: () => { S.masons = ms + 1; } }); }
+  { const sl = S.lv.stock || 0; a.push({ ic: '🏚️', t: 'Grenier et réserves · niveau ' + (sl + 1), s: sl < 5 ? 'Pendant ton absence, l\'équipe vend jusqu\'à ' + 2 * STOCK[sl] + ' baguettes. Niveau suivant : ' + 2 * STOCK[sl + 1] + ', et ' + STOCK[sl + 1] + ' blés et pains en réserve.' : 'Au maximum : ' + 2 * STOCK[5] + ' baguettes vendues pendant ton absence.', cost: sl < 5 ? STOCKCOST[sl] : null, buy: () => { S.lv.stock = sl + 1; } }); }
+  { const ms = S.masons || 1; a.push({ ic: '🧱', t: 'Équipe de maçons · ' + ms + (ms > 1 ? ' équipes' : ' équipe'), s: ms < 5 ? 'Une équipe de plus : un chantier de maison de plus en même temps.' : 'Au maximum.', cost: ms < 5 ? MASONCOST[ms] : null, buy: () => { S.masons = ms + 1; } }); }
   if (reserveOn() && !S.garde) a.push({ ic: '🧑‍🌾', t: 'Gaspard, le garde forestier', s: 'Il veille sur la réserve naturelle : plus aucun animal ne s\'en échappe.', cost: 1500, buy: () => { S.garde = true; } });
+  if ((S.popMax || S.pop || 0) >= 60) { const nf = S.fetes || 0, fc = feteCost(nf); a.push({ ic: '🎉', t: 'Fête du village' + (nf ? ' · ' + nf + ' donnée' + (nf > 1 ? 's' : '') : ''), s: 'Bal, lampions et grande tablée sur la place. +' + feteRenom(fc) + ' de renommée pour ton village. Chaque fête est plus grande, et plus chère, que la précédente.', cost: fc, buy: () => { S.fetes = nf + 1; S.renom = (S.renom || 0) + feteRenom(fc); S.feteUntil = now() + 240000; toast('🎉 Fête du village', 'Renommée : ' + fmt(S.renom) + ' ⭐'); }, noXp: true }); }
   if (!S.dog) a.push({ ic: '🐕', t: 'Médor, le chien de garde', s: 'Chasse les lapins et les sangliers tout seul.', cost: 100, buy: () => { S.dog = true; dog.position.copy(DOGHOME); } });
   return a.filter(upVisible);
 }
+/* La fête du village : une dépense toujours disponible, qui transforme les pièces en renommée (la note du village dans le futur classement). */
+const feteCost = (n) => Math.round(300 * Math.pow(1.12, n) / 10) * 10, feteRenom = (c) => Math.max(1, Math.round(c / 50));
+let feteT = 0;
+function tickFete(dt, n) { if (!(S.feteUntil > n) || (feteT += dt) < 0.45) return; feteT = 0; const a = Math.random() * 6.283, r = 2 + Math.random() * 9; burst(shop.position.x + Math.cos(a) * r, 2.5 + Math.random() * 3, shop.position.z + 7 + Math.sin(a) * r * 0.6, ['#E0405A', '#F3CF7A', '#4C8FD0', '#FFFDF8', '#5E8F3E'], 10, 5); }
 function buyUp(u) {
   if (u.cost === null) return;
   if (S.coins < u.cost) { SFX.no(); return toast('Il te manque ' + Math.ceil(u.cost - S.coins) + ' pièces', 'Vends du pain et reviens.'); }
-  S.coins -= u.cost; u.buy(); gain(Math.ceil(u.cost / 8)); SFX.level(); buzz(30); burst(player.position.x, player.position.y + 1.6, player.position.z, ['#E3A73C', '#F3CF7A', '#FFFDF8'], 18, 6); dirty = true; renderUp();
+  S.coins -= u.cost; u.buy(); if (!u.noXp) gain(Math.ceil(u.cost / 8)); SFX.level(); buzz(30); burst(player.position.x, player.position.y + 1.6, player.position.z, ['#E3A73C', '#F3CF7A', '#FFFDF8'], 18, 6); dirty = true; renderUp();
 }
 function renderUp() {
   const box2 = $('up-list'); box2.innerHTML = ''; $('up-coins').textContent = fmt(S.coins);
@@ -1344,11 +1351,11 @@ function tickGarden(t, n) {
 /* ---------------- village orders ---------------- */
 const ONAMES = ['Mme Dupont', 'M. Martin', 'L\'école', 'Le bistrot', 'Mamie Odette', 'Le club de pétanque', 'Le camping', 'La cantine', 'Les pompiers', 'Le château'];
 function newOrder() { const pain = 3 + Math.floor(Math.random() * (3 + Math.min(10, level()))), veg = S.lv.mk > 0 && Math.random() < 0.6 ? 1 + Math.floor(Math.random() * 3) : 0;
-  return { who: ONAMES[Math.floor(Math.random() * ONAMES.length)], pain, veg, coins: Math.round((pain * PRICES[S.lv.shop - 1] + veg * PROD[Math.max(0, Math.min(3, S.lv.mk - 1))].p) * 1.6) + 5, xp: 4 + pain }; }
+  return { who: ONAMES[Math.floor(Math.random() * ONAMES.length)], pain, veg, coins: Math.round((pain * PRICES[S.lv.shop - 1] + veg * PROD[Math.max(0, Math.min(3, S.lv.mk - 1))].p) * ECO.ordPay) + 5, xp: 4 + pain }; }
 const canDeliver = (o) => S.pain >= o.pain && S.stall.length >= (o.veg || 0) && S.cake >= (o.cake || 0);
-function tickOrders(n) { if (S.started && !S.over && S.q >= 8 && S.orders.length < 3 && n > (S.orderAt || 0)) { S.orders.push(newOrder()); S.orderAt = n + (fast ? 8000 : 28000); dirty = true; } }
+function tickOrders(n) { if (S.started && !S.over && S.q >= 8 && S.orders.length < 3 && n > (S.orderAt || 0)) { S.orders.push(newOrder()); S.orderAt = n + (fast ? 8000 : 1000 * Math.max(ECO.ordMin, ECO.ordK / Math.max(48, S.pop || 0))); dirty = true; } }
 function payOrder(o) { S.pain -= o.pain; S.stall.splice(0, o.veg || 0); S.cake -= (o.cake || 0); S.coins += o.coins; S.freq = Math.min(100, S.freq + 2); S.livrees = (S.livrees || 0) + 1; gain(o.xp); SFX.coin(); buzz(30); burst(player.position.x, player.position.y + 1.6, player.position.z, ['#E3A73C', '#F3CF7A', '#FFFDF8'], 16, 6); dirty = true; }
-function deliver(i) { const o = S.orders[i]; if (!o || !canDeliver(o)) { SFX.no(); return; } payOrder(o); S.orders.splice(i, 1); S.orderAt = now() + (fast ? 5000 : 18000); renderOrders(); toast('Commande livrée !', '+' + o.coins + ' pièces · fréquentation +2'); }
+function deliver(i) { const o = S.orders[i]; if (!o || !canDeliver(o)) { SFX.no(); return; } payOrder(o); S.orders.splice(i, 1); S.orderAt = Math.max(S.orderAt || 0, now() + (fast ? 5000 : 18000)); renderOrders(); toast('Commande livrée !', '+' + o.coins + ' pièces · fréquentation +2'); }
 function orderText(o) { return o.pain + ' baguettes (tu en as ' + S.pain + ')' + (o.veg ? ' + ' + o.veg + ' cagette' + (o.veg > 1 ? 's' : '') + ' (' + S.stall.length + ')' : '') + (o.cake ? ' + ' + o.cake + ' gâteau' + (o.cake > 1 ? 'x' : '') + ' (' + S.cake + ')' : ''); }
 function renderOrders() {
   const el = $('od-list'); el.innerHTML = '';
@@ -1474,7 +1481,10 @@ function floatAt(obj, txt) {
 
 /* ---------------- actions ---------------- */
 function plotRipe(p) { return p.s === 'ripe' || (p.s === 'growing' && now() >= p.end); }
+const STOCK = [60, 120, 240, 480, 900, 1600], STOCKCOST = [150, 600, 2500, 10000, 40000]; // grenier (blé), réserve (farine, le tiers), vitrine (pain)
+const stockCap = () => STOCK[Math.min(5, S.lv.stock || 0)];
 function harvest(i, w) {
+  if (S.ble >= stockCap()) { if (!w && !QUIET) toast('Le grenier est plein', 'Fais tourner le moulin, ou agrandis les réserves dans « Améliorer ».'); return; }
   const p = S.plots[i], pp = PLOT_POS[i]; p.s = 'empty'; S.ble += S.lv.seed; S.recoltes++; plotCd[i] = now() + 250;
   if (!w) { P.combo = now() - P.comboT < 2500 ? P.combo + 1 : 1; P.comboT = now(); } gain(2); dirty = true;
   burst(pp[0], 0.9, pp[1], ['#E8B94A', '#F3CF7A', '#C9A13A'], w ? 4 : 9); SFX.pick(w ? 1 : P.combo); buzz(12); pop(plotMeshes[i]);
@@ -1488,13 +1498,13 @@ function tapPlot(i) {
   if (p.s === 'empty') return sow(i);
   openSkip('Parcelle de blé', 'Le blé pousse. Tu peux attendre… ou finir maintenant.', () => p.end, () => { p.end = now(); });
 }
-function millStart() { const n = Math.min(MILLCAP[S.lv.mill - 1], Math.floor(S.ble / 2)); if (!n) return false; S.ble -= n * 2; S.mill = { end: now() + dur(6000 * Math.pow(0.8, S.lv.mill - 1) * n), out: n }; dirty = true; SFX.start(); pop(mill); burst(MILLP[0], 1.6, MILLP[1] + 2, '#E8B94A', 6); return true; }
+function millStart() { if (S.farine >= stockCap() / 3) return false; const n = Math.min(MILLCAP[S.lv.mill - 1], Math.floor(S.ble / 2)); if (!n) return false; S.ble -= n * 2; S.mill = { end: now() + dur(6000 * Math.pow(0.8, S.lv.mill - 1) * n), out: n }; dirty = true; SFX.start(); pop(mill); burst(MILLP[0], 1.6, MILLP[1] + 2, '#E8B94A', 6); return true; }
 function tapMill() {
   if (S.mill && now() >= S.mill.end) { S.farine += S.mill.out; S.farineTot += S.mill.out; floatAt(mill, '+' + S.mill.out + ' farine'); gain(3 * S.mill.out); S.mill = null; SFX.done(); pop(mill); burst(MILLP[0], 1.6, MILLP[1] + 2, '#FFFDF8', 10); buzz(15); return; }
   if (S.mill) return openSkip('Le moulin', 'Le moulin moud ton blé.', () => S.mill.end, () => { S.mill.end = now(); });
   if (!millStart()) SFX.no(), toast('Pas assez de blé', 'Il faut 2 bottes de blé pour un sac de farine.');
 }
-function ovenStart() { const n = Math.min(OVENCAP[S.lv.oven - 1], S.farine); if (!n) return false; S.farine -= n; S.oven = { end: now() + dur(9000 * Math.pow(0.8, S.lv.oven - 1) * n), out: 4 * n }; dirty = true; SFX.start(); pop(oven); burst(OVENP[0], 1.6, OVENP[1] + 1.6, '#F6A04A', 6); return true; }
+function ovenStart() { if (S.pain >= stockCap()) return false; const n = Math.min(OVENCAP[S.lv.oven - 1], S.farine); if (!n) return false; S.farine -= n; S.oven = { end: now() + dur(9000 * Math.pow(0.8, S.lv.oven - 1) * n), out: 4 * n }; dirty = true; SFX.start(); pop(oven); burst(OVENP[0], 1.6, OVENP[1] + 1.6, '#F6A04A', 6); return true; }
 function tapOven() {
   if (S.oven && now() >= S.oven.end) { if (WORKER) WORKER.bag = (WORKER.bag || 0) + S.oven.out; else if (S.hired.ines && !S.tasks.ines) crew.ines.userData.bag = (crew.ines.userData.bag || 0) + S.oven.out; /* once Inès is hired, every batch is hers to shelve, even one you take out yourself */ else S.carry += S.oven.out; S.fournees++; floatAt(oven, '+' + S.oven.out + ' 🥖'); gain(5 * S.oven.out / 4); S.oven = null; SFX.done(); pop(oven); burst(OVENP[0], 1.8, OVENP[1] + 1.6, ['#E3A73C', '#F3CF7A'], 12); buzz(15); return; }
   if (S.oven) return openSkip('Le four', 'La fournée cuit.', () => S.oven.end, () => { S.oven.end = now(); });
@@ -1746,16 +1756,26 @@ let spawnT = 0.5, offGain = 0, offSecs = 0;
 function calcOffline(last) {
   const secs = Math.min(4 * 3600, (now() - (last || now())) / 1000); if (!(secs > 120)) return;
   const cap = Math.min(S.unlocked * S.lv.seed * 2 / 22, 0.667 / Math.pow(0.8, S.lv.mill - 1), 0.444 / Math.pow(0.8, S.lv.oven - 1));
-  const rate = (S.hired.leo && S.hired.jules && S.hired.ines ? cap * PRICES[S.lv.shop - 1] : 0) + (S.cst >= 1 ? CFEE[S.cst] / CINT[S.cst] : 0) + (S.hired.paul && S.lv.mk > 0 ? S.gun * PROD[S.lv.mk - 1].p / 32 : 0);
-  offGain = Math.round(rate * secs * 0.12); offSecs = secs;
+  /* Pendant l'absence : l'équipe vend du pain au rythme des clients du village, jusqu'à deux fois la taille des réserves ; le château et le marché tournent au quart. */
+  const cli = clientsPerMin() / 60 * (0.55 + 0.6 * S.freq / 100);
+  const breads = S.hired.leo && S.hired.jules && S.hired.ines ? Math.min(cap * secs, cli * 1.4 * secs, 2 * stockCap()) : 0;
+  const other = (S.cst >= 1 ? CFEE[S.cst] / CINT[S.cst] : 0) + (S.hired.paul && S.lv.mk > 0 ? Math.min(S.gun / 32, cli * 0.38) * PROD[S.lv.mk - 1].p : 0);
+  offGain = Math.round(breads * PRICES[S.lv.shop - 1] + other * secs * 0.25); offSecs = secs;
 }
 function showOffline() {
   if (!(offGain > 0)) return; const h = Math.floor(offSecs / 3600), m = Math.round((offSecs % 3600) / 60);
-  $('bk-t').textContent = '+' + fmt(offGain) + ' pièces'; $('bk-s').textContent = 'Pendant ton absence (' + (h ? h + ' h ' : '') + m + ' min), ton équipe a continué de travailler. Elle travaille seule jusqu\'à 4 heures.'; $('back').hidden = false;
+  $('bk-t').textContent = '+' + fmt(offGain) + ' pièces'; $('bk-s').textContent = 'Pendant ton absence (' + (h ? h + ' h ' : '') + m + ' min), ton équipe a continué de vendre. Plus le grenier et les réserves sont grands, plus elle vend sans toi (4 heures au plus).'; $('back').hidden = false;
 }
 $('bk-ok').addEventListener('click', () => { S.coins += offGain; offGain = 0; dirty = true; $('back').hidden = true; SFX.coin(); });
 $('bk-ad').addEventListener('click', () => { $('back').hidden = true; const g = offGain * 2; offGain = 0; watchAd(() => { S.coins += g; dirty = true; SFX.coin(); toast('Doublé !', '+' + fmt(g) + ' pièces'); }); });
 const vPool = [], queue = []; let lastServe = 0; const PATIENCE = 30;
+/* ÉCONOMIE V2 : les réglages du rythme des revenus, au même endroit.
+   cli0 = clients par minute d'un hameau ; cliPop = habitants pour 1 client par minute de plus ; carPop = habitants pour que toutes les voitures s'arrêtent ;
+   ordK / habitants = secondes entre deux commandes (ordMin au plus vite) ; ordPay = ce que paie une commande, en part du prix de vente. */
+const ECO = { cli0: 3.2, cliPop: 110, carPop: 12000, ordK: 120000, ordMin: 28, ordPay: 0.96, prix0: 150, prixK: 70, prixMax: 9 };
+/* L'indice du village : logements, décors et terrains coûtent plus cher à mesure que le village grandit (au-delà de prix0 habitants, +100 % tous les prixK habitants, jusqu'à prixMax). */
+const villageMul = () => Math.min(ECO.prixMax, 1 + Math.max(0, (S.popMax || S.pop || 0) - ECO.prix0) / ECO.prixK);
+const clientsPerMin = () => Math.max(ECO.cli0, (S.pop || 0) / ECO.cliPop);
 function demand(n) {
   const cap = Math.min(S.unlocked * S.lv.seed * 2 / 22, 0.667 / Math.pow(0.8, S.lv.mill - 1), 0.444 / Math.pow(0.8, S.lv.oven - 1));
   const auto = 0.5 + (S.hired.leo ? 0.17 : 0) + (S.hired.jules ? 0.17 : 0) + (S.hired.ines ? 0.16 : 0);
@@ -2977,11 +2997,11 @@ PKEYS.forEach((k) => { const P = PEN[k];
     need: () => (k === 'cow' && S.lv.mk < 1 ? 'le marché' : k === 'sheep' && level() < 6 ? 'niveau 6' : k === 'hen' && level() < 4 ? 'niveau 4' : ''), on: () => { if (S.lv[k] < 1) S.lv[k] = 1; }, desc: k === 'hen' ? 'Des œufs pour les gâteaux.' : k === 'cow' ? 'Du lait pour le marché.' : 'De la laine pour les pulls.' }); });
 movable('cake', { n: 'Pâtisserie', ic: '🧁', pivot: [CAKEP[0], CAKEP[1]], objs: [cakeG], fp: [6, 6], pts: [ptA(CAKEP), ptA(STN.cake), ptV(SPOT.cake), ptV(HOME.camille)], cols: [findRect(CAKEP[0], CAKEP[1])], c: CAKECOST[0], need: () => (S.lv.hen < 1 ? 'le poulailler' : ''), on: () => { if (S.lv.cake < 1) S.lv.cake = 1; }, desc: '1 farine + 2 œufs = 1 gâteau. Nécessaire au-delà de 1 600 habitants.' });
 movable('bq', { n: 'Boutique de vêtements', ic: '👕', pivot: [BQP_[0], BQP_[1]], objs: [bqG], fp: [6, 6], pts: [ptA(BQP_), ptA(BQDOOR), ptA(STN.bq)], cols: [findRect(BQP_[0], BQP_[1])], c: BQCOST[0], need: () => (S.lv.sheep < 1 ? 'la bergerie' : ''), on: () => { if (S.lv.bq < 1) S.lv.bq = 1; }, desc: '2 laines = 1 pull. Nécessaire au-delà de 2 200 habitants.' });
-movable('mairie', { n: 'Mairie', ic: '🏛️', pivot: [MAIRIEP[0], MAIRIEP[1]], objs: [mairie], fp: [10, 7], pts: [ptA(MAIRIEP), ptA(STN.mairie)], cols: [findRect(MAIRIEP[0], MAIRIEP[1])], c: 150, need: () => ((S.pop || 0) < 25 ? '25 habitants' : ''), desc: 'Lettre, panier et commandes du jour. Nécessaire au-delà de 150 habitants.' });
+movable('mairie', { n: 'Mairie', ic: '🏛️', pivot: [MAIRIEP[0], MAIRIEP[1]], objs: [mairie], fp: [10, 7], pts: [ptA(MAIRIEP), ptA(STN.mairie)], cols: [findRect(MAIRIEP[0], MAIRIEP[1])], c: 300, need: () => ((S.pop || 0) < 25 ? '25 habitants' : ''), desc: 'Lettre, panier et commandes du jour. Nécessaire au-delà de 150 habitants.' });
 fountain.userData.kind = 'fontaine';
-movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 400, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'La fierté de la place. Nécessaire au-delà de 400 habitants. +30 beauté.' });
-movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 1500, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
-movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 2500, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
+movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 1500, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'La fierté de la place. Nécessaire au-delà de 400 habitants. +30 beauté.' });
+movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
+movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 15000, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
 movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], rot: false, objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand coin de nature clos : cerfs, sangliers, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Sans garde forestier, il arrive qu\'un animal s\'échappe. +35 beauté.' });
 const PROD_KEYS = Object.keys(MOV);
 const START_LAYOUT = { shop: [3, -10.2, 0], oven: [10, -9.5, 0], mill: [-12, -10, 0], champ: [6, 12.3, 0] }; // tout le départ tient dans quatre terrains du Bourg
@@ -2990,20 +3010,24 @@ const SERV_BEAUTY = { fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve
 const SERV = [[60, 'market', 'un marché'], [150, 'mairie', 'une mairie'], [400, 'fontaine', 'la grande fontaine'], [600, 'church', 'une église'], [1000, 'bistrot', 'un bistrot'], [1600, 'cake', 'une pâtisserie'], [2200, 'bq', 'une boutique de vêtements'], [2800, 'chateau', 'le château (étape 3)']];
 
 /* ---- houses ---- */
-const HOUSE_T = { // logements de village uniquement (pas d'immeubles de ville)
-  maisonnette: { n: 'Maisonnette', ic: '🛖', cap: 14, c: 80, fp: [4, 4], t: 1.5, lvl: 1, fb: ['s', 3.6, 3.6], glb: 1 },
-  maison_a: { n: 'Maison de village', ic: '🏡', cap: 20, c: 140, fp: [6, 6], t: 2, lvl: 1, fb: ['a'] },
-  maison_b: { n: 'Grande maison', ic: '🏠', cap: 27, c: 260, fp: [6, 6], t: 4, lvl: 2, fb: ['b'] },
-  maison_ville: { n: 'Maison de bourg', ic: '🏘️', cap: 37, c: 420, fp: [6, 6], t: 6, lvl: 4, fb: ['s', 5.6, 5.6], glb: 1 },
-  maison_colombages: { n: 'Maison à colombages', ic: '🏚️', cap: 27, c: 320, fp: [6, 6], t: 5, lvl: 3, fb: ['s', 5.6, 5.6], glb: 1 },
-  longere: { n: 'Longère', ic: '🏡', cap: 34, c: 700, fp: [12, 6], t: 8, lvl: 3, fb: ['s', 11.6, 5.6], glb: 1 },
-  presbytere: { n: 'Presbytère', ic: '⛪', cap: 51, c: 1100, fp: [10, 8], t: 12, lvl: 5, fb: ['s', 9.6, 7.6], glb: 1 },
-  maisons_rangee: { n: 'Maisons en rangée', ic: '🏘️', cap: 68, c: 1500, fp: [14, 6], t: 15, lvl: 6, fb: ['s', 13.6, 5.6], glb: 1 },
-  corps_ferme: { n: 'Corps de ferme', ic: '🐓', cap: 76, c: 1900, fp: [14, 12], t: 20, lvl: 7, fb: ['s', 13.6, 11.6], glb: 1 },
-  hotel_particulier: { n: 'Manoir', ic: '🏰', cap: 70, c: 1800, fp: [12, 10], t: 20, lvl: 8, fb: ['s', 11.6, 9.6], glb: 1 }
+const HOUSE_T = { // logements de village uniquement. Plus un logement est grand : plus cher par habitant, mais plus d'habitants par minute de maçon et par mètre carré.
+  maisonnette: { n: 'Maisonnette', ic: '🛖', cap: 12, c: 80, fp: [4, 4], t: 2, lvl: 1, fb: ['s', 3.6, 3.6], glb: 1 },
+  maison_a: { n: 'Maison de village', ic: '🏡', cap: 24, c: 190, fp: [6, 6], t: 3.6, lvl: 1, fb: ['a'] },
+  maison_b: { n: 'Grande maison', ic: '🏠', cap: 30, c: 280, fp: [6, 6], t: 4.2, lvl: 6, fb: ['b'] },
+  maison_colombages: { n: 'Maison à colombages', ic: '🏚️', cap: 34, c: 360, fp: [6, 6], t: 4.5, lvl: 10, fb: ['s', 5.6, 5.6], glb: 1 },
+  maison_ville: { n: 'Maison de bourg', ic: '🏘️', cap: 40, c: 480, fp: [6, 6], t: 5.1, lvl: 14, fb: ['s', 5.6, 5.6], glb: 1 },
+  longere: { n: 'Longère', ic: '🏡', cap: 60, c: 800, fp: [12, 6], t: 7.4, lvl: 18, fb: ['s', 11.6, 5.6], glb: 1 },
+  presbytere: { n: 'Presbytère', ic: '⛪', cap: 80, c: 1200, fp: [10, 8], t: 9.2, lvl: 22, fb: ['s', 9.6, 7.6], glb: 1 },
+  maisons_rangee: { n: 'Maisons en rangée', ic: '🏘️', cap: 90, c: 1500, fp: [14, 6], t: 10, lvl: 26, fb: ['s', 13.6, 5.6], glb: 1 },
+  hotel_particulier: { n: 'Manoir', ic: '🏰', cap: 120, c: 2400, fp: [12, 10], t: 12.5, lvl: 30, fb: ['s', 11.6, 9.6], glb: 1 },
+  corps_ferme: { n: 'Corps de ferme', ic: '🐓', cap: 150, c: 2800, fp: [14, 12], t: 15.6, lvl: 34, fb: ['s', 13.6, 11.6], glb: 1 }
 };
+// chaque exemplaire d'un même modèle coûte 16 % de plus que le précédent : varier les logements devient le bon calcul
+const HOUSE_GROW = 1.10;
+function housePrice(m) { const n = S.city ? S.city.items.filter((it) => it.t === 'h' && it.m === m).length : 0; return Math.round(HOUSE_T[m].c * Math.pow(HOUSE_GROW, n) * villageMul()); }
+function decoPrice(k) { const cnt = S.city ? S.city.items.filter((it) => it.k === k).length : 0; return Math.round(DECOS[k].c * Math.pow(1.06, cnt) * villageMul()); }
 const HLV = ['', 'Habitée', 'Fleurie', 'Maison de maître'];
-const MASONCOST = [0, 600, 3000];
+const MASONCOST = [0, 500, 2500, 12000, 50000];
 let GLB_OK = {};
 const HLABELS = [];
 Object.keys(HOUSE_T).forEach((k) => { if (HOUSE_T[k].glb) fetch('./glb/' + k + '.json?v=' + GLBV, { method: 'HEAD' }).then((r) => { if (r.ok) GLB_OK[k] = true; }).catch(() => {}); });
@@ -3113,17 +3137,16 @@ const nearMainRoad = (x, z) => Math.abs(z) < 3.6;
 function houseLinked(it) { const [w, d] = itemFp(it); if (!roadNet) roadNet = roadNetwork(); const x0 = it.x - w / 2 - 1, x1 = it.x + w / 2 + 1, z0 = it.z - d / 2 - 1, z1 = it.z + d / 2 + 1;
   for (let x = x0; x <= x1; x += 1) for (let z = z0; z <= z1; z += 1) { const edge = x <= x0 + 0.01 || x >= x1 - 0.99 || z <= z0 + 0.01 || z >= z1 - 0.99; if (edge && (nearMainRoad(x, z) || roadNet.has(tileKey(tileOf(x), tileOf(z))))) return true; } return false; }
 function computeLinks() { roadNet = roadNetwork(); links = S.city.items.map((it) => it.t === 'h' && houseLinked(it)); }
-function beauty() { let b = 0; S.city.items.forEach((it) => { if (it.t === 'd' && DECOS[it.k]) b += DECOS[it.k].b * (it.mon ? 2 : 1); else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
+function beauty() { let b = 0; S.city.items.forEach((it) => { if (it.t === 'd' && DECOS[it.k]) b += DECOS[it.k].b * (it.mon ? 1.5 : 1); else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
   PROD_KEYS.forEach((k) => { if (MOV[k].placed && SERV_BEAUTY[k]) b += SERV_BEAUTY[k]; }); return b + Math.min(60, Object.keys(S.city.roads).length * 0.1); }
 const rentMult = () => 1 + Math.min(1.5, beauty() / 150);
 function capOf(it) { if (it.t !== 'h') return 0; const l = it.end > 0 ? (it.l || 1) - 1 : it.l || 1; return HOUSE_T[it.m].cap * [0, 1, 1.3, 1.6][l]; } // pendant qu'on l'embellit, elle garde les habitants de son niveau précédent
 function capTotal() { if (!links) computeLinks(); return S.city.items.reduce((a, it, i) => a + (links[i] ? capOf(it) : 0), 0); }
 function servCap() { for (const [n, k, lb] of SERV) { const ok = k === 'chateau' ? S.cst >= 3 : MOV[k].placed; if (!ok) return [n, k, lb]; } return [Infinity, null, '']; }
-function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.7 + 0.3 * Math.min(1, b / (0.25 * cap + 1)); return Math.min(Math.max(Math.min(cap, 10), cap * fill), servCap()[0]); }
+function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.4 + 0.6 * Math.min(1, b / (cap + 1)); return Math.min(Math.max(Math.min(cap, 10), cap * fill), servCap()[0]); }
 function cityBoost() { return 0.7 + Math.min(3, (S.pop || 0) / 150); }
 const busyMasons = () => S.city.items.filter((it) => it.end > 0).length;
 // équilibrage 16/11 (beta14/equilibrage/simu.py) : le prix suit la taille du village, la durée grandit doucement et plafonne
-const buildMul = () => 1 + Math.max(S.pop || 0, S.popMax || 0) / 80; // on ne fait pas baisser les prix en vidant le village
 const timeMul = () => Math.min(6, 1 + 0.08 * (S.cbuilds || 0));
 const RENT_K = 0.02; // pièces par habitant logé et par minute, avant le bonus de beauté
 
@@ -3157,8 +3180,8 @@ let popT = 0;
 function tapCityHouse(i) {
   if (!S.started) return; const it = S.city.items[i]; if (!it) return; const T = HOUSE_T[it.m];
   const r = Math.floor(it.rent || 0); if (r >= 1) { it.rent -= r; S.coins += r; dirty = true; floatAt(cityObjs[i], '+' + r + ' ' + C); burst(it.x, 2.5, it.z, ['#E3A73C', '#F3CF7A'], 8, 4); }
-  if (it.end > 0) return openSheet(T.n + ' · chantier', 'Les maçons travaillent.', [], { end: () => it.end, skip: () => { it.end = now(); } });
-  const cost = Math.round(T.c * (it.l === 1 ? 0.8 : 1.6) * buildMul()), tm = dur(T.t * 60000 * (it.l === 1 ? 1 : 2) * timeMul());
+  if (it.end > 0) { const prime = Math.round((20 + Math.max(0, it.end - now()) / 60000 * 30) * villageMul()); return openSheet(T.n + ' · chantier', 'Les maçons travaillent.', [{ t: '💰 Prime aux maçons', s: 'Le temps de chantier restant est divisé par deux.', btn: prime + ' ' + C, ok: S.coins >= prime, run: () => { if (S.coins < prime) return; S.coins -= prime; it.end = now() + (it.end - now()) / 2; dirty = true; closeSheet(); } }], { end: () => it.end, skip: () => { it.end = now(); } }); }
+  const cost = Math.round(housePrice(it.m) * (it.l === 1 ? 0.5 : 1)), tm = dur(T.t * 60000 * (it.l === 1 ? 1 : 2) * timeMul());
   const opts = it.l < 3 ? [{ t: (it.l === 1 ? '🌷 La fleurir' : '✨ En faire une maison de maître') + ' · ' + cost + ' ' + C, s: longT(tm) + ' de chantier · +' + Math.round(T.cap * 0.3) + ' habitants' + (busyMasons() >= S.masons ? ' · maçons occupés' : ''), btn: 'Bâtir', ok: S.coins >= cost && busyMasons() < S.masons,
     run: () => { S.coins -= cost; it.end = now() + tm; it.l++; dirty = true; closeSheet(); } }] : [];
   openSheet(T.n + ' · ' + HLV[it.l], (links && !links[i] ? '🚧 Aucune rue ne la dessert : personne ne peut y habiter. ' : '') + Math.round(capOf(it)) + ' habitants · loyer ' + Math.round(capOf(it) * RENT_K * rentMult() * 60) + ' ' + C + '/h' + (r ? ' · +' + r + ' ' + C + ' ramassés' : ''), opts);
@@ -3204,11 +3227,12 @@ function renderBuild() {
   const el = $('bd-list'); el.innerHTML = ''; const lv = level();
   const row = (ic, n, s, price, ok, why, fn) => { const it = document.createElement('div'); it.className = 'item' + (ok ? ' best' : ''); it.innerHTML = '<div class="ic"></div><div class="t"><b></b><span></span></div><button class="btn" type="button"></button>';
     it.querySelector('.ic').textContent = ic; it.querySelector('b').textContent = n; rich(it.querySelector('span'), s); const bt = it.querySelector('button'); if (why) { bt.textContent = '🔒'; bt.disabled = true; rich(it.querySelector('span'), s + ' · ' + why); } else { rich(bt, price); bt.classList.toggle('gold', ok); bt.disabled = !ok; bt.addEventListener('click', fn); } el.appendChild(it); };
-  if (BTAB === 'logements') { let teaser = false; Object.keys(HOUSE_T).sort((a, b) => HOUSE_T[a].lvl - HOUSE_T[b].lvl).forEach((k) => { const T = HOUSE_T[k]; if (T.glb && !GLB_OK[k]) return; if (lv < T.lvl) { if (teaser) return; teaser = true; } const c = Math.round(T.c * buildMul()); row(T.ic, T.n, T.cap + ' habitants · chantier ' + longT(dur(T.t * 60000 * timeMul())), c + ' ' + C, S.coins >= c, lv < T.lvl ? 'niveau ' + T.lvl : '', () => startPlace({ t: 'h', m: k })); }); }
+  { const vm = villageMul(); if (vm > 1.05 && BTAB !== 'rues' && BTAB !== 'batiments') { const d = document.createElement('div'); d.style.cssText = 'font-size:12px;font-weight:800;opacity:.75;margin:0 2px 8px;line-height:1.3'; d.textContent = '📈 Prix du village × ' + vm.toFixed(1).replace('.', ',') + '. Plus le village est grand, plus bâtir et décorer coûte cher.'; el.appendChild(d); } }
+  if (BTAB === 'logements') { let teaser = false; Object.keys(HOUSE_T).sort((a, b) => HOUSE_T[a].lvl - HOUSE_T[b].lvl).forEach((k) => { const T = HOUSE_T[k]; if (T.glb && !GLB_OK[k]) return; if (lv < T.lvl) { if (teaser) return; teaser = true; } const c = housePrice(k); row(T.ic, T.n, T.cap + ' habitants · chantier ' + longT(dur(T.t * 60000 * timeMul())), c + ' ' + C, S.coins >= c, lv < T.lvl ? 'niveau ' + T.lvl : '', () => startPlace({ t: 'h', m: k })); }); }
   else if (BTAB === 'rues') { ROAD_T.forEach((T, i) => row(T.ic, T.n, 'Touche ou glisse pour tracer · ' + T.c + ' ' + C + ' la case de 2 m', T.c + ' ' + C, S.coins >= T.c, '', () => startRoad(i)));
     row('🧽', 'Gomme', 'Retire des cases de rue (remboursées à moitié)', 'Gommer', true, '', () => startRoad(-1)); }
   else if (BTAB === 'batiments') PROD_KEYS.forEach((k) => { const M = MOV[k], need = M.placed ? '' : M.need(); row(M.ic, M.n, M.placed ? 'Déjà construit · en mode construction, touche-le pour le déplacer' : M.desc, M.placed ? 'Déplacer' : M.c + ' ' + C, M.placed || S.coins >= M.c, need ? 'il faut ' + need : '', () => M.placed ? startMoveProd(k) : startPlace({ t: 'p', k })); });
-  else { let teasers = 0; Object.values(DECOS).filter((d) => d.cat === BTAB && !d.hide).sort((a, b) => a.lvl - b.lvl || a.c - b.c).forEach((d) => { if (lv < (d.lvl || 1) && ++teasers > 2) return; const cnt = S.city.items.filter((it) => it.k === d.id).length, c = Math.round(d.c * Math.pow(1.06, cnt)); row(d.ic, d.n, '+' + d.b + ' beauté' + (cnt ? ' · ' + cnt + ' posé' + (cnt > 1 ? 's' : '') : ''), c + ' ' + C, S.coins >= c, lv < (d.lvl || 1) ? 'niveau ' + d.lvl : '', () => startPlace({ t: 'd', k: d.id })); }); }
+  else { let teasers = 0; Object.values(DECOS).filter((d) => d.cat === BTAB && !d.hide).sort((a, b) => a.lvl - b.lvl || a.c - b.c).forEach((d) => { if (lv < (d.lvl || 1) && ++teasers > 2) return; const cnt = S.city.items.filter((it) => it.k === d.id).length, c = decoPrice(d.id); row(d.ic, d.n, '+' + d.b + ' beauté' + (cnt ? ' · ' + cnt + ' posé' + (cnt > 1 ? 's' : '') : ''), c + ' ' + C, S.coins >= c, lv < (d.lvl || 1) ? 'niveau ' + d.lvl : '', () => startPlace({ t: 'd', k: d.id })); }); }
 }
 function enterBuild() { BUILD = true; $('build').hidden = true; $('buildbar').hidden = false; document.body.classList.add('building'); P.goal = null; }
 function exitBuild() { cancelPlace(); CELLS.count = 0; GRID.visible = false; BUILD = false; SEL = null; selRing.visible = false; ROADM = null; $('buildbar').hidden = true; $('selbar').hidden = true; $('placebar').hidden = true; document.body.classList.remove('building'); ghostBox.visible = false; }
@@ -3216,7 +3240,7 @@ function exitBuild() { cancelPlace(); CELLS.count = 0; GRID.visible = false; BUI
 // ---- placing something new (house, deco, production building) or moving an existing one ----
 function startPlace(spec) { enterBuild(); const a = player.rotation.y; spec.x = GOD ? target.x : player.position.x + Math.sin(a) * 6; spec.z = GOD ? target.z : player.position.z + Math.cos(a) * 6; /* en vue du dessus, on pose là où l'on regarde */ if (Math.abs(spec.z) < 6) spec.z = spec.z < 0 ? -8 : 8; spec.r = spec.r || 0; PLC = spec; showPlace(); }
 function plSize(r) { const s = PLC; if (s.t === 'h') return itemFp({ t: 'h', m: s.m }, r); if (s.t === 'd') return itemFp({ t: 'd', k: s.k }, r); if (s.t === 'p' || s.t === 'mp') return mfp(MOV[s.k], r); if (s.t === 'mi') return itemFp(S.city.items[s.i], r); return [2, 2]; }
-function plCost() { const s = PLC; if (s.t === 'h') return Math.round(HOUSE_T[s.m].c * buildMul()); if (s.t === 'd') { if (s.mon) return s.cost || 0; const cnt = S.city.items.filter((it) => it.k === s.k).length; return Math.round(DECOS[s.k].c * Math.pow(1.06, cnt)); } if (s.t === 'p') return MOV[s.k].c; return 0; }
+function plCost() { const s = PLC; if (s.t === 'h') return housePrice(s.m); if (s.t === 'd') { if (s.mon) return s.cost || 0; return decoPrice(s.k); } if (s.t === 'p') return MOV[s.k].c; return 0; }
 function plFree() { const [w, d] = plSize(PLC.r), s = PLC; let saved = null;
   if (s.t === 'mp' || s.t === 'p') { saved = MOV[s.k].cols.map((e) => [e.c[0], e.c[1]]); MOV[s.k].cols.forEach((e) => { e.c[0] += 5000; }); }
   if (s.t === 'mi' && s.col) s.col[0] += 5000;
@@ -3247,7 +3271,7 @@ function confirmPlace() { const s = PLC; if (!s || !plFree()) return; const cost
   else if (s.t === 'mi') { const it = S.city.items[s.i]; it.x = s.x; it.z = s.z; it.r = s.r; }
   burst(s.x, 1.5, s.z, ['#E3A73C', '#F3CF7A', '#5E8F3E'], 14, 5); dirty = true; ghostBox.visible = false; CELLS.count = 0; $('placebar').hidden = true;
   const again = (s.t === 'd' || s.t === 'h') && !s.mon ? { t: s.t, m: s.m, k: s.k, r: s.r, x: s.x + plSize(s.r)[0], z: s.z } : null; PLC = null; rebuildCity();
-  if (again && S.coins >= (again.t === 'h' ? Math.round(HOUSE_T[again.m].c * buildMul()) : 0)) { PLC = again; showPlace(); } }
+  if (again && S.coins >= (again.t === 'h' ? housePrice(again.m) : 0)) { PLC = again; showPlace(); } }
 function startMoveProd(k) { enterBuild(); const M = MOV[k]; PLC = { t: 'mp', k, x: M.x, z: M.z, r: M.r }; showPlace(); }
 
 // ---- roads ----
@@ -3341,7 +3365,8 @@ function tickDirs() {
 /* ================= step by step: what the player can see grows with the level and the current objective ================= */
 const UP_LVL = [[/vélo/, 2], [/Nouvelle parcelle/, 2], [/Léo/, 3], [/Jules/, 4], [/Inès/, 5], [/Margot/, 6], [/Semences/, 5], [/Équipe ·/, 6], [/^Moulin/, 3], [/^Four/, 3], [/^Boulangerie/, 4], [/Barrière/, 4], [/maçons/, 5], [/Médor/, 7]];
 function upVisible(u) { const q = Q[Math.min(S.q, Q.length - 1)], qt = q ? q.t : ''; for (const [re, lv] of UP_LVL) if (re.test(u.t)) { const key = (u.t.match(/vélo|parcelle|Léo|Jules|Inès|Margot|barrière/i) || [''])[0]; return level() >= lv || (key && qt.toLowerCase().indexOf(key.toLowerCase()) >= 0); } return true; }
-const TAB_LVL = { logements: 1, rues: 1, batiments: 2, nature: 2, jardins: 2, mobilier: 3, lumieres: 3, clotures: 4, fontaines: 5, terrasses: 6, fete: 7, vehicules: 8, monuments: 10 };
+const TAB_LVL = { logements: 1, rues: 1, batiments: 2, nature: 2, jardins: 3, mobilier: 4, lumieres: 5, clotures: 6, fontaines: 8, terrasses: 10, fete: 12, vehicules: 14, monuments: 16 };
+Object.values(DECOS).forEach((d) => { if (d.lvl > 2) d.lvl = Math.round(d.lvl * 1.7); }); // le catalogue s'ouvre sur toute la partie
 const buildUnlocked = () => S.q >= 6 || (S.city && S.city.items.length > 2) || level() >= 2;
 
 /* ================= a 30-second guide before the first game ================= */
@@ -3391,7 +3416,7 @@ $('b-menu').addEventListener('click', () => { if (!S.started) return; openSheet(
 /* ================= les quartiers et les îlots : une carte bornée, quadrillée, qu'on ouvre dans un ordre lisible ================= */
 // Cahier des charges : CAHIER-DES-CHARGES-QUARTIERS.md. Neuf quartiers ; chacun est découpé en îlots d'environ 16 m qu'on achète un par un.
 // On ne construit que sur un îlot acheté. Les chiffres (habitants, prix) sont des premiers réglages.
-const TIER_POP = [0, 25, 60, 150, 400, 1000, 2000], TIER_COST = [0, 150, 400, 900, 2000, 4000, 8000], ILOT_BASE = [100, 150, 250, 400, 700, 1200, 2000];
+const TIER_POP = [0, 25, 60, 150, 400, 1000, 2000], TIER_COST = [0, 150, 400, 1500, 6000, 20000, 60000], ILOT_BASE = [100, 150, 250, 400, 700, 1200, 2000];
 const QUARTIERS = [
   { id: 'bourg', n: 'Le Bourg', ic: '🥖', tier: 0, x0: -34, x1: 14, z0: -22, z1: 18, nx: 3, nz: 2, ch: 'la boulangerie' },
   { id: 'campagne', n: 'La Campagne', ic: '🌾', tier: 1, x0: -104, x1: -50, z0: -20, z1: 28, nx: 3, nz: 3, ch: 'la ferme' },
@@ -3413,7 +3438,7 @@ function ilotAt(x, z) { const Q = quartierAt(x, z); if (!Q) return null; let i =
 const landS = () => S.land || (S.land = { open: { bourg: 1 }, own: {}, names: {} });
 function landOwned(x, z) { const I = ilotAt(x, z); return !I || !!landS().own[I.key]; }
 const qOpen = (Q) => !!landS().open[Q.id], qName = (Q) => landS().names[Q.id] || Q.n, qOwned = (Q) => Q.ilots.filter((I) => landS().own[I.key]).length;
-const ilotPrice = (I) => Math.round(ILOT_BASE[I.q.tier] * (1 + 0.35 * qOwned(I.q)) / 10) * 10;
+const ilotPrice = (I) => Math.round(ILOT_BASE[I.q.tier] * (1 + 0.35 * qOwned(I.q)) * villageMul() / 10) * 10;
 // what still stands between the player and a quarter ('' = it can be opened)
 function qLock(Q) { const pop = Math.floor(S.pop || 0); if (pop < TIER_POP[Q.tier]) return TIER_POP[Q.tier] + ' habitants';
   const sib = QUARTIERS.some((o) => o.tier === Q.tier && o !== Q && qOpen(o)); if (sib && pop < (TIER_POP[Q.tier + 1] || 1e9)) return TIER_POP[Q.tier + 1] + ' habitants'; return ''; }
@@ -3492,7 +3517,7 @@ function placeMonument(Q, id, cost) {
   const I = Q.ilots.find((o) => landS().own[o.key]) || Q.ilots[0]; camTo(I.cx, I.cz); startPlace({ t: 'd', k: id, mon: Q.id, cost: cost || 0 }); toast('🗿 Pose le monument dans ' + qName(Q), ''); }
 function monumentRows(Q, opts) { const cur = monumentOf(Q), swap = styleCost(Q) * 5;
   (MONUMENTS[Q.id] || []).filter((id) => DECOS[id]).forEach((id) => { const D = DECOS[id], here = cur && cur.k === id, cost = cur ? swap : 0;
-    opts.push({ t: '🗿 ' + D.n, s: here ? 'Le monument du quartier · +' + D.b * 2 + ' beauté' : 'Monument · +' + D.b * 2 + ' beauté' + (cur ? ' · remplace l\'actuel' : ' · offert'), btn: here ? 'En place' : cur ? cost + ' ' + C : 'Poser', ok: !here && S.coins >= cost && qOwned(Q) > 0,
+    opts.push({ t: '🗿 ' + D.n, s: here ? 'Le monument du quartier · +' + Math.round(D.b * 1.5) + ' beauté' : 'Monument · +' + Math.round(D.b * 1.5) + ' beauté' + (cur ? ' · remplace l\'actuel' : ' · offert'), btn: here ? 'En place' : cur ? cost + ' ' + C : 'Poser', ok: !here && S.coins >= cost && qOwned(Q) > 0,
       run: () => { if (here || S.coins < cost) return; closeSheet(); placeMonument(Q, id, cost); } }); }); }
 
 /* ================= l'identité du village : son nom, son blason, sa devise ================= */
@@ -3540,10 +3565,10 @@ function villageSheet() { if (!S.started) return; const v = Object.assign({}, vi
       b.style.cssText = 'border:2px solid var(--ink);border-radius:10px;cursor:pointer;font:800 ' + (key === 'e' ? '18px' : '12px') + ' Nunito,sans-serif;padding:' + (col ? '0' : key === 'e' ? '3px 6px' : '6px 9px') + ';min-width:34px;height:34px;background:' + (col ? o[1] : 'var(--white)');
       b.addEventListener('click', () => { v[key] = i; mark(); redraw(); }); wrap.appendChild(b); }); mark(); w.appendChild(row); });
   redraw();
-  openSheet('Mon village', 'Son nom, son blason et sa devise : ils s\'affichent à l\'entrée du village.', [{ t: '💾 Enregistrer', s: 'Tu pourras tout changer plus tard, gratuitement.', btn: 'Valider', ok: true,
+  openSheet('Mon village', 'Son nom, son blason et sa devise : ils s\'affichent à l\'entrée du village.' + (S.renom ? ' Renommée : ' + fmt(S.renom) + ' ⭐ (' + (S.fetes || 0) + ' fête' + ((S.fetes || 0) > 1 ? 's' : '') + ' donnée' + ((S.fetes || 0) > 1 ? 's' : '') + ').' : ''), [{ t: '💾 Enregistrer', s: 'Tu pourras tout changer plus tard, gratuitement.', btn: 'Valider', ok: true,
     run: () => { v.n = cleanName(w.querySelector('[data-k=n]').value, 'Petite France').slice(0, 22); v.dv = (w.querySelector('[data-k=dv]').value || '').replace(/[<>]/g, '').trim().slice(0, 40); S.village = v; dirty = true; closeSheet(); villageApply(); toast('🛡️ ' + v.n, ''); } }], null, w); }
 /* ================= ambiance : l'heure qu'il est en France, les saisons, la météo, le vent, la vie ================= */
-// Tout suit l'horloge de Paris. __pf.amb.set({ hour, season, weather, wind }) force une valeur pour essayer ; set(null) revient au réel.
+// La saison suit la date de Paris ; la journée du village dure 15 minutes. __pf.amb.set({ day (0 à 1), hour, season, wind }) force une valeur pour essayer ; set(null) revient au réel.
 const AMB = { hour: 12, h: 1, season: 'ete', weather: 'clair', wind: 0.1, night: 0, force: {}, rain: 0, snow: 0, mist: 0, cloud: 0.4, cover: 0 };
 const parisFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 function parisNow() { const p = {}, d = new Date(); parisFmt.formatToParts(d).forEach((q) => { p[q.type] = +q.value; }); if (p.hour === 24) p.hour = 0;
@@ -3582,7 +3607,7 @@ const GUST = { on: false, t: 12 + Math.random() * 20, pow: 0.8, ang: 0.6, angT: 
 function tickWind(dt, S0) {
   if (AMB.force.wind !== undefined) AMB.wind += (AMB.force.wind - AMB.wind) * (1 - Math.exp(-dt * 1.5));
   else { GUST.t -= dt; if (GUST.t <= 0) { GUST.on = !GUST.on; if (GUST.on) { GUST.pow = 0.55 + Math.random() * 0.45; GUST.t = 5 + Math.random() * 6; GUST.angT += (Math.random() - 0.5) * 1.2; } else GUST.t = S0.gust * (0.5 + Math.random()); }
-    const base = 0.07 + 0.16 * Math.max(AMB.rain, AMB.snow * 0.5); AMB.wind += ((GUST.on ? GUST.pow : base) - AMB.wind) * (1 - Math.exp(-dt * (GUST.on ? 1.3 : 0.45))); }
+    const base = 0.07; AMB.wind += ((GUST.on ? GUST.pow : base) - AMB.wind) * (1 - Math.exp(-dt * (GUST.on ? 1.3 : 0.45))); }
   GUST.ang += (GUST.angT - GUST.ang) * (1 - Math.exp(-dt * 0.4));
   AMBU.uWind.value = AMB.wind; AMBU.uWindDir.value.set(Math.cos(GUST.ang), Math.sin(GUST.ang)); AMBU.uPh.value += dt * (1 + AMB.wind * 2.4);
 }
@@ -3637,29 +3662,14 @@ function tickSmoke(dt, t, S0) {
   smokeM.count = n; smokeM.instanceMatrix.needsUpdate = true;
 }
 
-/* ---- rain and snow, in a box that follows the view ---- */
-const RAINN = 380, SNOWN = 300, PW = 64, PH = 24;
-const rainM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.03, 1.1, 0.03), new THREE.MeshBasicMaterial({ color: '#D5E6F4', transparent: true, opacity: 0.5, depthWrite: false }), RAINN);
-const snowM = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.06, 0), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.92, depthWrite: false }), SNOWN);
-[rainM, snowM].forEach((m) => { m.frustumCulled = false; m.userData.dyn = true; m.raycast = noRay; m.count = 0; m.renderOrder = 4; scene.add(m); });
-const PSEED = []; for (let i = 0; i < Math.max(RAINN, SNOWN); i++) PSEED.push([Math.random(), Math.random(), Math.random(), 0.7 + Math.random() * 0.6]);
-const fr = (v) => v - Math.floor(v);
-function tickPrecip(t) {
-  const wx = AMBU.uWindDir.value.x, wz = AMBU.uWindDir.value.y, w = AMB.wind, zf = Math.max(1, zoom / 34), W = PW * Math.min(2.2, zf);
-  let n = Math.round(RAINN * AMB.rain);
-  if (n) { const lean = 0.12 + w * 0.5; amQ.setFromUnitVectors(UPV, amV2.set(wx * lean, 1, wz * lean).normalize());
-    for (let i = 0; i < n; i++) { const s = PSEED[i], y = (1 - fr(s[1] + t * 1.5 * s[3])) * PH; amM.compose(amV.set(target.x + (fr(s[0] + wx * lean * t * 0.5) - 0.5) * W - wx * lean * y, y, target.z + (fr(s[2] + wz * lean * t * 0.5) - 0.5) * W - wz * lean * y), amQ, amS.set(1, 1, 1)); rainM.setMatrixAt(i, amM); } rainM.instanceMatrix.needsUpdate = true; }
-  rainM.count = n;
-  n = Math.round(SNOWN * AMB.snow);
-  if (n) { for (let i = 0; i < n; i++) { const s = PSEED[i], y = (1 - fr(s[1] + t * 0.085 * s[3])) * PH; amM.compose(amV.set(target.x + (fr(s[0] + wx * (0.01 + w * 0.05) * t) - 0.5) * W + Math.sin(t * 0.9 + i) * 0.5, y, target.z + (fr(s[2] + wz * (0.01 + w * 0.05) * t) - 0.5) * W + Math.cos(t * 0.7 + i * 1.3) * 0.5), amQ.identity(), amS.setScalar(s[3] * Math.min(2, zf))); snowM.setMatrixAt(i, amM); } snowM.instanceMatrix.needsUpdate = true; }
-  snowM.count = n;
-}
+/* ---- no weather any more (decided 18/11/2026): the mood comes from the light alone ---- */
+const PSEED = []; for (let i = 0; i < 64; i++) PSEED.push([Math.random(), Math.random(), Math.random(), 0.7 + Math.random() * 0.6]);
 
 /* ---- fireflies on warm nights ---- */
 const FLYN = 34, flyM = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.07, 0), new THREE.MeshBasicMaterial({ color: '#FFE98A', fog: false }), FLYN);
 flyM.frustumCulled = false; flyM.userData.dyn = true; flyM.raycast = noRay; flyM.count = 0; scene.add(flyM);
 function tickFlies(t) {
-  const on = AMB.night > 0.6 && (AMB.season === 'ete' || AMB.season === 'printemps') && AMB.rain < 0.1; flyM.count = on ? FLYN : 0; if (!on) return;
+  const on = AMB.night > 0.6 && AMB.season !== 'hiver'; flyM.count = on ? FLYN : 0; if (!on) return;
   for (let i = 0; i < FLYN; i++) { const s = PSEED[i], bx = Math.round(target.x / 30) * 30 + (s[0] - 0.5) * 70, bz = Math.round(target.z / 30) * 30 + (s[2] - 0.5) * 70, x = bx + Math.sin(t * 0.3 * s[3] + i) * 2.5, z = bz + Math.cos(t * 0.24 * s[3] + i * 2) * 2.5;
     amM.compose(amV.set(x, groundY(x, z) + 0.5 + s[1] * 1.6 + Math.sin(t * 0.8 + i) * 0.3, z), amQ.identity(), amS.setScalar(Math.max(0, Math.sin(t * (1.2 + s[3]) + i * 3)) * 1.2)); flyM.setMatrixAt(i, amM); }
   flyM.instanceMatrix.needsUpdate = true;
@@ -3743,27 +3753,26 @@ function grassChanged() { GRASS.dirty = true; GRASS.wait = 0.5; roadG = null; }
 function sunHeight(hour, doy, dst) { const len = 12.2 + 3.9 * Math.sin(2 * Math.PI * (doy - 80) / 365), noon = 12.75 + (dst ? 1 : 0), rise = noon - len / 2, set = noon + len / 2;
   if (hour > rise && hour < set) { const d = (hour - rise) / len; return { h: Math.sin(Math.PI * d), d }; }
   const nl = 24 - len, n = ((hour - set + 24) % 24) / nl; return { h: -Math.sin(Math.PI * n), d: n < 0.5 ? 1 : 0 }; }
-function pickWeather(S0, doy, hour) { const r = rnd01(doy * 7.13 + Math.floor(hour * 3) * 1.37 + 0.5); let a = 0; for (const w of S0.wx) { a += w[1]; if (r < a) return w[0]; } return 'clair'; }
 function ambRefresh(dt) {
   ambReal = parisNow(); const F = AMB.force;
   AMB.season = F.season || seasonOf(ambReal.md); AMB.hour = F.hour !== undefined ? F.hour : ambReal.hour; const S0 = SEASON[AMB.season], doy = F.season ? SEASON_DOY[F.season] : ambReal.doy;
-  AMB.weather = F.weather || pickWeather(S0, ambReal.doy, ambReal.hour);
-  // the village lives its own day, about 15 minutes from dawn to dusk; the evening only goes as far as lamps and lit windows, never to black night
-  const gp = F.hour !== undefined ? -1 : (Date.now() / 900000) % 1;
-  const sh = gp < 0 ? sunHeight(AMB.hour, doy, F.season ? (F.season === 'ete' || F.season === 'printemps') : ambReal.dst) : gp < 0.86 ? { h: Math.sin(Math.PI * gp / 0.86), d: gp / 0.86 } : { h: -0.11 * Math.sin(Math.PI * (gp - 0.86) / 0.14), d: 1 }; AMB.h = sh.h; AMB.day = gp;
-  // weather eases in and out
-  const k = 1 - Math.exp(-dt / 6), W = AMB.weather; AMB.rain += ((W === 'pluie' ? 1 : 0) - AMB.rain) * k; AMB.snow += ((W === 'neige' ? 1 : 0) - AMB.snow) * k; AMB.mist += ((W === 'brume' ? 1 : 0) - AMB.mist) * k;
-  AMB.cover += ((W === 'clair' ? 0 : W === 'brume' ? 0.45 : W === 'nuageux' ? 0.6 : 1) - AMB.cover) * k; AMB.cloud += ((W === 'clair' ? 0.55 : W === 'nuageux' ? 0.9 : 0.25) - AMB.cloud) * k;
+  // the village lives its own day in 15 minutes: dawn and its dew, the day, a golden evening, then a short moonlit night (lamps, lit windows, fireflies)
+  const DAYP = 0.76, gp = F.day !== undefined ? F.day : F.hour !== undefined ? -1 : (Date.now() / 900000) % 1, np = gp < DAYP ? -1 : (gp - DAYP) / (1 - DAYP);
+  const sh = gp < 0 ? sunHeight(AMB.hour, doy, F.season ? (F.season === 'ete' || F.season === 'printemps') : ambReal.dst) : np < 0 ? { h: Math.sin(Math.PI * gp / DAYP), d: gp / DAYP } : { h: -0.45 * Math.sin(Math.PI * np), d: np < 0.5 ? 1 : 0 }; AMB.h = sh.h; AMB.day = gp;
+  // the morning dew: it sparkles on the grass while the sun is low in the east, with a light golden haze
+  const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  AMB.dew = sh.h > 0 && sh.d < 0.5 ? sm(0, 0.07, sh.h) * (1 - sm(0.42, 0.72, sh.h)) : 0; AMBU.uDew.value = AMB.dew;
+  const cov = 0; AMB.cloud = 0.55;
   // between two rows of the table
   let i = 0; while (i < SKY.length - 2 && sh.h > SKY[i + 1][0]) i++; const A = SKY[i], B = SKY[i + 1], u = Math.max(0, Math.min(1, (sh.h - A[0]) / (B[0] - A[0]))), L = (j) => A[j] + (B[j] - A[j]) * u, C = (j, o) => o.copy(A[j]).lerp(B[j], u);
-  const cov = AMB.cover, day = 1 - L(11);
+  const day = 1 - L(11);
   C(1, amC[0]).lerp(amGrey, cov * 0.8); sun.color.copy(amC[0]); sun.intensity = L(2) * (1 - cov * 0.62 * day);
-  hemi.color.copy(C(3, amC[1]).lerp(amGrey, cov * 0.45 * day)); hemi.groundColor.copy(C(4, amC[2])); hemi.intensity = L(5) * (1 - cov * 0.08) + AMB.snow * 0.05;
-  C(6, amC[3]).lerp(AMB.season === 'hiver' ? amSnowFog : amGrey, Math.min(1, cov * 0.7 + AMB.mist * 0.5) * (0.35 + 0.65 * day)); scene.fog.color.copy(amC[3]);
-  scene.fog.near = 70 - 42 * AMB.mist - 14 * Math.max(AMB.rain, AMB.snow); scene.fog.far = 150 - 58 * AMB.mist - 22 * Math.max(AMB.rain, AMB.snow);
+  hemi.color.copy(C(3, amC[1]).lerp(amGrey, cov * 0.45 * day)); hemi.groundColor.copy(C(4, amC[2])); hemi.intensity = L(5);
+  C(6, amC[3]); scene.fog.color.copy(amC[3]);
+  scene.fog.near = 70 - 26 * AMB.dew; scene.fog.far = 150 - 34 * AMB.dew;
   renderer.toneMappingExposure = L(10);
-  AMB.night = L(11); AMBU.uNight.value = AMB.night; AMBU.uLitT.value = gp < 0 && (AMB.hour > 23.2 || AMB.hour < 5.5) ? 0.72 : 0.14;
-  AMBU.uCloud.value = AMB.cloud * (0.25 + 0.75 * day); AMBU.uSnow.value += ((S0.snow * (AMB.season === 'hiver' ? 1 : 0)) - AMBU.uSnow.value) * (1 - Math.exp(-dt / 3));
+  AMB.night = L(11); AMBU.uNight.value = AMB.night; { const lt = (gp < 0 ? (AMB.hour > 23.2 || AMB.hour < 5.5) : (np > 0.42 && np < 0.9)) ? 0.66 : 0.14; AMBU.uLitT.value += (lt - AMBU.uLitT.value) * Math.min(1, dt / 5); } /* au cœur de la nuit, les fenêtres s'éteignent une à une */
+  AMBU.uCloud.value = AMB.cloud * (0.25 + 0.75 * day) * (1 + 0.5 * (sh.h > 0 ? Math.pow(1 - sh.h, 2) : 0)); AMBU.uSnow.value += ((S0.snow * (AMB.season === 'hiver' ? 1 : 0)) - AMBU.uSnow.value) * (1 - Math.exp(-dt / 3));
   // where the light comes from: the sun crosses from east to west by the south; at night the moon takes over
   if (sh.h > 0) SUN.set(Math.cos(Math.PI * sh.d) * 0.95, 0.36 + 1.2 * Math.sin(Math.PI * sh.d), 0.5).normalize().multiplyScalar(33); else SUN.copy(MOON);
   // the strip of sky behind the hills
@@ -3778,15 +3787,15 @@ function ambRefresh(dt) {
   if (AMBH.flowers) AMBH.flowers.count = Math.round(AMBH.flowers.instanceMatrix.count * S0.flowers);
   if (AMBH.sunf) AMBH.sunf.visible = AMB.season === 'ete' || AMB.season === 'printemps';
   if (AMBH.wheat) AMBH.wheat.material.color.set(AMB.season === 'printemps' ? '#A9D46E' : AMB.season === 'hiver' ? '#D8D2C2' : AMB.season === 'automne' ? '#CDA860' : '#FFFFFF');
-  // a soft veil over the picture: gold at sunrise and sunset, deep blue at night, grey under the rain
-  const va = (L(13) + 0.1 * AMB.rain * day).toFixed(2), vk = (sh.h > 0.2 && AMB.rain > 0.5 ? '120,130,145' : (u < 0.5 ? A[12] : B[12])) + ',' + va;
-  if (vk !== ambFxKey) { ambFxKey = vk; const el = document.getElementById('ambfx'); if (el) el.style.background = 'radial-gradient(ellipse at 50% 42%, rgba(' + vk.replace(/,[^,]*$/, ',0') + ') 38%, rgba(' + vk + ') 100%)'; }
+  // a veil of light over the picture: the glow of the sun comes from the east in the morning and from the west in the evening, the moon lays a cool one; a soft vignette of the same mood around
+  const am = sh.h > 0 && sh.d < 0.5, va = (L(13) * (am ? 0.55 : 1)).toFixed(2), vc = u < 0.5 ? A[12] : B[12], low = sh.h > 0 ? Math.pow(1 - sh.h, 1.6) : 0, sx = Math.round(sh.h > 0 ? 8 + 84 * sh.d : 22), ga = (sh.h > 0 ? 0.08 + 0.2 * low : 0.16 * AMB.night).toFixed(2), gc = sh.h > 0 ? (low > 0.5 ? (am ? '255,212,178' : '255,170,90') : '255,224,170') : '150,180,255', vk = vc + ',' + va + ',' + sx + ',' + ga + ',' + gc;
+  if (vk !== ambFxKey) { ambFxKey = vk; const el = document.getElementById('ambfx'); if (el) el.style.background = 'radial-gradient(ellipse 85% 75% at ' + sx + '% -8%, rgba(' + gc + ',' + ga + ') 0%, rgba(' + gc + ',0) 72%), radial-gradient(ellipse at 50% 42%, rgba(' + vc + ',0) 38%, rgba(' + vc + ',' + va + ') 100%)'; }
 }
 function tickAmb(dt, t) {
   if ((ambSlow += dt) > 0.4) { ambRefresh(ambSlow); ambSlow = 0; }
   const S0 = SEASON[AMB.season]; tickWind(dt, S0);
   AMBU.uCloudOff.value.x += dt * 0.004 * (1 + AMB.wind * 3) * AMBU.uWindDir.value.x; AMBU.uCloudOff.value.y += dt * 0.004 * (1 + AMB.wind * 3) * AMBU.uWindDir.value.y;
-  tickGrass(dt); tickLeaves(dt, S0); tickSmoke(dt, t, S0); tickPrecip(t); tickFlies(t); tickBirds(dt, t);
+  AMBU.uDewT.value = t; tickGrass(dt); tickLeaves(dt, S0); tickSmoke(dt, t, S0); tickFlies(t); tickBirds(dt, t);
 }
 function ambBoot() {
   GRASS.row = 0; grassRows(0); GRASS.dirty = false;
@@ -3948,7 +3957,7 @@ function step() {
   else if (level() < 3) setLabel(L.chateau, '🔒 Château · niveau 3', 'lock');
   else if (S.cst < 5) setLabel(L.chateau, '🏰 Bâtir · étape ' + (S.cst + 1) + '/5 · ' + CCOST[S.cst] + ' ' + C, S.coins >= CCOST[S.cst] ? 'ready' : '');
   else setLabel(L.chateau, '🏰 Le château', '');
-  tickTourists(dt); tickGarden(t, n); tickOrders(n); tickFarm(t, n, dt); tickCity(n, dt); tickAmb(dt, t); tickFaune(dt, t, n); tickLand(dt);
+  tickTourists(dt); tickGarden(t, n); tickOrders(n); tickFarm(t, n, dt); tickCity(n, dt); tickAmb(dt, t); tickFaune(dt, t, n); tickLand(dt); tickFete(dt, n);
   for (let i = 0; i < loaves.length; i++) loaves[i].visible = i < S.pain; emptySign.visible = S.pain <= 0;
   if (standPop > 0) { standPop = Math.max(0, standPop - dt * 3); const b = Math.sin(standPop * Math.PI); stand.scale.set(1.22 * (1 + 0.12 * b), 1.22 * (1 + 0.2 * b), 1.22 * (1 + 0.12 * b)); }
   setLabel(L.church, MOV.church.placed ? '⛪ L\'église' : '🔒 Église · à bâtir', MOV.church.placed ? '' : 'lock'); setLabel(L.bistrot, MOV.bistrot.placed ? '☕ Le bistrot' : '🔒 Bistrot · à bâtir', MOV.bistrot.placed ? '' : 'lock');
@@ -3968,10 +3977,10 @@ function step() {
   if (S.started && !S.over) {
     spawnT -= dt;
     const D = demand(n), carsOn = S.q >= 10;
-    if (spawnT <= 0) { spawnT = Math.max(1.1, Math.min(10, 1.3 / (D * (carsOn ? 0.6 : 1)))) * (S.pain > 0 ? 1 : 1.5) * (0.7 + Math.random() * 0.6);
+    if (spawnT <= 0) { spawnT = Math.max(60 / (clientsPerMin() * (0.55 + 0.6 * S.freq / 100) * (n < S.flyersUntil ? 1.5 : 1)), 0.75, Math.min(10, 1.3 / (D * (carsOn ? 0.6 : 1)))) * (S.pain > 0 ? 1 : 1.5) * (0.7 + Math.random() * 0.6);
       if (S.lv.mk > 0 && S.stall.length && Math.random() < 0.38) spawnMarket(); else if (queue.length < 8 && villagers.length < 18) spawnVillager(); }
     carT -= dt;
-    if (carT <= 0) { carT = Math.max(5, Math.min(45, 3.5 / (D * 0.4))) * (0.7 + Math.random() * 0.6) * (S.pain > 0 ? 1 : 1.6); if (carsOn && queue.length < 8) spawnCar(); }
+    if (carT <= 0) { carT = Math.max(5, Math.min(45, 3.5 / (D * 0.4))) * (0.7 + Math.random() * 0.6) * (S.pain > 0 ? 1 : 1.6); if (carsOn && queue.length < 8 && Math.random() < Math.min(1, (S.pop || 0) / ECO.carPop)) spawnCar(); }
   }
   tickCars(dt);
   const serveGap = S.hired.margot && !S.tasks.margot ? 220 : 480; let worst = 0;
@@ -4103,6 +4112,7 @@ function boot(loaded, hot) {
     hadSave = true; $('home-cont').hidden = false; $('home-new').hidden = true;
     $('home-info').textContent = 'Niveau ' + level() + ' · ' + Math.floor(S.pop || 0) + ' habitants · ' + (S.mode === 'comp' ? '🔥 Coup de feu' : '🌿 Douceur de vivre');
   }
+  else if (loaded && loaded.rid && loaded.rid !== RID) { $('home-warn').textContent = 'Le jeu a changé : nouvelles règles, nouvelle économie. Tous les villages repartent de zéro.'; $('home-warn').hidden = false; }
   if (location.hash === '#debug') window.__pf = { get S() { return S; }, set S(v) { S = v; }, player, goTo, travel, tap, level, ups, buyUp, stationGo, findPath, solids, rects, GLB, renderer, cam, scene, get zoom() { return zoom; }, set zoom(v) { zoom = v; resize(); }, get quality() { return quality; }, startRaid, spawnCar, tapMairie, tapMill, tapOven, tapShop, harvest, stockBread, deliver, queue, villagers, crew, setFast: (v) => { fast = v; } };
   Object.keys(crew).forEach((k) => { crew[k].visible = !!S.hired[k]; }); if (S.inesBag > 0) { crew.ines.userData.bag = S.inesBag; S.inesBag = 0; }
   try { cityBoot(); } catch (e) { showErr('village', e); }
