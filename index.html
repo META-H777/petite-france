@@ -424,7 +424,7 @@ const HILL = { x: 26, z: -39, top: 6.5, r0: 14, r1: 22 };
 /* ---- le relief : des paliers (plats, tenus par des murs de pierre, reliés par des rampes) et des pentes douces. On garde toujours le plus haut. ---- */
 const RELIEF = [
   { t: 'palier', n: 'Le Haut-Bourg', x0: -34, x1: -2, z0: -58, z1: -22, h: 2.6, edge: 1.4, soft: { e: 7, n: 8 } },
-  { t: 'rampe', x0: -27, x1: -21, z0: -22, z1: -8.5, h: 2.6, side: 1.6 },
+  /* la grande rampe dallée du Haut-Bourg est retirée (Eugénie, 19/11/2026) : de l'herbe à la place, plus de place pour bâtir ; on monte par l'escalier */
   { t: 'rampe', stairs: true, x0: -10.5, x1: -7.5, z0: -22, z1: -16.8, h: 2.6, side: 0.7 },
   { t: 'versant', n: 'Le Coteau', x0: -26, x1: 76, z0: 19, z1: 28, h: 2.2, soft: 8 },
   { t: 'palier', n: 'Le bas-quai nord', x0: -47, x1: -35.5, z0: -62, z1: -20, h: -0.8, edge: 2.5, soft: { s: 6, n: 3 } },
@@ -828,9 +828,11 @@ STALLX.forEach((sx, si) => { const s = new THREE.Group(); s.position.x = sx; sta
 { const s = sign('MARCHÉ', 2.4, 0.6, '#2F4B7C', '#FFFDF8', 104); s.position.set(0, 2.9, 0.9); stallG.add(s); }
 // the car park, south of the road
 const PARK = { x0: -19, x1: -7, z: 6.4 };
-flat(PARK.x1 - PARK.x0 + 1, 4.6, '#C8C1B4', (PARK.x0 + PARK.x1) / 2, PARK.z, 0.03);
-for (let k = 0; k < 6; k++) flat(0.07, 3.8, '#FFFDF8', PARK.x0 + 0.3 + k * 2.3, PARK.z, 0.04);
-{ const g = new THREE.Group(); g.position.set(PARK.x0 - 0.8, 0, PARK.z - 2.2); scene.add(g); cyl(0.05, 0.05, 1.7, '#8FA3B8', 0, 0, 0, g, 5); const s = sign('P', 0.62, 0.62, '#2F4B7C', '#FFFDF8', 380); s.position.set(0, 1.9, 0.04); g.add(s); }
+/* le parking ne se donne plus au départ : il s'achète dans Construire › Bâtiments, et sans lui pas de voitures (Eugénie, 19/11/2026) */
+const parkG = new THREE.Group(); parkG.position.set(-13, 0, 6.4); parkG.userData = { kind: 'parking' }; scene.add(parkG);
+flat(13, 4.6, '#C8C1B4', 0, 0, 0.03, parkG);
+for (let k = 0; k < 6; k++) flat(0.07, 3.8, '#FFFDF8', -5.7 + k * 2.3, 0, 0.04, parkG);
+{ const g = new THREE.Group(); g.position.set(-6.8, 0, -2.2); parkG.add(g); cyl(0.05, 0.05, 1.7, '#8FA3B8', 0, 0, 0, g, 5); const s = sign('P', 0.62, 0.62, '#2F4B7C', '#FFFDF8', 380); s.position.set(0, 1.9, 0.04); g.add(s); }
 
 /* ---------------- LE CENTRE-VILLE ---------------- */
 const SHOPP = [3, -10.2];
@@ -1239,7 +1241,7 @@ function makeCar() {
 }
 function spawnCar() {
   const fr = SLOTS.filter((s) => !s.car); if (!fr.length) return null;
-  const s = fr[Math.floor(Math.random() * fr.length)], fromLeft = Math.random() < 0.5, lane = 1.15;
+  const s = fr[Math.floor(Math.random() * fr.length)], fromLeft = Math.random() < 0.5, lane = PARK.z < 0 ? -1.15 : 1.15;
   const g = carPool.pop() || makeCar(); g.visible = true; g.position.set(fromLeft ? BX0 - 4 : BX1 + 4, 0, lane);
   const c = { g, slot: s, lane, phase: 'drive', exitX: fromLeft ? BX1 + 6 : BX0 - 6 }; s.car = c; cars.push(c); return c;
 }
@@ -1247,7 +1249,7 @@ function tickCars(dt) {
   for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i], g = c.g;
     if (c.phase === 'drive') { if (stepToward(g, tv.set(c.slot.x, 0, c.lane), 9, dt)) c.phase = 'park'; }
     else if (c.phase === 'park') { if (stepToward(g, tv.set(c.slot.x, 0, PARK.z), 3.2, dt)) { c.phase = 'shop'; spawnVillager(c); } }
-    else if (c.phase === 'back') { g.position.z -= 3.2 * dt; if (g.position.z <= c.lane) { g.position.z = c.lane; c.phase = 'leave'; c.slot.car = null; } }
+    else if (c.phase === 'back') { const sg = Math.sign(c.lane); g.position.z -= sg * 3.2 * dt; if (sg * (g.position.z - c.lane) <= 0) { g.position.z = c.lane; c.phase = 'leave'; c.slot.car = null; } }
     else if (c.phase === 'leave') { if (stepToward(g, tv.set(c.exitX, 0, c.lane), 9, dt)) { g.visible = false; carPool.push(g); cars.splice(i, 1); } }
   }
 }
@@ -1868,7 +1870,7 @@ const ECO = { cli0: 3.2, cliStart: 5, cliPop: 110, carPop: 12000, ordK: 120000, 
 /* L'indice du village : logements, décors et terrains coûtent plus cher à mesure que le village grandit (au-delà de prix0 habitants, +100 % tous les prixK habitants, jusqu'à prixMax). */
 const villageMul = () => Math.min(ECO.prixMax, 1 + Math.max(0, (S.popMax || S.pop || 0) - ECO.prix0) / ECO.prixK);
 /* au départ 5 clients par minute (la première heure ne traîne plus), puis le village prend le relais ; en Coup de feu, 40 % de clients en plus */
-const clientsPerMin = () => { const p = S.pop || 0; return Math.max(ECO.cli0, p / ECO.cliPop, ECO.cliStart - Math.max(0, p - 60) * 0.018) * (S.mode === 'comp' ? 1.4 : 1); };
+const clientsPerMin = () => { const p = S.pop || 0; return Math.max(ECO.cli0, p / ECO.cliPop, ECO.cliStart - Math.max(0, p - 60) * 0.018) * (S.mode === 'comp' ? 1.4 : 1) * (S.city && S.city.prods && S.city.prods.parking && S.city.prods.parking[3] ? 1.15 : 1); };
 function demand(n) {
   const cap = Math.min(S.unlocked * S.lv.seed * 2 / 22, 0.667 / Math.pow(0.8, S.lv.mill - 1), 0.444 / Math.pow(0.8, S.lv.oven - 1));
   const auto = 0.5 + (S.hired.leo ? 0.17 : 0) + (S.hired.jules ? 0.17 : 0) + (S.hired.ines ? 0.16 : 0);
@@ -3096,6 +3098,9 @@ movable('cake', { n: 'Pâtisserie', ic: '🧁', pivot: [CAKEP[0], CAKEP[1]], obj
 movable('bq', { n: 'Boutique de vêtements', ic: '👕', pivot: [BQP_[0], BQP_[1]], objs: [bqG], fp: [6, 6], pts: [ptA(BQP_), ptA(BQDOOR), ptA(STN.bq)], cols: [findRect(BQP_[0], BQP_[1])], c: BQCOST[0], need: () => (S.lv.sheep < 1 ? 'la bergerie' : ''), on: () => { if (S.lv.bq < 1) S.lv.bq = 1; }, desc: '2 laines = 1 pull. Nécessaire au-delà de 2 200 habitants.' });
 movable('mairie', { n: 'Mairie', ic: '🏛️', pivot: [MAIRIEP[0], MAIRIEP[1]], objs: [mairie], fp: [10, 7], pts: [ptA(MAIRIEP), ptA(STN.mairie)], cols: [findRect(MAIRIEP[0], MAIRIEP[1])], c: 150, need: () => ((S.pop || 0) < 25 ? '25 habitants' : ''), desc: 'Lettre, panier et commandes du jour. Nécessaire au-delà de 150 habitants.' });
 fountain.userData.kind = 'fontaine';
+movable('parking', { n: 'Parking', ic: '🅿️', pivot: [-13, 6.4], rot: false, objs: [parkG], fp: [14, 6], cols: [], c: 400, need: () => ((S.pop || 0) < 20 ? '20 habitants' : ''),
+  pts: [{ get: () => [(PARK.x0 + PARK.x1) / 2, PARK.z], set: (x, z) => { PARK.x0 = x - 6; PARK.x1 = x + 6; PARK.z = z; SLOTS.forEach((s, k) => { s.x = PARK.x0 + 1.45 + k * 2.3; }); } }],
+  desc: 'À poser le long de la grand-rue. Les gens des villages voisins viennent en voiture : +15 % de clients.' });
 movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 1500, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'La fierté de la place. Nécessaire au-delà de 400 habitants. +30 beauté.' });
 movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
 movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 15000, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
@@ -3307,7 +3312,7 @@ function cellFree(px, pz) {
   { const M = MOV.champ; if (M && !(PLC && PLC.t === 'p' && PLC.k === 'champ') && Math.abs(px - M.x) < M.fp[0] / 2 + 0.6 && Math.abs(pz - M.z) < M.fp[1] / 2 + 0.6) return false; } /* jamais de maison sur le champ de blé */
   if (px < BX0 + 1 || px > BX1 - 1 || pz < BZ0 + 1 || pz > BZ1 - 1) return false;
   if (px > RIVER.x0 - 1.5 && px < RIVER.x1 + 1.5) return false;
-  if (px > PARK.x0 - 1 && px < PARK.x1 + 1 && pz > PARK.z - 2.6 && pz < PARK.z + 2.6) return false;
+  if (!(PLC && PLC.k === 'parking') && px > PARK.x0 - 1 && px < PARK.x1 + 1 && pz > PARK.z - 2.6 && pz < PARK.z + 2.6) return false;
   if (Math.abs(pz) < 2.6) return false; for (const c of GCOVER) { if (!c[5]) continue; const dx = px - c[0], dz = pz - c[1]; if (Math.abs(dx) + Math.abs(dz) > c[2] + c[3] + 1) continue; const cs = Math.cos(c[4]), sn = Math.sin(c[4]); if (Math.abs(dx * cs - dz * sn) < c[2] && Math.abs(dx * sn + dz * cs) < c[3]) return false; } if (Math.hypot(px - HILL.x, pz - HILL.z) < HILL.r1 + 1) return false; if (roadAt(px, pz)) return false; if (blocked(px, pz, 0.05)) return false;
   return true; }
 const CELLS = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false }), 800);
@@ -3355,17 +3360,17 @@ function plCost() { const s = PLC; if (s.t === 'h') return housePrice(s.m); if (
 function plFree() { const [w, d] = plSize(PLC.r), s = PLC; let saved = null;
   if (s.t === 'mp' || s.t === 'p') { saved = MOV[s.k].cols.map((e) => [e.c[0], e.c[1]]); MOV[s.k].cols.forEach((e) => { e.c[0] += 5000; }); }
   if (s.t === 'mi' && s.col) s.col[0] += 5000;
-  const ok = areaFree(PLC.x, PLC.z, w, d, true);
+  const ok = areaFree(PLC.x, PLC.z, w, d, true) && !(s.k === 'parking' && Math.abs(PLC.z) > 7.5); /* le parking touche la grand-rue */
   if (saved) MOV[s.k].cols.forEach((e, i) => { e.c[0] = saved[i][0]; }); if (s.t === 'mi' && s.col) s.col[0] -= 5000; return ok; }
 function showPlace() {
-  const s = PLC, [w, d] = plSize(s.r); s.x = snapC(s.x, w); s.z = snapC(s.z, d);
+  const s = PLC, [w, d] = plSize(s.r); s.x = snapC(s.x, w); s.z = snapC(s.z, d); if (s.k === 'parking' && (s.t === 'p' || s.t === 'mp')) s.z = s.z < 0 ? -7 : 7; /* le parking se colle toujours à la grand-rue */
   if (s.t === 'h' || s.t === 'd') { const gk = s.t + (s.m || s.k) + s.r; if (s.g && s.gk === gk) { s.g.position.set(s.x, groundY(s.x, s.z), s.z); } else { if (s.g) dropGhost(s.g); s.g = s.t === 'h' ? houseGroup({ t: 'h', m: s.m, x: s.x, z: s.z, r: s.r }, -1) : decoGroup({ t: 'd', k: s.k, x: s.x, z: s.z, r: s.r }, -1); s.g.userData.kind = 'ghost'; s.gk = gk; loadNear(); } }
   if (s.t === 'p' || s.t === 'mp') { const M = MOV[s.k]; M.placed = true; moveTo(M, s.x, s.z, s.r); }
   if (s.t === 'mi') { s.g.position.set(s.x, groundY(s.x, s.z), s.z); s.g.rotation.y = s.r; }
   const ok = plFree(), cost = plCost(); ghostBox.visible = false;
   $('placebar').hidden = false; $('selbar').hidden = true;
   const nm = s.t === 'h' ? HOUSE_T[s.m].n : s.t === 'd' ? DECOS[s.k].n : s.t === 'mi' ? (S.city.items[s.i].t === 'h' ? HOUSE_T[S.city.items[s.i].m].n : DECOS[S.city.items[s.i].k].n) : MOV[s.k].n;
-  $('pl-t').textContent = nm + (ok ? ' · touche le sol pour déplacer' : ' · place occupée, touche ailleurs'); $('pl-ok').disabled = !ok || S.coins < cost; rich($('pl-ok'), cost ? 'Poser · ' + cost + ' ' + C : 'Poser ici'); $('pl-rot').disabled = (s.t === 'p' || s.t === 'mp') && !MOV[s.k].rot;
+  $('pl-t').textContent = nm + (ok ? ' · touche le sol pour déplacer' : s.k === 'parking' && Math.abs(s.z) > 7.5 ? ' · à poser le long de la grand-rue' : ' · place occupée, touche ailleurs'); $('pl-ok').disabled = !ok || S.coins < cost; rich($('pl-ok'), cost ? 'Poser · ' + cost + ' ' + C : 'Poser ici'); $('pl-rot').disabled = (s.t === 'p' || s.t === 'mp') && !MOV[s.k].rot;
 }
 function cancelPlace() { const s = PLC; if (!s) return; if (s.g && (s.t === 'h' || s.t === 'd')) dropGhost(s.g);
   if (s.t === 'p') { MOV[s.k].placed = false; moveTo(MOV[s.k], MOV[s.k].x, MOV[s.k].z, 0); }
@@ -3396,7 +3401,7 @@ function paintRoad(x, z) { const ix = tileOf(x), iz = tileOf(z), k = tileKey(ix,
   S.coins -= ROAD_T[ROADM.t].c; R[k] = ROADM.t; dirty = true; links = null; drawRoads(); }
 
 // ---- selection of an existing thing in build mode ----
-const KIND2MOV = { shop: 'shop', oven: 'oven', mill: 'mill', plot: 'champ', market: 'market', garden: 'potager', cake: 'cake', bq: 'bq', mairie: 'mairie', church: 'church', bistrot: 'bistrot', fontaine: 'fontaine' };
+const KIND2MOV = { shop: 'shop', oven: 'oven', mill: 'mill', plot: 'champ', market: 'market', garden: 'potager', cake: 'cake', bq: 'bq', mairie: 'mairie', parking: 'parking', church: 'church', bistrot: 'bistrot', fontaine: 'fontaine' };
 function buildTap(sx, sy) {
   const gp = groundHit(sx, sy);
   if (ROADM) { if (gp) paintRoad(gp[0], gp[1]); return true; }
@@ -3576,6 +3581,7 @@ function landGrant() { const L = landS(); L.open.bourg = 1; const C = [[-1, -1],
   PROD_KEYS.forEach((k) => { const M = MOV[k]; if (!M.placed) return; const f = mfp(M, M.r); C.forEach((c) => g(M.x + c[0] * (f[0] / 2 - 0.3), M.z + c[1] * (f[1] / 2 - 0.3))); });
   Object.keys(S.city.roads || {}).forEach((k) => { const [ix, iz] = k.split(',').map(Number); g(ix * TILE + 1, iz * TILE + 1); });
   QUARTIERS[0].ilots.forEach((I) => { if (qOwned(QUARTIERS[0]) < 2) L.own[I.key] = 1; });
+  if (!L.g4) { L.g4 = 1; L.own['bourg:4'] = 1; dirty = true; } /* le terrain de l'ancien parking est offert : plus de place pour démarrer (Eugénie, 19/11/2026) */
   if (!MOV.market.placed && !L.own['bourg:3']) { L.own['bourg:3'] = 1; dirty = true; } } // ce terrain du Bourg est offert : avec son voisin, il accueille le marché
 
 /* ---- what the map shows: land that is not yours is dimmed; in build mode, the terrains for sale are outlined and priced ---- */
@@ -4212,7 +4218,7 @@ function step() {
     if (spawnT <= 0) { spawnT = Math.max(60 / (clientsPerMin() * (0.55 + 0.6 * S.freq / 100) * (n < S.flyersUntil ? 1.5 : 1)), 0.75, Math.min(10, 1.3 / (D * (carsOn ? 0.6 : 1)))) * (S.pain > 0 ? 1 : 1.5) * (0.7 + Math.random() * 0.6);
       if (S.lv.mk > 0 && S.stall.length && Math.random() < 0.38) spawnMarket(); else if (queue.length < 8 && villagers.length < 18) spawnVillager(); }
     carT -= dt;
-    if (carT <= 0) { carT = Math.max(5, Math.min(45, 3.5 / (D * 0.4))) * (0.7 + Math.random() * 0.6) * (S.pain > 0 ? 1 : 1.6); if (carsOn && queue.length < 8 && Math.random() < Math.min(1, (S.pop || 0) / ECO.carPop)) spawnCar(); }
+    if (carT <= 0) { carT = Math.max(5, Math.min(45, 3.5 / (D * 0.4))) * (0.7 + Math.random() * 0.6) * (S.pain > 0 ? 1 : 1.6); if (MOV.parking.placed && queue.length < 8 && Math.random() < Math.min(1, 0.3 + (S.pop || 0) / ECO.carPop)) spawnCar(); /* pas de parking, pas de voitures */ }
   }
   tickCars(dt);
   const serveGap = S.hired.margot && !S.tasks.margot ? 220 : 480; let worst = 0;
