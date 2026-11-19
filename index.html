@@ -321,11 +321,12 @@
     <button class="x" data-close="build" type="button" aria-label="Fermer">×</button>
     <div class="kick">Construire · <span id="bd-coins">0</span> <i class="cn"></i> · 🏠 <span id="bd-pop">0</span> · 🌷 <span id="bd-b">0</span></div>
     <h2>Ton village, comme tu le rêves.</h2>
+    <button class="btn ghost" id="bd-move" type="button" style="width:100%;margin:0 0 10px">✋ Aménager · déplacer ce qui est déjà posé</button>
     <div class="tabs" id="bd-tabs"></div>
     <div id="bd-list"></div>
   </div>
 </div>
-<div class="buildbar" id="buildbar" hidden><b>🏗️ Mode construction</b><span>Touche un bâtiment pour le déplacer · glisse pour te déplacer</span><div><button class="btn ghost" id="bb-cat" type="button">Catalogue</button><button class="btn gold" id="bb-done" type="button">Terminer</button></div></div>
+<div class="buildbar" id="buildbar" hidden><b>✋ Aménager</b><span>Touche une maison, un décor ou un bâtiment pour le déplacer · glisse pour te déplacer</span><div><button class="btn ghost" id="bb-cat" type="button">Catalogue</button><button class="btn gold" id="bb-done" type="button">Terminer</button></div></div>
 <div class="placebar" id="selbar" hidden><p id="sel-t"></p><div><button class="btn ghost" id="sel-x" type="button">✕</button><button class="btn ghost" id="sel-rot" type="button">↻</button><button class="btn ghost" id="sel-del" type="button">Démolir</button><button class="btn gold" id="sel-move" type="button">Déplacer</button></div></div>
 <div class="modal" id="intro" hidden><div class="card introc"><div class="kick" id="in-k"></div><div class="in-ic" id="in-ic"></div><h2 id="in-t"></h2><p id="in-p"></p><div class="dots" id="in-dots"></div><div class="in-btns"><button class="btn ghost" id="in-skip" type="button">Passer</button><button class="btn gold" id="in-next" type="button">Suivant</button></div></div></div>
 <div class="modal" id="win" hidden><div class="card" style="text-align:center"><div class="kick">Petite France</div><h2>3 000 habitants !</h2><p>Ton village est devenu une vraie ville, la plus belle de la région. Bientôt, une nouvelle région t'attend.</p><button class="btn gold wide" id="win-ok" type="button">Continuer à embellir</button></div></div>
@@ -3290,6 +3291,7 @@ function tapCityHouse(i) {
   const cost = Math.round(housePrice(it.m) * (it.l === 1 ? 0.5 : 1)), tm = dur(T.t * 60000 * (it.l === 1 ? 1 : 2) * timeMul());
   const opts = it.l < 3 ? [{ t: (it.l === 1 ? '🌷 La fleurir' : '✨ En faire une maison de maître') + ' · ' + cost + ' ' + C, s: longT(tm) + ' de chantier · +' + Math.round(T.cap * 0.3) + ' habitants' + (busyMasons() >= S.masons ? ' · maçons occupés' : ''), btn: 'Bâtir', ok: S.coins >= cost && busyMasons() < S.masons,
     run: () => { S.coins -= cost; it.end = now() + tm; it.l++; dirty = true; closeSheet(); } }] : [];
+  opts.push({ t: '✋ Déplacer cette maison', s: 'La déplacer, la tourner ou la démolir.', btn: 'Déplacer', ok: true, run: () => { closeSheet(); amenager(i); } });
   openSheet(T.n + ' · ' + HLV[it.l], (links && !links[i] ? '🚧 Aucune rue ne la dessert : personne ne peut y habiter. ' : '') + Math.round(capOf(it)) + ' habitants · loyer ' + Math.round(capOf(it) * RENT_K * rentMult() * 60) + ' ' + C + '/h' + (r ? ' · +' + r + ' ' + C + ' ramassés' : ''), opts);
 }
 
@@ -3341,6 +3343,8 @@ function renderBuild() {
   else if (BTAB === 'batiments') PROD_KEYS.forEach((k) => { if (k === 'reserve' && !MOV.reserve.placed) return; const M = MOV[k], need = M.placed ? '' : M.need(); row(M.ic, M.n, M.placed ? 'Déjà construit · en mode construction, touche-le pour le déplacer' : M.desc, M.placed ? 'Déplacer' : M.c + ' ' + C, M.placed || S.coins >= M.c, need ? 'il faut ' + need : '', () => M.placed ? startMoveProd(k) : startPlace({ t: 'p', k })); });
   else { let teasers = 0; Object.values(DECOS).filter((d) => d.cat === BTAB && !d.hide).sort((a, b) => a.lvl - b.lvl || a.c - b.c).forEach((d) => { if (lv < (d.lvl || 1) && ++teasers > 2) return; const cnt = S.city.items.filter((it) => it.k === d.id).length, c = decoPrice(d.id); row(d.ic, d.n, '+' + Math.round(decoB(d)) + ' beauté' + (cnt ? ' · ' + cnt + ' posé' + (cnt > 1 ? 's' : '') : ''), c + ' ' + C, S.coins >= c, lv < (d.lvl || 1) ? 'niveau ' + d.lvl : '', () => startPlace({ t: 'd', k: d.id })); }); }
 }
+/* mode Aménager : reprendre la main sur tout ce qui est posé, sans passer par le catalogue (Romain, 19/11/2026) */
+function amenager(i) { if (!S.started || VISIT.on) return; enterBuild(); if (i !== undefined && cityObjs[i]) select({ t: 'mi', i, g: cityObjs[i] }); else toast('✋ Mode Aménager', 'Touche une maison, un décor ou un bâtiment pour le déplacer, le tourner ou le démolir.'); }
 function enterBuild() { BUILD = true; $('build').hidden = true; $('buildbar').hidden = false; document.body.classList.add('building'); P.goal = null; }
 function exitBuild() { cancelPlace(); CELLS.count = 0; GRID.visible = false; BUILD = false; SEL = null; selRing.visible = false; ROADM = null; $('buildbar').hidden = true; $('selbar').hidden = true; $('placebar').hidden = true; document.body.classList.remove('building'); ghostBox.visible = false; }
 
@@ -3416,7 +3420,7 @@ $('sel-x').addEventListener('click', () => { SEL = null; selRing.visible = false
 $('pl-ok').addEventListener('click', () => { if (ROADM) { ROADM = null; $('placebar').hidden = true; return; } confirmPlace(); });
 $('pl-rot').addEventListener('click', () => { if (!PLC) return; PLC.r = (PLC.r + Math.PI / 2) % (Math.PI * 2); showPlace(); });
 $('pl-x').addEventListener('click', () => { if (ROADM) { ROADM = null; $('placebar').hidden = true; return; } cancelPlace(); });
-$('b-build').addEventListener('click', openBuild);
+$('b-build').addEventListener('click', openBuild); $('bd-move').addEventListener('click', () => amenager());
 $('bb-cat').addEventListener('click', () => { cancelPlace(); ROADM = null; $('placebar').hidden = true; openBuild(); });
 $('bb-done').addEventListener('click', exitBuild);
 $('b-pop').addEventListener('click', () => { if (!S.started) return; const sc = servCap(), cap = capTotal();
@@ -3518,6 +3522,7 @@ function tickVisit(dt) { const V = VISIT; if (!V.on) return; const s = V.stops[V
 $('v-quit').addEventListener('click', () => endVisit(false)); $('v-build').addEventListener('click', () => endVisit(true));
 $('b-menu').addEventListener('click', () => { if (!S.started || VISIT.on) return; const na = ups().filter((u) => u.cost !== null && !u.wait && S.coins >= u.cost).length, nd = S.orders.filter(canDeliver).length, nm = missionsReady(); openSheet('Menu', 'Village de ' + vil().n, [
   { t: '🏗️ Construire', s: 'Maisons, rues, bâtiments, jardins et décor.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openBuild(); } },
+  { t: '✋ Aménager', s: 'Déplace, tourne ou démolis tout ce que tu as posé.', btn: 'Aménager', ok: true, run: () => { closeSheet(); amenager(); } },
   { t: '🔨 Améliorer' + (na ? ' · ' + na + ' possible' + (na > 1 ? 's' : '') : ''), s: 'Employés, ateliers, réserves, maisons à embellir, fête du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } },
   { t: '📜 Missions' + (nm ? ' · ' + nm + ' à faire' : ''), s: 'Les habitants de chaque quartier ont besoin de toi.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); missionsSheet(); } },
   { t: '📋 Commandes' + (nd ? ' · ' + nd + ' prête' + (nd > 1 ? 's' : '') : ''), s: 'Ce que le village te commande.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-od').click(); } },
