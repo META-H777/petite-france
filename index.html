@@ -3628,6 +3628,10 @@ function ledSum(ms) { const from = Math.floor((now() - ms) / LEDQ) + 1, r = {}, 
 const tdbEsc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function rentPerHour() { let t = 0; const rm = rentMult(); S.city.items.forEach((it, i) => { if (it.t === 'h' && it.l > 0 && !(it.end > 0) && links && links[i]) t += capOf(it) * RENT_K * rm * 60; }); return t; }
 let TDB_SPAN = 3600000;
+/* ---- le temps de jeu : compté seulement quand la partie est lancée et la page visible ---- */
+function tickPlay(raw) { if (!S.started || document.hidden || VISIT.on) return; if (!S.playSince) { S.playSince = Date.now(); if ((S.xp || 0) > 0) S.playLate = 1; }
+  const m0 = Math.floor((S.playS || 0) / 60); S.playS = (S.playS || 0) + Math.min(raw, 1); if (Math.floor(S.playS / 60) !== m0) dirty = true; }
+function playTxt() { const m = Math.floor((S.playS || 0) / 60), h = Math.floor(m / 60); return h ? h + ' h ' + String(m % 60).padStart(2, '0') : m + ' min'; }
 function tableau() { if (!S.started || VISIT.on) return; ledB(); const el = document.createElement('div'); el.className = 'tdb';
   const lv = level(), nx = LEVELS[lv], pc = nx ? Math.round((S.xp - (LEVELS[lv - 1] || 0)) / (nx - (LEVELS[lv - 1] || 0)) * 100) : 100;
   const L = ledSum(TDB_SPAN), tot = (o) => Object.values(o).reduce((a, v) => a + v, 0), R = tot(L.r), D = tot(L.d);
@@ -3644,6 +3648,7 @@ function tableau() { if (!S.started || VISIT.on) return; ledB(); const el = docu
   const teamH = team.map(([n, k, yes, no]) => { const busy = S.hired[k] && S.tasks[k]; return '<div class="tm ' + (S.hired[k] && !busy ? 'ok' : 'no') + '"><i>' + (S.hired[k] ? busy ? '⏳' : '✅' : '✋') + '</i><div><b>' + n + '</b><span>' + (S.hired[k] ? busy ? NAME[k] + ' est en mission : son poste attend son retour.' : yes : no) + '</span></div></div>'; }).join('');
   const rph = Math.round(rentPerHour());
   el.innerHTML = '<div class="who"><b>🚲 C’est toi, sur le vélo.</b> Tu as rouvert la boulangerie de ' + tdbEsc(vil().n) + '. Le maire, M. Bonnefoy, t’a confié le village : tu fais le pain, tu bâtis les maisons et tu ouvres les commerces. Les écus d’or sont à toi, c’est toi qui décides quoi construire.</div>'
+    + '<div class="ln" style="margin:0 0 10px"><span>⏱️ Temps de jeu dans cette partie' + (S.playLate ? ' (compté depuis le ' + new Date(S.playSince).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) + ')' : '') + '</span><b>' + playTxt() + '</b></div>'
     + '<div class="kpi"><div><small>Écus d’or</small><b>' + fmt(Math.floor(S.coins)) + '</b></div><div><small>Habitants</small><b>' + fmt(S.pop || 0) + '</b></div><div><small>Niveau</small><b>' + lv + '</b><span class="mb"><i style="width:' + pc + '%"></i></span></div><div><small>Fréquentation</small><b>' + Math.round(S.freq) + '</b><span class="mb g"><i style="width:' + Math.round(S.freq) + '%"></i></span></div></div>'
     + '<p class="ex"><b>Niveau</b> : il monte avec tout ce que tu fais (pain vendu, maisons, commandes). Chaque niveau débloque de nouveaux bâtiments et décors' + (nx ? ' (tu as fait ' + pc + ' % du chemin vers le niveau ' + (lv + 1) + ')' : '') + '.<br><b>Fréquentation</b> (sur 100) : l’envie des clients de venir à la boulangerie. Elle monte quand tu les sers et livres les commandes, elle baisse quand un client repart sans pain.</p>'
     + '<h4>Ce qui rentre et ce qui sort</h4><div class="span"><button type="button" data-s="3600000" class="' + (TDB_SPAN === 3600000 ? 'on' : '') + '">Dernière heure</button><button type="button" data-s="86400000" class="' + (TDB_SPAN === 86400000 ? 'on' : '') + '">24 heures</button></div>'
@@ -4209,7 +4214,7 @@ window.addEventListener('unhandledrejection', (ev) => showErr('promesse', ev.rea
 function frame() { if (!(window.__bot && window.__bot.manual)) { try { step(); } catch (e) { showErr('boucle', e); } } requestAnimationFrame(frame); }
 function step() {
   const raw = clockT.getDelta(), dt = Math.min(0.1, raw), t = clockT.elapsedTime, n = now();
-  ledTick(); tickPrix(dt);
+  ledTick(); tickPrix(dt); tickPlay(raw);
   if (S.started && raw < 0.5) { perfN++; perfT += raw; if (perfN >= 90) { if (perfN / perfT < 38 && quality > 0) { quality--; applyQuality(); } perfN = 0; perfT = 0; } }
   // ---- the player walks (or rides) ----
   let wx = 0, wz = 0;
