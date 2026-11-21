@@ -679,6 +679,44 @@ function paveTex(rx, ry) {
     paveTex.img = cv; }
   const t = new THREE.CanvasTexture(paveTex.img); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); return t;
 }
+/* ---- les revêtements de rue : chacun a sa propre texture, qui se raccorde d'une case à l'autre (256 px = 2 m) ---- */
+function roadTex(kind) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256; const g = cv.getContext('2d'); let sd = 7 + kind * 131; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const W = (fn) => { for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) { g.save(); g.translate(ox, oy); fn(); g.restore(); } }; // dessiné neuf fois : ce qui dépasse d'un bord revient par l'autre
+  const hsl = (h, s2, l) => 'hsl(' + h.toFixed(0) + ',' + s2.toFixed(0) + '%,' + l.toFixed(0) + '%)';
+  const ell = (x, y, rx, ry, a, col) => W(() => { g.fillStyle = col; g.beginPath(); g.ellipse(x, y, rx, ry, a, 0, Math.PI * 2); g.fill(); });
+  if (kind === 1) { /* chemin de terre : terre battue, taches, cailloux, quelques brins */
+    g.fillStyle = '#B8935F'; g.fillRect(0, 0, 256, 256);
+    for (let k = 0; k < 70; k++) ell(r() * 256, r() * 256, 10 + r() * 26, 6 + r() * 16, r() * 3, 'rgba(' + (r() < 0.5 ? '90,62,30' : '230,200,150') + ',' + (0.08 + r() * 0.1).toFixed(2) + ')');
+    for (let k = 0; k < 90; k++) { const x = r() * 256, y = r() * 256, s2 = 1.5 + r() * 3; ell(x, y + 1, s2, s2 * 0.7, 0, 'rgba(60,40,20,0.35)'); ell(x, y, s2, s2 * 0.7, 0, hsl(30 + r() * 15, 10 + r() * 15, 55 + r() * 25)); }
+    for (let k = 0; k < 14; k++) { const x = r() * 256, y = r() * 256; W(() => { g.strokeStyle = 'rgba(96,120,58,0.8)'; g.lineWidth = 1.6; for (let b = 0; b < 4; b++) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + (r() - 0.5) * 8, y - 4 - r() * 5); g.stroke(); } }); } }
+  else if (kind === 2) { /* allée de gravier : crème, grains serrés */
+    g.fillStyle = '#E2D6BC'; g.fillRect(0, 0, 256, 256);
+    for (let k = 0; k < 2600; k++) { const x = r() * 256, y = r() * 256, s2 = 0.8 + r() * 1.8; g.fillStyle = r() < 0.5 ? hsl(38 + r() * 12, 10 + r() * 20, 62 + r() * 30) : 'rgba(110,90,60,' + (0.2 + r() * 0.3).toFixed(2) + ')'; g.fillRect(x, y, s2, s2); } }
+  else if (kind === 3) { /* calade : galets ronds posés de chant, gris et beiges */
+    g.fillStyle = '#7D766B'; g.fillRect(0, 0, 256, 256);
+    for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++) { const x = i * 16 + 8 + (r() - 0.5) * 5 + (j % 2) * 8, y = j * 16 + 8 + (r() - 0.5) * 5, rx = 6 + r() * 2.5, ry = 5 + r() * 2.5, a = r() * 3, l = 58 + r() * 22;
+      ell(x + 1, y + 1.5, rx, ry, a, 'rgba(40,36,30,0.45)'); ell(x, y, rx, ry, a, hsl(30 + r() * 20, 5 + r() * 12, l)); ell(x - 1.5, y - 2, rx * 0.5, ry * 0.4, a, 'rgba(255,255,255,0.18)'); } }
+  else if (kind === 4) { /* briques rouges croisées */
+    g.fillStyle = '#8A5A48'; g.fillRect(0, 0, 256, 256); const L = 32, H = 16;
+    for (let j = -2; j < 10; j++) for (let i = -2; i < 10; i++) { const bx = i * 32, by = j * 32;
+      [[bx, by, L, H], [bx + 16, by + 16, H, L]].forEach(([x, y, w, h]) => { const col = hsl(8 + r() * 10, 45 + r() * 15, 40 + r() * 12); W(() => { g.fillStyle = col; rrect(g, x + 1.2, y + 1.2, w - 2.4, h - 2.4, 2); g.fill(); g.fillStyle = 'rgba(255,220,200,0.12)'; g.fillRect(x + 3, y + 3, w - 6, 3); }); }); } }
+  else if (kind === 5) { /* pavés de granit en éventail, comme à Paris */
+    g.fillStyle = '#5E5F63'; g.fillRect(0, 0, 256, 256);
+    const C2 = []; for (let j = -1; j <= 4; j++) for (let i = -1; i <= 4; i++) C2.push([i * 64 + (j % 2 ? 32 : 0), j * 64 + 32]); C2.sort((a, b) => a[1] - b[1]);
+    C2.forEach(([cx, cy]) => { for (let rad = 60; rad > 4; rad -= 9) { const n = Math.max(3, Math.round(Math.PI * rad / 9)); for (let k = 0; k <= n; k++) { const a = Math.PI * k / n, x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad * -1 + 0, l = 52 + r() * 20, col = hsl(220, 4 + r() * 6, l);
+      W(() => { g.save(); g.translate(x, y); g.rotate(a + Math.PI / 2); g.fillStyle = 'rgba(25,25,30,0.55)'; g.fillRect(-4.2, -3.6, 8.4, 8.2); g.fillStyle = col; rrect(g, -3.8, -3.8, 7.6, 7.2, 1.5); g.fill(); g.restore(); }); } } }); }
+  else if (kind === 6) { /* grandes dalles de pierre blonde, en joints décalés */
+    g.fillStyle = '#A99878'; g.fillRect(0, 0, 256, 256);
+    for (let j = 0; j < 4; j++) { const h = 64, off = (j % 2) * 48; for (let i = -1; i < 3; i++) { const w = 96, x = i * 96 + off, y = j * h, col = hsl(40 + r() * 8, 28 + r() * 14, 72 + r() * 10);
+      W(() => { g.fillStyle = col; rrect(g, x + 1.5, y + 1.5, w - 3, h - 3, 3); g.fill(); }); for (let k = 0; k < 40; k++) { const px = x + 4 + r() * (w - 8), py = y + 4 + r() * (h - 8); W(() => { g.fillStyle = 'rgba(120,95,60,' + (0.06 + r() * 0.08).toFixed(2) + ')'; g.fillRect(px, py, 2 + r() * 3, 1 + r() * 2); }); } } } }
+  else if (kind === 7) { /* dallage à cabochons : octogones de pierre claire, petits carrés d'ardoise, comme dans les châteaux */
+    g.fillStyle = '#3B3F48'; g.fillRect(0, 0, 256, 256); const P = 64, c = 18;
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { const x = i * P, y = j * P, col = hsl(42 + r() * 6, 30 + r() * 10, 84 + r() * 6);
+      g.fillStyle = col; g.beginPath(); g.moveTo(x + c, y + 1.5); g.lineTo(x + P - c, y + 1.5); g.lineTo(x + P - 1.5, y + c); g.lineTo(x + P - 1.5, y + P - c); g.lineTo(x + P - c, y + P - 1.5); g.lineTo(x + c, y + P - 1.5); g.lineTo(x + 1.5, y + P - c); g.lineTo(x + 1.5, y + c); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(x + c, y + 5, P - 2 * c, 4); }
+    for (let j = 0; j <= 4; j++) for (let i = 0; i <= 4; i++) { const x = i * P, y = j * P; g.save(); g.translate(x, y); g.rotate(Math.PI / 4); g.fillStyle = hsl(222, 12, 30 + r() * 8); g.fillRect(-9, -9, 18, 18); g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(-7, -7, 14, 3); g.restore(); } }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); return t; }
 function paved(geo, x, y, z, rx, ry) { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: paveTex(rx, ry) })); m.position.set(x, y, z); m.receiveShadow = true; m.userData.dyn = true; scene.add(m); return m; }
 { const xw = BX0 - 15, xb = RIVER.x0 - 0.9, xe = BX1 + 15; flat(xb - xw, 4.6, '#E3D6BC', (xw + xb) / 2, 0, 0.03);
   paved(new THREE.PlaneGeometry(xe - xb, 4.6).rotateX(-Math.PI / 2), (xb + xe) / 2, 0.06, 0, (xe - xb) / 2, 2.3);
@@ -3236,10 +3274,14 @@ const DCAT_NAMES = { nature: ['Arbres et plantes', '🌳'], jardins: ['Jardins',
 DCATS.forEach((c) => { DCAT_NAMES[c.id] = [c.n, c.ic]; });
 
 /* ---- roads: a 2 m grid painted by hand ---- */
-const ROAD_T = [{ n: 'Rue pavée', ic: '🧱', c: 6, col: null }, { n: 'Chemin de terre', ic: '🟫', c: 2, col: '#CDB58C' }, { n: 'Allée de gravier', ic: '⬜', c: 4, col: '#E6DCC6' }, { n: 'Calade de galets', ic: '🪨', c: 8, col: '#B4AD9E' }];
+// l'ordre compte : les parties enregistrent le numéro de chaque case ; les nouveaux revêtements vont à la fin. o : rang d'affichage, du plus simple au plus noble
+const ROAD_T = [{ n: 'Rue pavée', ic: '🧱', c: 6, o: 3, g: 'Village', d: 'pavés de pierre blonde, la rue de tous les jours' }, { n: 'Chemin de terre', ic: '🟫', c: 2, o: 0, g: 'Rustique', d: 'terre battue et cailloux, pour la campagne' },
+  { n: 'Allée de gravier', ic: '⬜', c: 4, o: 1, g: 'Rustique', d: 'gravier crème, pour les jardins et les parcs' }, { n: 'Calade de galets', ic: '🪨', c: 8, o: 4, g: 'Village', d: 'galets ronds posés de chant, à la provençale' },
+  { n: 'Allée de briques', ic: '🟥', c: 9, o: 5, g: 'Bourgeois', d: 'briques rouges croisées, chaleureuse et soignée', lvl: 6 }, { n: 'Pavés en éventail', ic: '🌀', c: 12, o: 6, g: 'Bourgeois', d: 'granit gris posé en arcs, comme les rues de Paris', lvl: 9 },
+  { n: 'Dalles de pierre blonde', ic: '🟨', c: 16, o: 7, g: 'Prestige', d: 'grandes dalles claires, pour une place ou une avenue', lvl: 12 }, { n: 'Dallage à cabochons', ic: '💠', c: 24, o: 8, g: 'Prestige', d: 'octogones de pierre et cabochons d’ardoise, l’allée d’honneur d’une mairie ou d’un château', lvl: 15 }];
 const RMAX = 3000;
 const roadMesh = ROAD_T.map((t, i) => { const geo = new THREE.PlaneGeometry(TILE, TILE).rotateX(-Math.PI / 2);
-  const m = new THREE.InstancedMesh(geo, i === 0 ? new THREE.MeshLambertMaterial({ map: paveTex(1, 1) }) : new THREE.MeshLambertMaterial({ color: t.col }), RMAX); m.count = 0; m.receiveShadow = true; m.userData.dyn = true; m.frustumCulled = false; scene.add(m); return m; });
+  const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ map: i === 0 ? paveTex(1, 1) : roadTex(i) }), RMAX); m.count = 0; m.receiveShadow = true; m.userData.dyn = true; m.frustumCulled = false; scene.add(m); return m; });
 const tileKey = (ix, iz) => ix + ',' + iz, tileOf = (x) => Math.floor(x / TILE);
 function roadAt(x, z) { const R = S.city && S.city.roads; return !!(R && R[tileKey(tileOf(x), tileOf(z))] !== undefined); }
 const onMainRoad = (x, z) => Math.abs(z) < 2.5 && x > RIVER.x1 + 0.5;
@@ -3413,7 +3455,7 @@ function renderBuild() {
     it.querySelector('.ic').textContent = ic; it.querySelector('b').textContent = n; rich(it.querySelector('span'), s); const bt = it.querySelector('button'); if (why) { bt.textContent = '🔒'; bt.disabled = true; rich(it.querySelector('span'), s + ' · ' + why); } else { rich(bt, price); bt.classList.toggle('gold', ok); bt.disabled = !ok; bt.addEventListener('click', fn); } el.appendChild(it); };
   { const vm = villageMul(); if (vm > 1.05 && BTAB !== 'rues' && BTAB !== 'batiments') { const d = document.createElement('div'); d.style.cssText = 'font-size:12px;font-weight:800;opacity:.75;margin:0 2px 8px;line-height:1.3'; d.textContent = '📈 Prix du village × ' + vm.toFixed(1).replace('.', ',') + '. Plus le village est grand, plus bâtir et décorer coûte cher.'; el.appendChild(d); } }
   if (BTAB === 'logements') { let teaser = false; Object.keys(HOUSE_T).sort((a, b) => HOUSE_T[a].lvl - HOUSE_T[b].lvl).forEach((k) => { const T = HOUSE_T[k]; if (T.glb && !GLB_OK[k]) return; if (lv < T.lvl) { if (teaser) return; teaser = true; } const c = housePrice(k); row(T.ic, T.n, T.cap + ' habitants · chantier ' + longT(dur(T.t * 60000 * timeMul())), c + ' ' + C, S.coins >= c, lv < T.lvl ? 'niveau ' + T.lvl : '', () => startPlace({ t: 'h', m: k })); }); }
-  else if (BTAB === 'rues') { ROAD_T.forEach((T, i) => row(T.ic, T.n, 'Touche ou glisse pour tracer · ' + T.c + ' ' + C + ' la case de 2 m', T.c + ' ' + C, S.coins >= T.c, '', () => startRoad(i)));
+  else if (BTAB === 'rues') { ROAD_T.map((T, i) => i).sort((a, b) => ROAD_T[a].o - ROAD_T[b].o).forEach((i) => { const T = ROAD_T[i]; row(T.ic, T.n, T.g + ' · ' + T.d + ' · ' + T.c + ' ' + C + ' la case de 2 m', T.c + ' ' + C, S.coins >= T.c, lv < (T.lvl || 1) ? 'niveau ' + T.lvl : '', () => startRoad(i)); });
     row('🧽', 'Gomme', 'Retire des cases de rue (remboursées à moitié)', 'Gommer', true, '', () => { $('build').hidden = true; openSheet('Êtes-vous sûr ?', 'La gomme efface les cases de rue que tu touches ou glisses. Chaque case est remboursée à moitié, on ne peut pas revenir en arrière.', [
       { t: '🧽 Oui, gommer des rues', s: 'Touche ou glisse sur une rue pour l’effacer.', btn: 'Gommer', ok: true, run: () => { closeSheet(); startRoad(-1); } },
       { t: 'Non, annuler', s: 'Ne rien effacer.', btn: 'Annuler', ok: true, run: closeSheet } ]); }); }
