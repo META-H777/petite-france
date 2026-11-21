@@ -1612,9 +1612,23 @@ function placeLabels() {
     const vis = show ? '' : 'hidden'; if (l.vis !== vis) { l.vis = vis; l.el.style.visibility = vis; } if (!show) continue;
     // far from where you look, a label shrinks to its icon: the village stays visible
     { const far = near > 13 && !/name|qn|land/.test(k) && !BUILD; if (far !== !!l.far) { l.far = far; const w = l.txt.split(' '), sh = w[0] + (w[1] && /^[+×x\d]/.test(w[1]) ? ' ' + w[1] : ''); rich(l.el, far && /[^\w\sÀ-ÿ]/.test(w[0]) ? sh : l.txt); } }
-    l.el.style.transform = 'translate(' + ((vtmp.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-vtmp.y * 0.5 + 0.5) * h).toFixed(1) + 'px) translate(-50%,-100%)';
+    l.sx = (vtmp.x * 0.5 + 0.5) * w; l.sy = (-vtmp.y * 0.5 + 0.5) * h;
+    l.el.style.transform = 'translate(' + l.sx.toFixed(1) + 'px,' + l.sy.toFixed(1) + 'px) translate(-50%,-100%)';
   }
+  unclutterLabels();
 }
+/* une étiquette importante (argent à ramasser, action prête, alerte, minuteur) n'est jamais cachée par un nom de quartier, un panneau de terrain ou une étiquette ordinaire :
+   celle de moindre rang passe derrière et s'efface tant qu'elles se chevauchent (Romain, 21/11/2026) */
+const LRANK = (k) => (/\bname\b/.test(k) ? 0 : /warn|coin|ready|timer/.test(k) ? 3 : /qn|land|zone/.test(k) ? 1 : 2); // 0 : les prénoms des villageois, qui bougent sans cesse, n'effacent rien et ne sont jamais effacés
+function unclutterLabels() {
+  const on = [];
+  for (const l of labels) { if (l.el.style.display === 'none' || l.vis === 'hidden') { if (l.dim) { l.dim = false; l.el.style.opacity = ''; l.el.style.pointerEvents = ''; } continue; }
+    const k = l.el.className, t = l.el.textContent; if (l.mt !== t || l.mk !== k) { l.mt = t; l.mk = k; l.bw = l.el.offsetWidth; l.bh = l.el.offsetHeight; l.rk = LRANK(k); const z = String(l.rk); if (l.el.style.zIndex !== z) l.el.style.zIndex = z; }
+    on.push(l); }
+  for (const a of on) { let hide = false;
+    if (a.rk > 0 && a.rk < 3) for (const b of on) { if (b === a || b.rk <= a.rk) continue;
+      if (Math.abs(a.sx - b.sx) < (a.bw + b.bw) / 2 + 2 && Math.abs((a.sy - a.bh / 2) - (b.sy - b.bh / 2)) < (a.bh + b.bh) / 2 + 2) { hide = true; break; } }
+    if (hide !== !!a.dim) { a.dim = hide; a.el.style.opacity = hide ? '0.12' : ''; a.el.style.pointerEvents = hide ? 'none' : ''; } } }
 function longT(ms) { const m = Math.round(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) : '') : m + ' min'; }
 function clock(ms) { const s = Math.max(0, Math.ceil(ms / 1000)); if (s >= 3600) return Math.floor(s / 3600) + ' h ' + String(Math.floor((s % 3600) / 60)).padStart(2, '0'); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function floatAt(obj, txt) {
