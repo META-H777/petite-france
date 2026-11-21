@@ -1622,14 +1622,17 @@ function placeLabels() {
    celle de moindre rang passe derrière et s'efface tant qu'elles se chevauchent (Romain, 21/11/2026) */
 const LRANK = (k) => (/\bname\b/.test(k) ? 0 : /warn|coin|ready|timer/.test(k) ? 3 : /qn|land|zone/.test(k) ? 1 : 2); // 0 : les prénoms des villageois, qui bougent sans cesse, n'effacent rien et ne sont jamais effacés
 function unclutterLabels() {
-  const on = [];
-  for (const l of labels) { if (l.el.style.display === 'none' || l.vis === 'hidden') { if (l.dim) { l.dim = false; l.el.style.opacity = ''; l.el.style.pointerEvents = ''; } continue; }
-    const k = l.el.className, t = l.el.textContent; if (l.mt !== t || l.mk !== k) { l.mt = t; l.mk = k; l.bw = l.el.offsetWidth; l.bh = l.el.offsetHeight; l.rk = LRANK(k); const z = String(l.rk); if (l.el.style.zIndex !== z) l.el.style.zIndex = z; }
-    on.push(l); }
-  for (const a of on) { let hide = false;
-    if (a.rk > 0 && a.rk < 3) for (const b of on) { if (b === a || b.rk <= a.rk) continue;
-      if (Math.abs(a.sx - b.sx) < (a.bw + b.bw) / 2 + 2 && Math.abs((a.sy - a.bh / 2) - (b.sy - b.bh / 2)) < (a.bh + b.bh) / 2 + 2) { hide = true; break; } }
-    if (hide !== !!a.dim) { a.dim = hide; a.el.style.opacity = hide ? '0.12' : ''; a.el.style.pointerEvents = hide ? 'none' : ''; } } }
+  // aucune mesure du navigateur ici (elle forçait une remise en page complète à chaque changement de texte et figeait les grands villages) : la taille est estimée d'après le texte
+  const ui = parseFloat(document.documentElement.style.getPropertyValue('--ui')) || 1, hi = [], mid = [], low = [];
+  for (const l of labels) { if (l.el.style.display === 'none' || l.vis === 'hidden' || l.sx === undefined) { if (l.dim) { l.dim = false; l.el.style.opacity = ''; l.el.style.pointerEvents = ''; } continue; }
+    const k = l.el.className; if (l.mk !== k || l.mt !== l.txt || l.mf !== !!l.far) { l.mk = k; l.mt = l.txt; l.mf = !!l.far; l.rk = LRANK(k); const big = /big|qn/.test(k), n = (l.far ? (l.txt || '').split(' ').slice(0, 2).join(' ') : (l.txt || '')).replace(/<[^>]*>/g, '').length;
+      l.bw = (n * (big ? 9 : 7.2) + 22) * (0.45 + 0.55 * ui); l.bh = (big ? 30 : 23) * (0.45 + 0.55 * ui); const z = String(l.rk); if (l.el.style.zIndex !== z) l.el.style.zIndex = z; }
+    (l.rk === 3 ? hi : l.rk === 2 ? mid : l.rk === 1 ? low : []).push(l); }
+  const over = (a, b) => Math.abs(a.sx - b.sx) < (a.bw + b.bw) / 2 + 2 && Math.abs((a.sy - a.bh / 2) - (b.sy - b.bh / 2)) < (a.bh + b.bh) / 2 + 2;
+  const set = (a, hide) => { if (hide !== !!a.dim) { a.dim = hide; a.el.style.opacity = hide ? '0.12' : ''; a.el.style.pointerEvents = hide ? 'none' : ''; } };
+  for (const a of mid) set(a, hi.some((b) => over(a, b)));
+  for (const a of low) set(a, hi.some((b) => over(a, b)) || mid.some((b) => !b.dim && over(a, b)));
+  for (const a of hi) set(a, false); }
 function longT(ms) { const m = Math.round(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) : '') : m + ' min'; }
 function clock(ms) { const s = Math.max(0, Math.ceil(ms / 1000)); if (s >= 3600) return Math.floor(s / 3600) + ' h ' + String(Math.floor((s % 3600) / 60)).padStart(2, '0'); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function floatAt(obj, txt) {
