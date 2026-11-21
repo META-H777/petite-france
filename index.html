@@ -1671,8 +1671,10 @@ function autoWork(k, c, u, n, dt) {
     let best = -1, bd = 1e9, sw = -1;
     for (let i = 0; i < S.gun; i++) { const p = S.garden[i], d = Math.hypot(c.position.x - GPOS[i][0], c.position.z - GPOS[i][1]); if (gRipe(p)) { if (d < bd) { bd = d; best = i; } } else if (p.s === 'empty' && n > gardenCd[i] && sw < 0) sw = i; }
     c.userData.carry.visible = u.bagV.length > 0;
-    if (u.bagV.length >= 3 || (u.bagV.length && best < 0)) { u.target.copy(SPOT.market); u.job = () => { stockStall(u.bagV); if (u.bagV.length) u.cool = 4; }; }
-    else if (best >= 0) { const i = best; u.target.set(GPOS[i][0], 0, GPOS[i][1]); u.job = () => { if (gRipe(S.garden[i])) gHarvest(i, u); }; }
+    // Paul replante chaque carré qu'il récolte ; si l'étal est plein, il garde sa cagette et continue de semer au lieu de piétiner devant le marché (Romain, 21/11/2026)
+    const room = S.stall.length < 24;
+    if (room && (u.bagV.length >= 3 || (u.bagV.length && best < 0))) { u.target.copy(SPOT.market); u.job = () => { stockStall(u.bagV); if (u.bagV.length) u.cool = 4; }; }
+    else if (best >= 0 && u.bagV.length < 3) { const i = best; u.target.set(GPOS[i][0], 0, GPOS[i][1]); u.job = () => { if (gRipe(S.garden[i])) { gHarvest(i, u); gSow(i); } }; }
     else if (sw >= 0) { const i = sw; u.target.set(GPOS[i][0], 0, GPOS[i][1]); u.job = () => { if (S.garden[i].s === 'empty') gSow(i); }; }
     else u.target.copy(HOME.paul);
   } else if (k === 'lucie') {
