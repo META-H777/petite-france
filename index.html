@@ -716,6 +716,39 @@ function roadTex(kind) {
       g.fillStyle = col; g.beginPath(); g.moveTo(x + c, y + 1.5); g.lineTo(x + P - c, y + 1.5); g.lineTo(x + P - 1.5, y + c); g.lineTo(x + P - 1.5, y + P - c); g.lineTo(x + P - c, y + P - 1.5); g.lineTo(x + c, y + P - 1.5); g.lineTo(x + 1.5, y + P - c); g.lineTo(x + 1.5, y + c); g.closePath(); g.fill();
       g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(x + c, y + 5, P - 2 * c, 4); }
     for (let j = 0; j <= 4; j++) for (let i = 0; i <= 4; i++) { const x = i * P, y = j * P; g.save(); g.translate(x, y); g.rotate(Math.PI / 4); g.fillStyle = hsl(222, 12, 30 + r() * 8); g.fillRect(-9, -9, 18, 18); g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(-7, -7, 14, 3); g.restore(); } }
+  else if (kind === 8) { /* sable ocre stabilisé, comme les allées des jardins du Sud */
+    g.fillStyle = '#D6B27A'; g.fillRect(0, 0, 256, 256);
+    for (let k = 0; k < 40; k++) ell(r() * 256, r() * 256, 12 + r() * 30, 8 + r() * 18, r() * 3, 'rgba(' + (r() < 0.5 ? '150,100,50' : '250,225,170') + ',' + (0.06 + r() * 0.08).toFixed(2) + ')');
+    for (let k = 0; k < 2200; k++) { const x = r() * 256, y = r() * 256, s2 = 0.8 + r() * 1.6; g.fillStyle = r() < 0.6 ? hsl(32 + r() * 10, 35 + r() * 25, 55 + r() * 25) : 'rgba(110,70,30,' + (0.2 + r() * 0.3).toFixed(2) + ')'; g.fillRect(x, y, s2, s2); } }
+  else if (kind === 9) { /* chemin enherbé : l'herbe a repris, la terre affleure par endroits */
+    g.fillStyle = '#7FA556'; g.fillRect(0, 0, 256, 256);
+    for (let k = 0; k < 26; k++) ell(r() * 256, r() * 256, 10 + r() * 22, 6 + r() * 14, r() * 3, 'rgba(160,125,80,' + (0.35 + r() * 0.3).toFixed(2) + ')');
+    for (let k = 0; k < 900; k++) { const x = r() * 256, y = r() * 256; W(() => { g.strokeStyle = hsl(85 + r() * 25, 35 + r() * 20, 30 + r() * 25); g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (r() - 0.5) * 4, y - 3 - r() * 4); g.stroke(); }); }
+    for (let k = 0; k < 30; k++) ell(r() * 256, r() * 256, 1.6, 1.6, 0, r() < 0.5 ? '#FFFDF8' : '#F2C14E'); }
+  else if (kind === 10) { /* pavés de grès rose des Vosges, en rangs */
+    g.fillStyle = '#8E6058'; g.fillRect(0, 0, 256, 256);
+    for (let j = 0; j < 8; j++) { const off = (j % 2) * 16; for (let i = -1; i < 9; i++) { const x = i * 32 + off, y = j * 32, col = hsl(8 + r() * 12, 30 + r() * 15, 58 + r() * 14);
+      W(() => { g.fillStyle = col; rrect(g, x + 2, y + 2, 28, 28, 5); g.fill(); g.fillStyle = 'rgba(255,235,225,0.15)'; rrect(g, x + 5, y + 4, 20, 7, 3); g.fill(); }); } } }
+  else if (kind === 11) { /* calade en arêtes de poisson : galets posés de chant, en épis, entre des bandes de pierre */
+    g.fillStyle = '#7A7266'; g.fillRect(0, 0, 256, 256);
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 22; i++) for (let k = 0; k < 4; k++) { const x = i * 12 + 6, y = j * 64 + 8 + k * 13, a = (k % 2 ? 0.6 : -0.6), l = 55 + r() * 25;
+      ell(x + 1, y + 1.5, 6.5, 3.2, a, 'rgba(40,36,30,0.45)'); ell(x, y, 6.5, 3.2, a, hsl(30 + r() * 20, 6 + r() * 12, l)); }
+    for (let j = 0; j < 4; j++) W(() => { g.fillStyle = '#CFC3A8'; g.fillRect(0, j * 64 - 3, 256, 6); g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(0, j * 64 + 2, 256, 1.5); }); }
+  else if (kind === 12) { /* opus incertum : grandes pierres plates de formes irrégulières */
+    g.fillStyle = '#8D8170'; g.fillRect(0, 0, 256, 256); const N = 5, Sz = 256 / N, P = [];
+    for (let j = 0; j < N; j++) { P.push([]); for (let i = 0; i < N; i++) P[j].push([i * Sz + (r() - 0.5) * Sz * 0.55, j * Sz + (r() - 0.5) * Sz * 0.55]); }
+    const pt = (i, j) => { const q = P[((j % N) + N) % N][((i % N) + N) % N]; return [q[0] + Math.floor(i / N) * 256, q[1] + Math.floor(j / N) * 256]; };
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = pt(i, j), b = pt(i + 1, j), c = pt(i + 1, j + 1), d = pt(i, j + 1), cx = (a[0] + b[0] + c[0] + d[0]) / 4, cy = (a[1] + b[1] + c[1] + d[1]) / 4, col = hsl(36 + r() * 14, 14 + r() * 16, 66 + r() * 16), sh = (q) => [cx + (q[0] - cx) * 0.9, cy + (q[1] - cy) * 0.9];
+      const Q = [a, b, c, d].map(sh); W(() => { g.fillStyle = col; g.beginPath(); g.moveTo(Q[0][0], Q[0][1]); for (let k = 1; k < 4; k++) g.lineTo(Q[k][0], Q[k][1]); g.closePath(); g.fill(); g.fillStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.moveTo(Q[0][0], Q[0][1]); g.lineTo(Q[1][0], Q[1][1]); g.lineTo(cx, cy); g.closePath(); g.fill(); }); } }
+  else if (kind === 13) { /* tomettes de Provence : hexagones de terre cuite */
+    g.fillStyle = '#E8D9BE'; g.fillRect(0, 0, 256, 256); const R = 256 / 12, H = Math.sqrt(3) * R, sy = 256 / (7 * H);
+    for (let i = -1; i <= 8; i++) for (let j = -1; j <= 7; j++) { const cx = i * 1.5 * R, cy = (j * H + (((i % 2) + 2) % 2) * H / 2) * sy, col = hsl(10 + r() * 10, 50 + r() * 15, 40 + r() * 12);
+      g.fillStyle = col; g.beginPath(); for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3, x = cx + Math.cos(a) * (R - 1.6), y = cy + Math.sin(a) * (R - 1.6) * sy; if (k) g.lineTo(x, y); else g.moveTo(x, y); } g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,220,190,0.12)'; g.beginPath(); g.arc(cx - 3, cy - 3, R * 0.45, 0, Math.PI * 2); g.fill(); } }
+  else if (kind === 14) { /* damier de marbre noir et blanc, comme une cour d'honneur */
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { const dark = (i + j) % 2; g.fillStyle = dark ? hsl(220, 8, 18 + r() * 6) : hsl(40, 20, 90 + r() * 5); g.fillRect(i * 64, j * 64, 64, 64);
+      g.strokeStyle = dark ? 'rgba(255,255,255,0.12)' : 'rgba(110,100,90,0.18)'; g.lineWidth = 1; g.beginPath(); let x = i * 64 + r() * 64, y = j * 64; g.moveTo(x, y); for (let k = 0; k < 5; k++) { x += (r() - 0.5) * 24; y += 13; g.lineTo(Math.max(i * 64, Math.min(i * 64 + 64, x)), y); } g.stroke(); }
+    g.strokeStyle = 'rgba(80,70,60,0.5)'; g.lineWidth = 1.5; for (let k = 0; k <= 4; k++) { g.beginPath(); g.moveTo(k * 64, 0); g.lineTo(k * 64, 256); g.stroke(); g.beginPath(); g.moveTo(0, k * 64); g.lineTo(256, k * 64); g.stroke(); } }
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); return t; }
 function paved(geo, x, y, z, rx, ry) { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: paveTex(rx, ry) })); m.position.set(x, y, z); m.receiveShadow = true; m.userData.dyn = true; scene.add(m); return m; }
 { const xw = BX0 - 15, xb = RIVER.x0 - 0.9, xe = BX1 + 15; flat(xb - xw, 4.6, '#E3D6BC', (xw + xb) / 2, 0, 0.03);
@@ -2159,7 +2192,8 @@ const CATEGORIES = [
   { id: 'fete', n: 'La fête au village', ic: '🎠' },
   { id: 'monuments', n: 'Monuments', ic: '🗼' },
   { id: 'vehicules', n: 'Véhicules', ic: '🚲' },
-  { id: 'clotures', n: 'Clôtures et sols', ic: '🧱' },
+  { id: 'clotures', n: 'Clôtures et murets', ic: '🧱' },
+  { id: 'sols', n: 'Sols et dallages', ic: '🟫' },
   { id: 'quais', n: 'Bords de l’eau', ic: '🦆' }
 ];
 const CATALOGUE = (() => {
@@ -2727,6 +2761,161 @@ const CATALOGUE = (() => {
     terrasse('#C9573F', '#F4E9D3')(sub(g, -1.0, 0, 0.75)); terrasse('#2F4B7C', '#F4E9D3')(sub(g, 1.0, 0, 0.75));
     poteau(g, -1.9, 1.8, 2.5); poteau(g, 1.9, 1.8, 2.5); ampoules(g, [-1.9, 2.42, 1.8], [1.9, 2.42, 1.8], 0.4, 12, () => LIT); ampoules(g, [-1.9, 2.42, 1.8], [-1.3, 2.0, -0.6], 0.2, 5, () => LIT); ampoules(g, [1.9, 2.42, 1.8], [1.3, 2.0, -0.6], 0.2, 5, () => LIT);
     ardoise(sub(g, 1.75, 0, 1.6, -0.5, 0.8)); }
+  /* ================= le catalogue étoffé (Romain, 21/11/2026) : plus de choix, toujours village et France ================= */
+  const RTM = {}; const rtex = (k) => RTM[k] || (RTM[k] = new THREE.MeshLambertMaterial({ map: roadTex(k) }));
+  const sol = (k) => (g) => { mesh(gk('sl2', () => new THREE.BoxGeometry(2, 0.05, 2)), rtex(k), 0, 0.025, 0, g, { noShadow: true }); };
+  const TERRA = '#C2603F', OCRE = '#D9A55B', BARK = '#5E4630', LEAF = '#4F7F3A', LEAF2 = '#6E9E43', LEAF3 = '#3E6B33';
+  // ---- arbres et plantes ----
+  function chene(g) { CY(0.24, 0.34, 1.7, BARK, 0, 0, 0, g, 7); RD([0, 1.4, 0], [0.6, 2.3, 0.2], 0.16, BARK, g); RD([0, 1.4, 0], [-0.55, 2.2, -0.2], 0.15, BARK, g);
+    [[0, 3.0, 0, 1.25, LEAF3], [0.85, 2.6, 0.3, 0.95, LEAF], [-0.8, 2.6, -0.3, 0.9, '#557F3B'], [0.1, 3.7, -0.2, 0.8, LEAF], [-0.3, 2.9, 0.75, 0.75, '#5E8A40']].forEach((q) => SP(q[3], q[4], q[0], q[1], q[2], g, 1)); }
+  function bouleau(g) { CY(0.08, 0.12, 2.8, '#EEEBE2', 0, 0, 0, g, 6); for (let k = 0; k < 6; k++) B(0.17, 0.04, 0.17, '#2B2535', 0, 0.3 + k * 0.42, 0, g).rotation.y = k;
+    [[0, 3.0, 0, 0.62], [0.35, 2.55, 0.1, 0.5], [-0.3, 2.5, -0.15, 0.48], [0.05, 3.5, 0, 0.42]].forEach((q, i) => SP(q[3], i % 2 ? '#A3C45E' : '#8FB552', q[0], q[1], q[2], g, 1)); }
+  function pinParasol(g) { RD([0, 0, 0], [0.25, 2.2, 0.05], 0.2, '#7A5A40', g); RD([0.25, 2.1, 0.05], [0.9, 2.8, 0.2], 0.12, '#7A5A40', g); RD([0.25, 2.1, 0.05], [-0.5, 2.7, -0.1], 0.12, '#7A5A40', g);
+    SP(1.25, LEAF3, 0.2, 3.05, 0.05, g, 1).scale.set(1, 0.42, 1); SP(0.8, '#355F2E', 0.75, 2.9, 0.2, g, 1).scale.set(1, 0.45, 1); SP(0.75, '#4B7A38', -0.45, 2.85, -0.1, g, 1).scale.set(1, 0.45, 1); }
+  function figuier(g) { [[0.5, 1.2, 0.2], [-0.45, 1.1, -0.2], [0.05, 1.4, -0.45]].forEach((q) => RD([0, 0, 0], q, 0.09, '#8F8577', g));
+    [[0.6, 1.5, 0.2, 0.62], [-0.55, 1.4, -0.2, 0.6], [0, 1.75, -0.45, 0.55], [0, 1.5, 0.45, 0.5]].forEach((q) => SP(q[3], '#5E8F3E', q[0], q[1], q[2], g, 1));
+    for (let k = 0; k < 9; k++) SP(0.06, '#6B3E5A', Math.cos(k) * 0.75, 1.15 + (k % 3) * 0.15, Math.sin(k) * 0.75, g, 0); }
+  function lilas(g) { [[0, 0.7, 0, 0.55], [0.45, 0.6, 0.2, 0.42], [-0.4, 0.6, -0.15, 0.42]].forEach((q) => SP(q[3], LEAF, q[0], q[1], q[2], g, 1));
+    for (let k = 0; k < 11; k++) { const a = k * 0.57, r = 0.25 + (k % 3) * 0.17; CO(0.1, 0.32, k % 3 ? '#B49ADB' : '#FFFDF8', Math.cos(a) * r, 0.85 + (k % 2) * 0.2, Math.sin(a) * r, g, 6); } }
+  function magnolia(g) { CY(0.12, 0.18, 1.5, '#7E7468', 0, 0, 0, g, 6); [[0.5, 2.1, 0.1], [-0.45, 2.0, -0.1], [0, 2.3, 0.4], [0, 2.2, -0.4]].forEach((q) => RD([0, 1.3, 0], q, 0.07, '#7E7468', g));
+    [[0, 2.4, 0, 0.85], [0.55, 2.15, 0.15, 0.6], [-0.5, 2.1, -0.15, 0.6]].forEach((q) => SP(q[3], '#5E8F3E', q[0], q[1], q[2], g, 1));
+    for (let k = 0; k < 16; k++) { const a = k * 0.81, r = 0.55 + (k % 3) * 0.2; SP(0.13, k % 2 ? '#F7E4EA' : '#E9A9BF', Math.cos(a) * r, 2.15 + (k % 4) * 0.22, Math.sin(a) * r, g, 0); } }
+  // ---- jardins ----
+  function geraniums(g) { [[-0.5, 0.1, 0.9], [0.1, -0.2, 1.1], [0.6, 0.25, 0.85]].forEach((q) => { LA([[0.16, 0], [0.22, 0.32], [0.24, 0.34], [0, 0.34]], TERRA, q[0], 0, q[1], g, 10);
+    SP(0.24 * q[2], LEAF, q[0], 0.45, q[1], g, 1); for (let k = 0; k < 5; k++) SP(0.08, k % 2 ? '#D9283B' : '#E8505A', q[0] + Math.cos(k * 1.3) * 0.15, 0.6 + (k % 2) * 0.06, q[1] + Math.sin(k * 1.3) * 0.15, g, 0); }); }
+  function jarre(g) { LA([[0.25, 0], [0.42, 0.25], [0.48, 0.55], [0.38, 0.85], [0.26, 0.95], [0.3, 1.0], [0.24, 1.02], [0, 1.0]], '#C98A5A', 0, 0, 0, g, 12); [-1, 1].forEach((s) => { const t = TO(0.1, 0.03, PI, '#B97A4A', s * 0.36, 0.82, 0, g, 6); t.rotation.z = s * PI / 2; });
+    for (let k = 0; k < 9; k++) { const a = k * 0.7; RD([0, 0.95, 0], [Math.cos(a) * 0.32, 1.45 + (k % 3) * 0.1, Math.sin(a) * 0.32], 0.025, '#6E8F4E', g); CO(0.04, 0.16, '#9B7AD6', Math.cos(a) * 0.32, 1.45 + (k % 3) * 0.1, Math.sin(a) * 0.32, g, 5); } }
+  function ruches(g) { [-0.55, 0.55].forEach((x, i) => { B(0.5, 0.25, 0.5, WOOD, x, 0, 0, g); B(0.56, 0.5, 0.48, i ? '#F4E9D3' : '#E8D6A8', x, 0.25, 0, g); B(0.56, 0.18, 0.48, i ? '#E8D6A8' : '#F4E9D3', x, 0.75, 0, g);
+    [-1, 1].forEach((s) => { const r = B(0.38, 0.04, 0.6, RED, x + s * 0.15, 0, 0, g); r.position.y = 1.02; r.rotation.z = -s * 0.55; }); B(0.18, 0.04, 0.03, '#2B2535', x, 0.3, 0.25, g); });
+    for (let k = 0; k < 8; k++) SP(0.035, '#F2C14E', Math.cos(k) * 0.9, 0.5 + (k % 4) * 0.2, Math.sin(k * 1.7) * 0.6, g, 0); }
+  function tonnelleVigne(g) { [[-1.7, -1.7], [1.7, -1.7], [-1.7, 1.7], [1.7, 1.7]].forEach((q) => poteau(g, q[0], q[1], 2.3));
+    for (let k = 0; k < 7; k++) { B(3.5, 0.05, 0.06, LWOOD, 0, 2.3, -1.7 + k * 0.57, g); }
+    for (let k = 0; k < 26; k++) { const x = -1.6 + (k % 7) * 0.53, z = -1.5 + Math.floor(k / 7) * 1.0; SP(0.32, k % 2 ? LEAF2 : LEAF, x, 2.45, z, g, 1).scale.y = 0.45; if (k % 3 === 0) { SP(0.07, '#5E2E5A', x, 2.15, z, g, 0); SP(0.06, '#6B3E66', x + 0.06, 2.05, z, g, 0); SP(0.05, '#5E2E5A', x, 1.96, z, g, 0); } }
+    CY(0.45, 0.45, 0.04, WHITE, 0, 0.72, 0, g, 12); CY(0.04, 0.05, 0.72, IRON, 0, 0, 0, g, 6); chaiseLuco(g, 0.75, 0.1, -1.6); chaiseLuco(g, -0.75, -0.1, 1.6); }
+  function aromatiques(g) { B(1.8, 0.4, 1.0, '#8A6A48', 0, 0, 0, g); B(1.7, 0.02, 0.9, '#5A3E26', 0, 0.4, 0, g);
+    ['#6E8F4E', '#8FA88A', '#5E8F3E', '#9DB06A', '#7A9E7E', '#6B8F3A'].forEach((c, i) => { for (let k = 0; k < 3; k++) SP(0.13, c, -0.7 + i * 0.28, 0.5, -0.28 + k * 0.28, g, 0); });
+    poteau(g, 0.85, 0.55, 0.7, LWOOD); lab(g, 'HERBES', 0.4, 0.14, '#F4E9D3', '#3F6B3A', 80, 0.85, 0.62, 0.58); }
+  // ---- mobilier ----
+  function borneKm(g) { RB(0.44, 0.62, 0.24, WHITE, 0, 0, 0, g); RB(0.46, 0.22, 0.26, '#C9302C', 0, 0.6, 0, g); SP(0.23, '#C9302C', 0, 0.82, 0, g, 1).scale.set(1, 0.4, 0.55);
+    lab(g, 'D 7', 0.34, 0.14, '#C9302C', '#FFFDF8', 80, 0, 0.71, 0.135); lab(g, '3 km', 0.34, 0.14, WHITE, '#2B2535', 80, 0, 0.36, 0.125); B(0.6, 0.06, 0.4, STONE2, 0, 0, 0, g); }
+  function panneauBois(g) { CY(0.05, 0.06, 2.3, WOOD, 0, 0, 0, g, 6); CO(0.08, 0.15, WOOD, 0, 2.3, 0, g, 4);
+    [['LA MAIRIE', 1.95, 0.4], ['L’ÉGLISE', 1.65, -0.6], ['LE LAVOIR', 1.35, 1.9]].forEach((q) => { const s = sub(g, 0, q[1], 0, q[2]); B(0.9, 0.2, 0.04, LWOOD, 0.48, 0, 0, s); CO(0.13, 0.12, LWOOD, 0.98, 0, 0, s, 3).rotation.z = -PI / 2;
+      lab(s, q[0], 0.8, 0.15, '#B98A4E', '#3A2A1C', 70, 0.46, 0.1, 0.025); lab(s, q[0], 0.8, 0.15, '#B98A4E', '#3A2A1C', 70, 0.46, 0.1, -0.025, PI); }); }
+  function arretCar(g) { [-1.6, 1.6].forEach((x) => [-0.5, 0.5].forEach((z) => CY(0.04, 0.04, 2.2, PGREEN, x, 0, z, g, 6)));
+    B(3.5, 0.08, 1.3, PGREEN, 0, 2.2, 0, g); B(3.3, 1.5, 0.03, PGREEN, 0, 0.6, -0.5, g); mesh(gk('arcv', () => new THREE.BoxGeometry(3.1, 1.2, 0.02)), GLASS, 0, 1.35, -0.47, g);
+    RB(2.4, 0.08, 0.38, LWOOD, 0, 0.45, -0.25, g); [-1, 1].forEach((s) => B(0.06, 0.45, 0.3, IRON, s * 1.0, 0, -0.25, g));
+    CY(0.03, 0.03, 2.6, IRON, 1.9, 0, 0.6, g, 6); CY(0.24, 0.24, 0.04, '#2F4B7C', 1.9, 2.4, 0.6, g, 16).rotation.x = PI / 2; lab(g, 'CAR', 0.3, 0.14, '#2F4B7C', '#FFFDF8', 90, 1.9, 2.38, 0.63); }
+  function bancArbre(g) { adopt(g, () => tree(0, 0, 0.95)); for (let k = 0; k < 8; k++) { const a = k * PI / 4, s = sub(g, Math.cos(a) * 0.95, 0, Math.sin(a) * 0.95, -a + PI / 2);
+    B(0.85, 0.06, 0.38, LWOOD, 0, 0.42, 0, s); B(0.06, 0.42, 0.3, IRON, 0, 0, 0, s); B(0.85, 0.32, 0.05, LWOOD, 0, 0.5, -0.2, s); } }
+  function jardiniere(g) { B(1.7, 0.5, 0.6, LWOOD, 0, 0, 0, g); for (let k = 0; k < 4; k++) B(0.04, 0.5, 0.62, WOOD, -0.82 + k * 0.55, 0, 0, g);
+    for (let k = 0; k < 10; k++) { SP(0.15, LEAF, -0.7 + k * 0.155, 0.6, (k % 2) * 0.15 - 0.07, g, 0); SP(0.07, ['#D9283B', '#FFFDF8', '#F2C14E', '#B49ADB'][k % 4], -0.7 + k * 0.155, 0.73, (k % 2) * 0.15 - 0.07, g, 0); } }
+  // ---- fontaines et statues ----
+  function pompe(g) { LA([[0.55, 0], [0.55, 0.35], [0.45, 0.35], [0.45, 0.1], [0, 0.1]], STONE2, 0, 0, -0.1, g, 10); CY(0.44, 0.44, 0.02, WATER, 0, 0.3, -0.1, g, 10);
+    CY(0.13, 0.15, 1.2, PGREEN, 0, 0, -0.55, g, 8); LA([[0.16, 0], [0.18, 0.08], [0.1, 0.2], [0, 0.24]], PGREEN, 0, 1.2, -0.55, g, 8); mesh(LG.knob, GOLD, 0, 1.46, -0.55, g);
+    RD([0, 0.9, -0.45], [0, 0.85, -0.12], 0.06, PGREEN, g); RD([0.12, 1.1, -0.55], [0.55, 1.45, -0.55], 0.04, IRON, g); SP(0.05, IRON, 0.57, 1.47, -0.55, g, 0); }
+  function abreuvoir(g) { B(3.4, 0.6, 0.9, STONE2, 0, 0, 0.2, g); B(3.2, 0.02, 0.7, WATER, 0, 0.55, 0.2, g); B(3.5, 0.08, 1.0, STONE3, 0, 0.6, 0.2, g).scale.set(1, 1, 1);
+    B(0.5, 1.4, 0.4, STONE, 0, 0, -0.45, g); LA([[0.12, 0], [0.08, 0.1], [0.18, 0.2], [0, 0.32]], STONE3, 0, 1.4, -0.45, g, 8); RD([0, 1.05, -0.25], [0, 1.0, 0.0], 0.05, BRONZE, g);
+    mesh(gk('abrj', () => new THREE.CylinderGeometry(0.02, 0.03, 0.45, 5)), SPRAY, 0, 0.78, 0.02, g); }
+  function mascaron(g) { B(1.6, 2.2, 0.35, STONE, 0, 0, -0.55, g); B(1.75, 0.15, 0.42, STONE3, 0, 2.2, -0.55, g); LA([[0.2, 0], [0.2, 0.1], [0.08, 0.3], [0, 0.35]], STONE3, 0, 2.35, -0.55, g, 8);
+    SP(0.22, BRONZE, 0, 1.4, -0.36, g, 1).scale.z = 0.5; SP(0.06, '#2B2535', -0.08, 1.46, -0.27, g, 0); SP(0.06, '#2B2535', 0.08, 1.46, -0.27, g, 0); RD([0, 1.3, -0.3], [0, 1.25, -0.1], 0.04, BRONZE, g);
+    mesh(gk('masj', () => new THREE.CylinderGeometry(0.02, 0.035, 0.8, 5)), SPRAY, 0, 0.85, -0.08, g); LA([[0.75, 0], [0.75, 0.5], [0.65, 0.5], [0.65, 0.12], [0, 0.12]], STONE2, 0, 0, -0.3, g, 12).scale.z = 0.6; CY(0.63, 0.63, 0.02, WATER, 0, 0.42, -0.3, g, 12).scale.z = 0.6; }
+  function fontaineColonne(g) { LA([[1.5, 0], [1.5, 0.55], [1.38, 0.6], [1.35, 0.15], [0, 0.15]], STONE2, 0, 0, 0, g, 16); CY(1.36, 1.36, 0.02, WATER, 0, 0.48, 0, g, 16);
+    CY(0.26, 0.3, 1.8, STONE, 0, 0, 0, g, 8); LA([[0.32, 0], [0.4, 0.15], [0.3, 0.3], [0.18, 0.35], [0.22, 0.6], [0, 0.65]], STONE3, 0, 1.8, 0, g, 8); mesh(LG.knob, GOLD, 0, 2.5, 0, g).scale.setScalar(1.6);
+    for (let k = 0; k < 4; k++) { const a = k * PI / 2, x = Math.cos(a), z = Math.sin(a); RD([x * 0.28, 1.35, z * 0.28], [x * 0.6, 1.3, z * 0.6], 0.05, BRONZE, g); const j = mesh(gk('fcj', () => new THREE.CylinderGeometry(0.02, 0.04, 0.82, 5)), SPRAY, x * 0.64, 0.9, z * 0.64, g); } }
+  // ---- monuments ----
+  function monumentMorts(g) { B(2.6, 0.2, 2.6, STONE3, 0, 0, 0, g); B(2.0, 0.25, 2.0, STONE2, 0, 0.2, 0, g); B(1.2, 1.4, 1.2, STONE, 0, 0.45, 0, g); B(1.35, 0.15, 1.35, STONE3, 0, 1.85, 0, g);
+    LA([[0.42, 0], [0.32, 2.4], [0.0, 2.75]], STONE, 0, 2.0, 0, g, 4).rotation.y = PI / 4; TO(0.22, 0.04, PI * 2, '#3F6B3A', 0, 2.9, 0.33, g, 12); SP(0.07, '#C9302C', 0, 2.68, 0.36, g, 0);
+    lab(g, 'À NOS MORTS', 1.0, 0.2, STONE, '#3A3A3A', 64, 0, 1.4, 0.61); [[-1.15, -1.15], [1.15, -1.15], [-1.15, 1.15], [1.15, 1.15]].forEach((q) => { CY(0.06, 0.07, 0.6, IRON, q[0], 0.2, q[1], g, 6); CO(0.07, 0.12, GOLD, q[0], 0.8, q[1], g, 6); });
+    [[-1.15, -1.15, 1.15, -1.15], [1.15, -1.15, 1.15, 1.15], [1.15, 1.15, -1.15, 1.15], [-1.15, 1.15, -1.15, -1.15]].forEach((q) => wire(g, [q[0], 0.7, q[1]], [q[2], 0.7, q[3]], 0.12, IRON));
+    for (let k = 0; k < 6; k++) SP(0.1, ['#D9283B', '#FFFDF8', '#2F4B7C'][k % 3], -0.4 + k * 0.16, 0.5, 0.75, g, 0); }
+  function calvaire(g) { B(1.4, 0.25, 1.4, '#9A968C', 0, 0, 0, g); B(1.0, 0.25, 1.0, '#A8A499', 0, 0.25, 0, g); B(0.5, 0.9, 0.5, '#B3AFA4', 0, 0.5, 0, g);
+    B(0.18, 2.1, 0.18, '#A8A499', 0, 1.4, 0, g); B(0.95, 0.18, 0.18, '#A8A499', 0, 2.75, 0, g); CY(0.07, 0.06, 0.55, '#8E8A80', 0, 2.2, 0.12, g, 6); SP(0.07, '#8E8A80', 0, 2.82, 0.14, g, 0); }
+  function pigeonnier(g) { CY(1.5, 1.6, 0.5, STONE2, 0, 0, 0, g, 14); CY(1.45, 1.45, 3.0, STONE, 0, 0.5, 0, g, 14); CY(1.55, 1.55, 0.15, STONE3, 0, 2.2, 0, g, 14); CY(1.55, 1.55, 0.12, STONE3, 0, 3.5, 0, g, 14);
+    for (let k = 0; k < 12; k++) { const a = k * PI / 6; B(0.14, 0.18, 0.08, '#2B2535', Math.cos(a) * 1.46, 2.75 + (k % 2) * 0.35, Math.sin(a) * 1.46, g).rotation.y = -a; }
+    B(0.7, 1.2, 0.1, WOOD, 0, 0.5, 1.44, g); LA([[1.75, 0], [1.2, 0.6], [0.5, 1.3], [0.2, 1.5], [0, 1.55]], TERRA, 0, 3.62, 0, g, 14); CY(0.24, 0.24, 0.5, STONE3, 0, 5.0, 0, g, 8); CO(0.32, 0.35, TERRA, 0, 5.5, 0, g, 8); mesh(LG.knob, GOLD, 0, 5.9, 0, g);
+    for (let k = 0; k < 5; k++) { const a = k * 1.3; SP(0.09, '#C9C9CF', Math.cos(a) * 1.6, 3.7 + (k % 2) * 0.3, Math.sin(a) * 1.6, g, 0); } }
+  function halle(g) { [[-2.6, -1.6], [0, -1.6], [2.6, -1.6], [-2.6, 1.6], [0, 1.6], [2.6, 1.6]].forEach((q) => { B(0.5, 0.35, 0.5, STONE2, q[0], 0, q[1], g); B(0.26, 2.3, 0.26, WOOD, q[0], 0.35, q[1], g); RD([q[0], 2.2, q[1]], [q[0] + (q[0] > 0 ? -0.5 : q[0] < 0 ? 0.5 : 0.4), 2.65, q[1]], 0.12, WOOD, g); });
+    B(5.6, 0.2, 0.22, WOOD, 0, 2.65, -1.6, g); B(5.6, 0.2, 0.22, WOOD, 0, 2.65, 1.6, g); B(0.22, 0.2, 3.4, WOOD, -2.6, 2.65, 0, g); B(0.22, 0.2, 3.4, WOOD, 2.6, 2.65, 0, g);
+    { const r = CO(2.75, 1.7, TERRA, 0, 2.75, 0, g, 4); r.rotation.y = PI / 4; r.scale.set(1.45, 1, 0.92); const r2 = CO(2.75, 1.7, '#A94F36', 0, 2.73, 0, g, 4); r2.rotation.y = PI / 4; r2.scale.set(1.47, 0.6, 0.94); } /* grand toit de tuiles à quatre pans */
+    CO(0.12, 0.3, '#8F4A35', 0, 4.4, 0, g, 4); for (let k = 0; k < 4; k++) { B(0.5, 0.35, 0.4, LWOOD, -1.5 + k, 0, 0.3, g); SP(0.14, ['#F08A3C', '#D9483B', '#A9C93F', '#F2C14E'][k], -1.5 + k, 0.45, 0.3, g, 0); } }
+  // ---- lumières ----
+  function candelabre3(g) { CY(0.16, 0.2, 0.5, IRON, 0, 0, 0, g, 8); CY(0.06, 0.08, 3.0, IRON, 0, 0.5, 0, g, 8);
+    [0, 2.1, 4.2].forEach((a) => { const x = Math.cos(a) * 0.5, z = Math.sin(a) * 0.5; RD([0, 3.0, 0], [x, 3.25, z], 0.04, IRON, g); lanterne(g, x, 3.25, z, true); }); lanterne(g, 0, 3.45, 0, true); }
+  function lampeTempete(g) { LA([[0.28, 0], [0.33, 0.35], [0.28, 0.7], [0, 0.7]], WOOD, 0, 0, 0, g, 10); [0.1, 0.6].forEach((y) => CY(0.3, 0.3, 0.04, IRON, 0, y, 0, g, 10)); lanterne(g, 0, 0.7, 0); }
+  function feuSaintJean(g) { for (let k = 0; k < 9; k++) { const a = k * 0.7; B(0.25, 0.18, 0.3, STONE2, Math.cos(a) * 0.75, 0, Math.sin(a) * 0.75, g).rotation.y = -a; }
+    for (let k = 0; k < 6; k++) { const a = k * PI / 3; RD([Math.cos(a) * 0.55, 0.05, Math.sin(a) * 0.55], [Math.cos(a) * 0.05, 1.1, Math.sin(a) * 0.05], 0.09, '#6B4A2E', g); }
+    const f1 = mesh(gk('fsj1', () => new THREE.ConeGeometry(0.38, 0.9, 6)), ORANGE_LIT, 0, 0.55, 0, g); f1.castShadow = false; const f2 = mesh(gk('fsj2', () => new THREE.ConeGeometry(0.2, 0.6, 5)), LIT, 0.08, 0.75, 0.05, g); f2.castShadow = false; lampGlow(g, 0, 0.7, 0); }
+  function photophores(g) { [[-0.4, 0.2, 0.32], [0.1, -0.25, 0.42], [0.5, 0.2, 0.26]].forEach((q) => { CY(0.11, 0.11, q[2], IRON, q[0], 0, q[1], g, 6).scale.set(1, 0.08, 1); mesh(gk('php' + q[2], () => new THREE.CylinderGeometry(0.09, 0.09, q[2], 8)), GLASS, q[0], q[2] / 2 + 0.02, q[1], g);
+    SP(0.04, LIT, q[0], 0.12, q[1], g, 0); CO(0.12, 0.1, IRON, q[0], q[2], q[1], g, 6); }); lampGlow(g, 0, 0.2, 0); }
+  // ---- terrasses et commerces ----
+  function nappeCarreaux(g) { CY(0.04, 0.05, 0.72, IRON, 0, 0, 0, g, 6); B(0.8, 0.03, 0.8, WHITE, 0, 0.72, 0, g); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if ((i + j) % 2) B(0.2, 0.01, 0.2, '#C9302C', -0.3 + i * 0.2, 0.75, -0.3 + j * 0.2, g);
+    [-1, 1].forEach((s) => B(0.8, 0.22, 0.01, WHITE, 0, 0.53, s * 0.405, g)); LA([[0.05, 0], [0.06, 0.12], [0.03, 0.2], [0.035, 0.24], [0, 0.24]], GLASS, 0.15, 0.76, 0.1, g, 8); RD([-0.25, 0.78, -0.05], [0.05, 0.8, -0.2], 0.05, '#D9A55B', g);
+    chaiseRotin(g, 0, 0.6, PI, '#C9573F', '#F4E9D3'); chaiseRotin(g, 0, -0.6, 0, '#C9573F', '#F4E9D3'); }
+  function tonneauDegust(g) { [[-0.5, 0.1], [0.55, -0.1]].forEach((q, i) => { LA([[0.34, 0], [0.4, 0.5], [0.34, 1.0], [0, 1.0]], WOOD, q[0], 0, q[1], g, 12); [0.15, 0.5, 0.85].forEach((y) => CY(0.4, 0.4, 0.04, IRON, q[0], y - 0.02, q[1], g, 12));
+    for (let k = 0; k < 2; k++) { LA([[0.04, 0], [0.04, 0.2], [0.015, 0.26], [0.015, 0.33], [0, 0.33]], k ? '#7A1F2B' : '#2E5A43', q[0] - 0.1 + k * 0.2, 1.0, q[1], g, 6); } LA([[0.025, 0], [0.01, 0.05], [0.01, 0.1], [0.04, 0.14], [0.04, 0.2], [0, 0.2]], GLASS, q[0] + 0.12, 1.0, q[1] + 0.15, g, 6); }); }
+  function etalV(g, cAwn, goods) { [-0.85, 0.85].forEach((x) => [-0.35, 0.35].forEach((z) => CY(0.03, 0.03, 2.0, LWOOD, x, 0, z, g, 5))); B(1.9, 0.08, 0.8, LWOOD, 0, 0.8, 0, g);
+    for (let k = 0; k < 6; k++) { const r = B(0.33, 0.04, 1.05, k % 2 ? WHITE : cAwn, -0.83 + k * 0.33, 0, 0.1, g); r.position.y = 2.05; r.rotation.x = -0.3; } goods(g); }
+  function etalPoisson(g) { etalV(g, '#2F4B7C', (g) => { B(1.7, 0.08, 0.65, '#EAF2F4', 0, 0.88, 0, g); for (let k = 0; k < 9; k++) { const f = SP(0.12, k % 3 ? '#9AA7B0' : '#C9573F', -0.65 + (k % 5) * 0.32, 1.0, -0.15 + Math.floor(k / 5) * 0.3, g, 1); f.scale.set(1.8, 0.35, 0.6); }
+    for (let k = 0; k < 4; k++) SP(0.07, '#F2C14E', -0.7 + k * 0.45, 1.0, 0.27, g, 0); lab(g, 'MARÉE DU JOUR', 0.9, 0.18, '#2F4B7C', '#FFFDF8', 64, 0, 1.9, 0.5); }); }
+  function etalEpices(g) { etalV(g, '#E3A73C', (g) => { ['#D9A55B', '#C9302C', '#6E7F3A', '#3A3A2E', '#E8B94A', '#9B7AD6'].forEach((c, i) => { const x = -0.65 + (i % 3) * 0.65, z = -0.15 + Math.floor(i / 3) * 0.3; CY(0.2, 0.17, 0.18, '#B98A4E', x, 0.88, z, g, 10); CO(0.18, 0.14, c, x, 1.06, z, g, 10); });
+    lab(g, 'OLIVES & ÉPICES', 0.95, 0.18, '#E3A73C', '#5A3B26', 64, 0, 1.9, 0.5); }); }
+  function huitres(g) { etalV(g, '#3F6B4E', (g) => { for (let k = 0; k < 3; k++) { B(0.5, 0.14, 0.5, LWOOD, -0.6 + k * 0.6, 0.88, 0, g); for (let j = 0; j < 6; j++) SP(0.07, '#B8B2A6', -0.75 + k * 0.6 + (j % 3) * 0.14, 1.04, -0.1 + Math.floor(j / 3) * 0.2, g, 0).scale.y = 0.4; }
+    SP(0.06, '#F2D14E', 0.75, 1.0, 0.25, g, 0); lab(g, 'HUÎTRES', 0.7, 0.18, '#3F6B4E', '#FFFDF8', 72, 0, 1.9, 0.5); }); }
+  // ---- la fête ----
+  function matCocagne(g) { CY(0.09, 0.12, 6.0, '#C8A06A', 0, 0, 0, g, 8); TO(0.6, 0.04, PI * 2, LWOOD, 0, 5.8, 0, g, 16).rotation.x = PI / 2;
+    for (let k = 0; k < 8; k++) { const a = k * PI / 4, x = Math.cos(a) * 0.6, z = Math.sin(a) * 0.6; RD([x, 5.8, z], [x, 5.4, z], 0.01, '#3A3A3A', g); if (k % 2) SP(0.12, '#8F4A35', x, 5.3, z, g, 0).scale.y = 1.6; else LA([[0.05, 0], [0.05, 0.2], [0.02, 0.27], [0, 0.3]], '#2E5A43', x, 5.1, z, g, 6); }
+    for (let k = 0; k < 3; k++) { const r = B(0.06, 1.2, 0.01, TRI[k], Math.cos(k * 2.1) * 0.15, 4.8, Math.sin(k * 2.1) * 0.15, g); r.rotation.z = 0.2; } mesh(LG.knob, GOLD, 0, 6.05, 0, g).scale.setScalar(1.5); }
+  function chamboule(g) { B(1.9, 0.9, 0.7, '#C9573F', 0, 0, 0.2, g); B(2.0, 0.06, 0.8, WHITE, 0, 0.9, 0.2, g); [-0.95, 0.95].forEach((x) => CY(0.04, 0.04, 2.2, WHITE, x, 0, -0.4, g, 5)); B(2.0, 0.3, 0.06, '#2F4B7C', 0, 1.9, -0.4, g);
+    lab(g, 'CHAMBOULE-TOUT', 1.2, 0.2, '#2F4B7C', '#F3CF7A', 64, 0, 2.05, -0.36); B(1.8, 0.05, 0.4, LWOOD, 0, 1.0, -0.3, g); const P2 = [[0, 0], [1, 0], [2, 0], [0.5, 1], [1.5, 1], [1, 2]];
+    P2.forEach((q) => CY(0.07, 0.07, 0.16, ['#E3A73C', '#C9573F', '#7FB5C9'][q[1]], -0.15 + q[0] * 0.15, 1.05 + q[1] * 0.16, -0.3, g, 8)); for (let k = 0; k < 3; k++) SP(0.07, '#E8DCC0', -0.6 + k * 0.15, 0.97, 0.4, g, 0); }
+  function buvette(g) { B(2.0, 1.0, 0.7, LWOOD, 0, 0, 0.3, g); for (let k = 0; k < 6; k++) B(0.04, 1.0, 0.72, WOOD, -0.95 + k * 0.38, 0, 0.3, g); B(2.1, 0.06, 0.8, WOOD, 0, 1.0, 0.3, g);
+    [-0.95, 0.95].forEach((x) => CY(0.05, 0.05, 2.4, WOOD, x, 0, -0.1, g, 5)); B(2.2, 0.5, 0.06, '#C9573F', 0, 2.0, -0.08, g); lab(g, 'BUVETTE', 1.2, 0.3, '#C9573F', '#FFFDF8', 80, 0, 2.25, -0.04);
+    fanions(g, [-0.95, 2.4, -0.1], [0.95, 2.4, -0.1], 0.15); for (let k = 0; k < 4; k++) LA([[0.035, 0], [0.04, 0.18], [0, 0.18]], k % 2 ? '#F2C14E' : GLASS, -0.6 + k * 0.4, 1.06, 0.45, g, 6);
+    LA([[0.3, 0], [0.34, 0.4], [0.3, 0.8], [0, 0.8]], WOOD, 1.25, 0, 0.5, g, 10); }
+  function bottesPaille(g) { [[-0.5, 0, 0], [0.5, 0, 0], [0, 0.42, 0]].forEach((q) => { B(0.9, 0.42, 0.55, '#E3C46E', q[0], q[1], q[2], g); B(0.92, 0.04, 0.57, '#C9A54E', q[0], q[1] + 0.12, q[2], g); B(0.92, 0.04, 0.57, '#C9A54E', q[0], q[1] + 0.28, q[2], g); });
+    for (let k = 0; k < 5; k++) { const r = B(0.05, 0.3, 0.02, '#D9B85E', -0.8 + k * 0.4, 0, 0.3, g); r.rotation.z = (k - 2) * 0.3; } }
+  // ---- véhicules ----
+  function tracteur(g) { wheelX(g, 0.6, 0.3, '#2B2B2B', -0.55, 0.6, -0.5); wheelX(g, 0.6, 0.3, '#2B2B2B', 0.55, 0.6, -0.5); wheelX(g, 0.36, 0.22, '#C9302C', -0.55, 0.6, -0.5).scale.set(1, 1, 1);
+    [-0.55, 0.55].forEach((x) => { wheelX(g, 0.33, 0.18, '#2B2B2B', x * 0.75, 0.33, 0.95); wheelX(g, 0.18, 0.2, '#C9302C', x * 0.75, 0.33, 0.95); wheelX(g, 0.34, 0.32, '#C9302C', x, 0.6, -0.5); });
+    RB(0.6, 0.55, 1.5, '#C9302C', 0, 0.55, 0.35, g); B(0.5, 0.35, 0.06, '#9A9A9A', 0, 0.65, 1.1, g); CY(0.04, 0.05, 0.7, '#3A3A3A', 0.15, 1.1, 0.7, g, 6);
+    B(0.5, 0.06, 0.4, '#3A3A3A', 0, 1.1, -0.5, g); B(0.5, 0.45, 0.06, '#3A3A3A', 0, 1.15, -0.72, g); CY(0.15, 0.15, 0.04, '#2B2B2B', 0, 1.35, -0.1, g, 10).rotation.x = -0.9; }
+  function fourgonPoste(g) { RB(1.4, 1.3, 2.6, '#F2C14E', 0, 0.35, -0.15, g); RB(1.3, 0.6, 0.7, '#F2C14E', 0, 0.35, 1.3, g); mesh(gk('fpw', () => new THREE.BoxGeometry(1.2, 0.5, 0.04)), GLASS, 0, 1.25, 1.12, g).rotation.x = -0.35;
+    [[-0.6, 0.85], [0.6, 0.85], [-0.6, -0.95], [0.6, -0.95]].forEach((q) => wheelX(g, 0.3, 0.2, '#2B2B2B', q[0], 0.3, q[1])); B(0.04, 0.4, 0.9, '#2F4B7C', 0.71, 0.9, -0.5, g); B(0.04, 0.4, 0.9, '#2F4B7C', -0.71, 0.9, -0.5, g);
+    lab(g, 'POSTE', 0.8, 0.25, '#F2C14E', '#2F4B7C', 80, 0.73, 1.0, -0.5, PI / 2); lab(g, 'POSTE', 0.8, 0.25, '#F2C14E', '#2F4B7C', 80, -0.73, 1.0, -0.5, -PI / 2); SP(0.08, '#FFF4D6', -0.45, 0.6, 1.66, g, 0); SP(0.08, '#FFF4D6', 0.45, 0.6, 1.66, g, 0); }
+  function caleche(g) { const H = sub(g, 0, 0, 1.3); RB(0.45, 0.55, 1.2, '#6B4A2E', 0, 0.75, 0, H); [[-0.15, 0.4], [0.15, 0.4], [-0.15, -0.4], [0.15, -0.4]].forEach((q) => CY(0.05, 0.05, 0.78, '#6B4A2E', q[0], 0, q[1], H, 5));
+    RD([0, 1.15, 0.5], [0, 1.6, 0.75], 0.2, '#6B4A2E', H); RB(0.22, 0.25, 0.5, '#6B4A2E', 0, 1.5, 0.9, H); B(0.05, 0.35, 0.5, '#2B2535', 0, 1.25, 0.35, H); RD([0, 1.2, -0.6], [0, 0.8, -0.8], 0.06, '#2B2535', H);
+    wheelX(g, 0.5, 0.06, '#7A1F2B', -0.65, 0.5, -0.9, 14); wheelX(g, 0.5, 0.06, '#7A1F2B', 0.65, 0.5, -0.9, 14); wheelX(g, 0.35, 0.06, '#7A1F2B', -0.6, 0.35, 0.3, 12); wheelX(g, 0.35, 0.06, '#7A1F2B', 0.6, 0.35, 0.3, 12);
+    RB(1.1, 0.5, 1.2, '#2B2535', 0, 0.55, -0.45, g); RB(1.0, 0.1, 0.5, '#7A1F2B', 0, 1.05, -0.65, g); B(1.1, 0.45, 0.06, '#7A1F2B', 0, 1.05, -0.95, g); RD([-0.35, 0.7, 0.1], [-0.15, 0.95, 0.9], 0.04, WOOD, g); RD([0.35, 0.7, 0.1], [0.15, 0.95, 0.9], 0.04, WOOD, g);
+    SP(0.07, GOLD, -0.6, 1.2, 0.2, g, 0); SP(0.07, GOLD, 0.6, 1.2, 0.2, g, 0); }
+  // ---- clôtures et murets ----
+  function ganivelle(g) { [0.25, 0.75].forEach((y) => B(1.98, 0.02, 0.02, '#6B6B6B', 0, y, 0, g)); for (let k = 0; k < 15; k++) { const x = -0.93 + k * 0.133; B(0.05, 1.0 + (k % 3) * 0.04, 0.025, k % 2 ? '#9A7A55' : '#8A6A48', x, 0, 0, g); } }
+  function piquets(g) { [-0.9, 0.9].forEach((x) => CY(0.06, 0.07, 1.0, '#7A6248', x, 0, 0, g, 6)); [0.4, 0.8].forEach((y, i) => { const r = RD([-0.95, y, 0], [0.95, y + (i ? 0.03 : -0.02), 0], 0.07, '#8A6E52', g); }); }
+  function pierresSeches(g) { for (let j = 0; j < 4; j++) for (let k = 0; k < 6; k++) { const w = 0.28 + ((j * 7 + k * 3) % 4) * 0.04, x = -0.85 + k * 0.34 + (j % 2) * 0.12; if (x > 0.9) continue; B(w, 0.17, 0.42, ['#B8AE98', '#A89E88', '#C8BEA8', '#9E9480'][(j + k) % 4], x, j * 0.17, 0, g).rotation.y = ((j + k) % 3 - 1) * 0.08; }
+    for (let k = 0; k < 6; k++) B(0.26, 0.2, 0.18, '#A89E88', -0.85 + k * 0.33, 0.68, 0, g).rotation.z = ((k % 2) - 0.5) * 0.6; }
+  function muretTuiles(g) { B(1.98, 0.85, 0.36, '#EADBC0', 0, 0, 0, g); B(2.02, 0.06, 0.44, STONE3, 0, 0.85, 0, g); for (let k = 0; k < 8; k++) { const t = CY(0.11, 0.11, 0.48, k % 2 ? '#A94F36' : TERRA, -0.88 + k * 0.25, 0, 0, g, 8); t.rotation.x = PI / 2; t.position.y = 0.95; t.scale.set(1, 1, 0.6); } }
+  function haieLaurier(g) { RB(1.98, 1.25, 0.8, '#3F6B3A', 0, 0, 0, g); for (let k = 0; k < 12; k++) SP(0.12, k % 3 ? '#F0A6B8' : '#E05A8C', -0.85 + (k % 6) * 0.34, 0.8 + Math.floor(k / 6) * 0.35, 0.36 - (k % 2) * 0.08, g, 0); for (let k = 0; k < 4; k++) SP(0.12, '#F0A6B8', -0.6 + k * 0.4, 1.27, 0, g, 0); }
+  function charmille(g) { RB(1.98, 1.7, 0.6, '#6E9E43', 0, 0, 0, g); RB(2.0, 0.1, 0.62, '#7FAE4E', 0, 1.62, 0, g); }
+  // ---- bords de l'eau ----
+  function bittes(g) { [-0.5, 0.5].forEach((x) => { LA([[0.16, 0], [0.13, 0.4], [0.2, 0.45], [0.2, 0.52], [0, 0.55]], IRON, x, 0, 0, g, 10); }); const r = TO(0.18, 0.04, PI * 2, '#C9A56E', -0.5, 0.25, 0, g, 12); r.rotation.x = PI / 2; TO(0.13, 0.04, PI * 2, '#C9A56E', -0.5, 0.33, 0, g, 12).rotation.x = PI / 2;
+    RD([-0.35, 0.3, 0], [0.4, 0.35, 0.05], 0.03, '#C9A56E', g); }
+  function filets(g) { [-0.9, 0.9].forEach((x) => CY(0.04, 0.05, 1.9, LWOOD, x, 0, 0, g, 5)); B(1.9, 0.05, 0.05, LWOOD, 0, 1.85, 0, g); const n = mesh(gk('filet', () => new THREE.PlaneGeometry(1.7, 1.4, 1, 1)), new THREE.MeshLambertMaterial({ color: '#5A4A3A', transparent: true, opacity: 0.55, side: THREE.DoubleSide }), 0, 1.1, 0.02, g); n.castShadow = false;
+    for (let k = 0; k < 7; k++) SP(0.06, '#F08A3C', -0.75 + k * 0.25, 1.82, 0.05, g, 0); for (let k = 0; k < 3; k++) B(0.4, 0.25, 0.3, '#3F6B8C', -0.5 + k * 0.5, 0, 0.5, g); }
+  function barque(g) { [-0.7, 0.7].forEach((z) => { RD([-0.5, 0, z], [0, 0.45, z], 0.06, WOOD, g); RD([0.5, 0, z], [0, 0.45, z], 0.06, WOOD, g); });
+    const h = SP(0.5, '#2F6B8C', 0, 0.5, 0, g, 1); h.scale.set(1.1, 0.8, 3.0); const h2 = SP(0.5, WHITE, 0, 0.47, 0, g, 1); h2.scale.set(1.13, 0.5, 3.04); B(0.07, 0.08, 2.8, '#5A3B26', 0, 0.86, 0, g);
+    RD([0.7, 0, 0.9], [0.9, 0.05, -0.6], 0.05, LWOOD, g); B(0.18, 0.02, 0.4, LWOOD, 0.92, 0.04, -0.7, g); }
+  function heron(g) { [-0.05, 0.05].forEach((x) => RD([x, 0, 0], [x * 0.5, 0.55, -0.05], 0.025, '#B9A06A', g)); const b = SP(0.17, '#9AA4AC', 0, 0.68, -0.05, g, 1); b.scale.set(0.8, 0.85, 1.5);
+    RD([0, 0.75, 0.15], [0, 1.05, 0.22], 0.05, '#C9CED2', g); SP(0.07, WHITE, 0, 1.08, 0.24, g, 0); CO(0.025, 0.2, '#E3A73C', 0, 1.06, 0.36, g, 4).rotation.x = PI / 2; B(0.12, 0.02, 0.03, '#2B2535', 0, 1.12, 0.22, g); }
+  // ---- sols et dallages ----
+  function pelouse(g) { FL(2, 2, '#7FAE4E', 0, 0, 0.005, g); for (let k = 0; k < 14; k++) { const x = ((k * 0.618) % 1) * 1.8 - 0.9, z = ((k * 0.377 + 0.2) % 1) * 1.8 - 0.9; CO(0.04, 0.14, k % 2 ? '#6E9E43' : '#5E8F3E', x, 0.02, z, g, 3); } }
+  function prairie(g) { FL(2, 2, '#86B454', 0, 0, 0.005, g); for (let k = 0; k < 22; k++) { const x = ((k * 0.618) % 1) * 1.8 - 0.9, z = ((k * 0.377 + 0.1) % 1) * 1.8 - 0.9; RD([x, 0, z], [x, 0.2 + (k % 3) * 0.05, z], 0.012, '#5E8F3E', g); SP(0.04, ['#FFFDF8', '#F2C14E', '#D9283B', '#9B7AD6'][k % 4], x, 0.22 + (k % 3) * 0.05, z, g, 0); } }
+  function marelle(g) { paves(g); const C2 = [[0, -0.75], [0, -0.35], [-0.2, 0.05], [0.2, 0.05], [0, 0.45], [0, 0.82]];
+    C2.forEach((q, i) => { const m = B(0.38, 0.005, 0.36, WHITE, q[0], 0.055, q[1], g); m.castShadow = false; const n = B(0.32, 0.007, 0.3, '#B5A88E', q[0], 0.056, q[1], g); n.castShadow = false; lab(g, String(i + 1), 0.16, 0.16, '#B5A88E', '#FFFDF8', 90, q[0], 0.07, q[1]).rotation.x = -PI / 2; });
+    SP(0.04, '#C9573F', 0.45, 0.07, -0.6, g, 0); }
+  function rosaceMarbre(g) { mesh(gk('rsm', () => new THREE.BoxGeometry(4, 0.05, 4)), rtex(6), 0, 0.025, 0, g, { noShadow: true });
+    [[1.5, '#EFE9DC'], [1.35, '#2B2E36'], [1.25, '#EFE9DC']].forEach((q, i) => { const m = CY(q[0], q[0], 0.02, q[1], 0, 0.05 + i * 0.004, 0, g, 24); m.castShadow = false; });
+    for (let k = 0; k < 8; k++) { const a = k * PI / 4, L = k % 2 ? 0.75 : 1.15; const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(0.16, 0.16); sh.lineTo(0, L); sh.lineTo(-0.16, 0.16); sh.lineTo(0, 0);
+      const m = mesh(gk('rsp' + L, () => new THREE.ShapeGeometry(sh).rotateX(-PI / 2)), k % 2 ? '#2B2E36' : GOLD, 0, 0.065, 0, g); m.rotation.y = a; m.castShadow = false; }
+    CY(0.16, 0.16, 0.03, GOLD, 0, 0.06, 0, g, 12).castShadow = false; }
   const it = (id, cat, n, ic, c, b, fp, lvl, build) => ({ id, cat, n, ic, c, b, fp, lvl, build });
   return [
     // nature
@@ -2849,8 +3038,8 @@ const CATALOGUE = (() => {
     it('2cv_rouge', 'vehicules', '2CV rouge', '🚗', 450, 11, [1, 2], 11, (g) => deuche(g, '#C9573F')),
     it('2cv_charleston', 'vehicules', '2CV Charleston', '🚗', 800, 20, [1, 2], 13, (g) => deuche(g, '#7A1F2B', '#26262B')),
     // clôtures et sols
-    it('paves', 'clotures', 'Pavés parisiens', '🧱', 30, 1, [1, 1], 1, paves),
-    it('gravier', 'clotures', 'Allée de gravier', '⬜', 30, 1, [1, 1], 1, gravier),
+    it('paves', 'sols', 'Pavés parisiens', '🧱', 30, 1, [1, 1], 1, paves),
+    it('gravier', 'sols', 'Allée de gravier', '⬜', 30, 1, [1, 1], 1, gravier),
     it('haie_buis', 'clotures', 'Haie de buis', '🌿', 35, 1, [1, 1], 1, haieBuis),
     it('barriere', 'clotures', 'Barrière blanche', '🏡', 35, 1, [1, 1], 1, barriere),
     it('muret', 'clotures', 'Muret de pierre', '🪨', 45, 1, [1, 1], 2, muret),
@@ -2859,12 +3048,82 @@ const CATALOGUE = (() => {
     it('treillage', 'clotures', 'Treillage vert et rosier', '🌹', 70, 2, [1, 1], 4, treillage),
     it('grille', 'clotures', 'Grille en fer forgé', '⚜️', 90, 2, [1, 1], 5, (g) => grille(g)),
     it('pilier', 'clotures', 'Pilier au pot à feu', '🔥', 160, 4, [1, 1], 7, pilier),
-    it('place_pavee', 'clotures', 'Place pavée à rosace', '🔶', 200, 5, [2, 2], 6, place),
+    it('place_pavee', 'sols', 'Place pavée à rosace', '🔶', 200, 5, [2, 2], 6, place),
     it('portail', 'clotures', 'Portail en fer forgé', '🚪', 450, 11, [2, 1], 9, portail),
     it('jardinets', 'quais', 'Jardinets du quai', '🥬', 120, 4, [2, 1], 3, jardinet),
     it('pecheur', 'quais', 'Pêcheur à la ligne', '🎣', 90, 3, [1, 1], 4, pecheur),
     it('lavoir', 'quais', 'Lavoir couvert', '🧺', 650, 16, [2, 2], 7, lavoir),
-    it('guinguette_quai', 'quais', 'Guinguette du quai (restaurant, rapporte des écus)', '🍽️', 900, 12, [2, 2], 8, guinguetteQuai)
+    it('guinguette_quai', 'quais', 'Guinguette du quai (restaurant, rapporte des écus)', '🍽️', 900, 12, [2, 2], 8, guinguetteQuai),
+    // ---- le catalogue étoffé du 21/11/2026 ----
+    it('chene', 'nature', 'Grand chêne', '🌳', 240, 6, [2, 2], 6, chene),
+    it('bouleau', 'nature', 'Bouleau', '🌳', 80, 2, [1, 1], 3, bouleau),
+    it('pin_parasol', 'nature', 'Pin parasol', '🌲', 200, 5, [2, 2], 7, pinParasol),
+    it('figuier', 'nature', 'Figuier', '🌿', 130, 3, [1, 1], 5, figuier),
+    it('lilas', 'nature', 'Buisson de lilas', '💜', 70, 2, [1, 1], 2, lilas),
+    it('magnolia', 'nature', 'Magnolia en fleurs', '🌸', 260, 7, [1, 1], 8, magnolia),
+    it('geraniums', 'jardins', 'Pots de géraniums', '🌺', 45, 1, [1, 1], 1, geraniums),
+    it('pivoines', 'jardins', 'Massif de pivoines', '🌸', 70, 2, [1, 1], 2, roses('#E05A8C', '#F4B3CB')),
+    it('dahlias', 'jardins', 'Massif de dahlias', '🌼', 75, 2, [1, 1], 3, roses('#E8732E', '#F2C14E')),
+    it('aromatiques', 'jardins', 'Carré d\'herbes aromatiques', '🌿', 70, 2, [1, 1], 2, aromatiques),
+    it('jarre', 'jardins', 'Jarre provençale à la lavande', '🏺', 120, 3, [1, 1], 4, jarre),
+    it('ruches', 'jardins', 'Ruches du rucher', '🐝', 160, 3, [1, 1], 5, ruches),
+    it('tonnelle_vigne', 'jardins', 'Tonnelle de vigne et sa table', '🍇', 420, 10, [2, 2], 9, tonnelleVigne),
+    it('jardiniere', 'mobilier', 'Bac à fleurs en bois', '🌼', 50, 1, [1, 1], 1, jardiniere),
+    it('panneau_bois', 'mobilier', 'Poteau indicateur en bois', '🪧', 60, 2, [1, 1], 2, panneauBois),
+    it('borne_km', 'mobilier', 'Borne kilométrique', '🛣️', 70, 2, [1, 1], 3, borneKm),
+    it('arret_car', 'mobilier', 'Abri du car de ramassage', '🚌', 220, 5, [2, 1], 6, arretCar),
+    it('banc_arbre', 'mobilier', 'Banc circulaire autour d\'un tilleul', '🌳', 260, 6, [2, 2], 7, bancArbre),
+    it('pompe', 'fontaines', 'Pompe à bras', '🚰', 180, 4, [1, 1], 4, pompe),
+    it('abreuvoir', 'fontaines', 'Abreuvoir de pierre', '🐴', 240, 5, [2, 1], 5, abreuvoir),
+    it('mascaron', 'fontaines', 'Fontaine murale à mascaron', '🦁', 380, 9, [1, 1], 8, mascaron),
+    it('fontaine_colonne', 'fontaines', 'Fontaine de village à colonne', '⛲', 650, 15, [2, 2], 10, fontaineColonne),
+    it('photophores', 'lumieres', 'Photophores', '🕯️', 40, 1, [1, 1], 1, photophores),
+    it('lampe_tempete', 'lumieres', 'Lampe tempête sur tonneau', '🏮', 70, 2, [1, 1], 3, lampeTempete),
+    it('feu_saint_jean', 'lumieres', 'Feu de la Saint-Jean', '🔥', 120, 3, [1, 1], 5, feuSaintJean),
+    it('candelabre_3feux', 'lumieres', 'Candélabre à trois feux', '💡', 260, 6, [1, 1], 9, candelabre3),
+    it('nappe_carreaux', 'terrasses', 'Table de bistrot à nappe à carreaux', '🍷', 90, 2, [1, 1], 3, nappeCarreaux),
+    it('tonneaux', 'terrasses', 'Tonneaux de dégustation', '🍷', 140, 3, [1, 1], 5, tonneauDegust),
+    it('etal_poisson', 'terrasses', 'Étal de la poissonnière', '🐟', 300, 8, [1, 1], 8, etalPoisson),
+    it('etal_epices', 'terrasses', 'Étal des olives et des épices', '🫒', 300, 8, [1, 1], 9, etalEpices),
+    it('huitres', 'terrasses', 'Banc de l\'écailler', '🦪', 320, 8, [1, 1], 10, huitres),
+    it('bottes_paille', 'fete', 'Bottes de paille', '🌾', 60, 1, [1, 1], 2, bottesPaille),
+    it('chamboule', 'fete', 'Chamboule-tout', '🥫', 220, 5, [1, 1], 7, chamboule),
+    it('mat_cocagne', 'fete', 'Mât de cocagne', '🪅', 260, 6, [1, 1], 8, matCocagne),
+    it('buvette', 'fete', 'Buvette de la fête', '🍺', 350, 8, [1, 1], 9, buvette),
+    it('calvaire', 'monuments', 'Calvaire de granit', '✝️', 300, 7, [1, 1], 6, calvaire),
+    it('monument_morts', 'monuments', 'Monument aux morts', '🎖️', 900, 22, [2, 2], 10, monumentMorts),
+    it('pigeonnier', 'monuments', 'Pigeonnier rond', '🕊️', 1100, 26, [2, 2], 11, pigeonnier),
+    it('halle', 'monuments', 'Halle de marché en charpente', '🛖', 2400, 55, [3, 2], 14, halle),
+    it('velo_facteur', 'vehicules', 'Vélo du facteur', '🚲', 100, 2, [1, 1], 3, (g) => velo(g, '#E8B94A', (g) => { B(0.32, 0.3, 0.2, '#5A3B26', -0.25, 0.6, -0.45, g); B(0.32, 0.3, 0.2, '#5A3B26', 0.25, 0.6, -0.45, g); })),
+    it('tracteur', 'vehicules', 'Vieux tracteur rouge', '🚜', 500, 10, [1, 2], 10, tracteur),
+    it('fourgon_poste', 'vehicules', 'Fourgonnette du facteur', '🚐', 480, 10, [1, 2], 11, fourgonPoste),
+    it('caleche', 'vehicules', 'Calèche et son cheval', '🐎', 700, 15, [1, 2], 13, caleche),
+    it('piquets', 'clotures', 'Clôture en piquets de châtaignier', '🪵', 25, 1, [1, 1], 1, piquets),
+    it('ganivelle', 'clotures', 'Ganivelle', '🪵', 30, 1, [1, 1], 1, ganivelle),
+    it('charmille', 'clotures', 'Haie de charmille', '🌳', 45, 1, [1, 1], 2, charmille),
+    it('pierres_seches', 'clotures', 'Mur de pierres sèches', '🪨', 55, 1, [1, 1], 3, pierresSeches),
+    it('muret_tuiles', 'clotures', 'Muret à chaperon de tuiles', '🧱', 60, 2, [1, 1], 4, muretTuiles),
+    it('haie_laurier', 'clotures', 'Haie de lauriers-roses', '🌸', 60, 2, [1, 1], 4, haieLaurier),
+    it('bittes', 'quais', 'Bittes d\'amarrage et cordage', '⚓', 50, 1, [1, 1], 3, bittes),
+    it('heron', 'quais', 'Héron cendré', '🪶', 80, 2, [1, 1], 4, heron),
+    it('filets', 'quais', 'Filets de pêche qui sèchent', '🎣', 90, 2, [1, 1], 4, filets),
+    it('barque', 'quais', 'Barque retournée sur tréteaux', '🛶', 140, 3, [1, 2], 5, barque),
+    it('pelouse', 'sols', 'Carré de pelouse', '🟩', 5, 0, [1, 1], 1, pelouse),
+    it('prairie', 'sols', 'Prairie fleurie', '🌼', 12, 1, [1, 1], 1, prairie),
+    it('sol_terre', 'sols', 'Terre battue', '🟫', 6, 0, [1, 1], 1, sol(1)),
+    it('sol_sable', 'sols', 'Sable ocre', '🟧', 8, 0, [1, 1], 1, sol(8)),
+    it('sol_calade', 'sols', 'Calade de galets', '🪨', 14, 0, [1, 1], 3, sol(3)),
+    it('sol_gres', 'sols', 'Pavés de grès rose', '🌸', 16, 0, [1, 1], 4, sol(10)),
+    it('sol_aretes', 'sols', 'Calade en arêtes de poisson', '🐟', 16, 0, [1, 1], 5, sol(11)),
+    it('sol_briques', 'sols', 'Briques croisées', '🟥', 16, 0, [1, 1], 5, sol(4)),
+    it('marelle', 'sols', 'Marelle à la craie', '🔢', 20, 1, [1, 1], 2, marelle),
+    it('sol_opus', 'sols', 'Opus incertum', '🪨', 20, 1, [1, 1], 6, sol(12)),
+    it('sol_tomettes', 'sols', 'Tomettes de Provence', '🔶', 22, 1, [1, 1], 7, sol(13)),
+    it('sol_eventail', 'sols', 'Pavés en éventail', '🌀', 22, 1, [1, 1], 8, sol(5)),
+    it('sol_dalles', 'sols', 'Dalles de pierre blonde', '🟨', 28, 1, [1, 1], 10, sol(6)),
+    it('sol_cabochons', 'sols', 'Dallage à cabochons', '💠', 40, 1, [1, 1], 12, sol(7)),
+    it('sol_marbre', 'sols', 'Damier de marbre', '♟️', 50, 1, [1, 1], 14, sol(14)),
+    it('rosace_marbre', 'sols', 'Rose des vents en marbre', '🧭', 450, 11, [2, 2], 13, rosaceMarbre)
   ];
 })();
 /* ================= la faune sauvage : lapins, cerfs, sangliers, aigles ================= */
@@ -3280,7 +3539,11 @@ DCATS.forEach((c) => { DCAT_NAMES[c.id] = [c.n, c.ic]; });
 const ROAD_T = [{ n: 'Rue pavée', ic: '🧱', c: 6, o: 3, g: 'Village', d: 'pavés de pierre blonde, la rue de tous les jours' }, { n: 'Chemin de terre', ic: '🟫', c: 2, o: 0, g: 'Rustique', d: 'terre battue et cailloux, pour la campagne' },
   { n: 'Allée de gravier', ic: '⬜', c: 4, o: 1, g: 'Rustique', d: 'gravier crème, pour les jardins et les parcs' }, { n: 'Calade de galets', ic: '🪨', c: 8, o: 4, g: 'Village', d: 'galets ronds posés de chant, à la provençale' },
   { n: 'Allée de briques', ic: '🟥', c: 9, o: 5, g: 'Bourgeois', d: 'briques rouges croisées, chaleureuse et soignée', lvl: 6 }, { n: 'Pavés en éventail', ic: '🌀', c: 12, o: 6, g: 'Bourgeois', d: 'granit gris posé en arcs, comme les rues de Paris', lvl: 9 },
-  { n: 'Dalles de pierre blonde', ic: '🟨', c: 16, o: 7, g: 'Prestige', d: 'grandes dalles claires, pour une place ou une avenue', lvl: 12 }, { n: 'Dallage à cabochons', ic: '💠', c: 24, o: 8, g: 'Prestige', d: 'octogones de pierre et cabochons d’ardoise, l’allée d’honneur d’une mairie ou d’un château', lvl: 15 }];
+  { n: 'Dalles de pierre blonde', ic: '🟨', c: 16, o: 7, g: 'Prestige', d: 'grandes dalles claires, pour une place ou une avenue', lvl: 12 }, { n: 'Dallage à cabochons', ic: '💠', c: 24, o: 8, g: 'Prestige', d: 'octogones de pierre et cabochons d’ardoise, l’allée d’honneur d’une mairie ou d’un château', lvl: 15 },
+  { n: 'Sable ocre', ic: '🟧', c: 3, o: 1.5, g: 'Rustique', d: 'allée de sable stabilisé, comme dans les jardins du Midi' }, { n: 'Chemin enherbé', ic: '🌱', c: 3, o: 0.5, g: 'Rustique', d: 'l’herbe a repris, la terre affleure : pour les vergers et les prés' },
+  { n: 'Pavés de grès rose', ic: '🌸', c: 10, o: 4.5, g: 'Village', d: 'grès rose des Vosges posé en rangs, chaleureux', lvl: 7 }, { n: 'Calade en arêtes', ic: '🐟', c: 10, o: 4.6, g: 'Village', d: 'galets en épis entre des bandes de pierre, la ruelle provençale', lvl: 8 },
+  { n: 'Opus incertum', ic: '🪨', c: 13, o: 6.5, g: 'Bourgeois', d: 'grandes pierres plates irrégulières, pour une cour ou une terrasse', lvl: 10 }, { n: 'Tomettes de Provence', ic: '🔶', c: 14, o: 6.6, g: 'Bourgeois', d: 'hexagones de terre cuite, pour une terrasse de mas', lvl: 11 },
+  { n: 'Damier de marbre', ic: '♟️', c: 30, o: 9, g: 'Prestige', d: 'marbre noir et blanc, la cour d’honneur d’un hôtel particulier', lvl: 17 }];
 const RMAX = 3000;
 const roadMesh = ROAD_T.map((t, i) => { const geo = new THREE.PlaneGeometry(TILE, TILE).rotateX(-Math.PI / 2);
   const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ map: i === 0 ? paveTex(1, 1) : roadTex(i) }), RMAX); m.count = 0; m.receiveShadow = true; m.userData.dyn = true; m.frustumCulled = false; scene.add(m); return m; });
@@ -3621,7 +3884,7 @@ function tickDirs() {
 /* ================= step by step: what the player can see grows with the level and the current objective ================= */
 const UP_LVL = [[/vélo/, 2], [/Nouvelle parcelle/, 2], [/Léo/, 3], [/Jules/, 4], [/Inès/, 5], [/Margot/, 6], [/Semences/, 5], [/Équipe ·/, 6], [/^Moulin/, 3], [/^Four/, 3], [/^Boulangerie/, 4], [/Barrière/, 4], [/maçons/, 5], [/Médor/, 7]];
 function upVisible(u) { const q = Q[Math.min(S.q, Q.length - 1)], qt = q ? q.t : ''; for (const [re, lv] of UP_LVL) if (re.test(u.t)) { const key = (u.t.match(/vélo|parcelle|Léo|Jules|Inès|Margot|barrière/i) || [''])[0]; return level() >= lv || (key && qt.toLowerCase().indexOf(key.toLowerCase()) >= 0); } return true; }
-const TAB_LVL = { logements: 1, rues: 1, batiments: 2, nature: 2, jardins: 3, mobilier: 4, lumieres: 5, clotures: 6, quais: 3, fontaines: 8, terrasses: 10, fete: 12, vehicules: 14, monuments: 16 };
+const TAB_LVL = { logements: 1, rues: 1, batiments: 2, nature: 2, jardins: 3, mobilier: 4, lumieres: 5, clotures: 6, sols: 2, quais: 3, fontaines: 8, terrasses: 10, fete: 12, vehicules: 14, monuments: 16 };
 Object.values(DECOS).forEach((d) => { if (d.lvl > 2) d.lvl = Math.round(d.lvl * 1.7); }); // le catalogue s'ouvre sur toute la partie
 const buildUnlocked = () => S.q >= 6 || (S.city && S.city.items.length > 2) || level() >= 2;
 
