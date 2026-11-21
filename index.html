@@ -878,11 +878,21 @@ flat(26, 1.6, '#E3D6BC', -53, 12.6); flat(1.6, 10.4, '#E3D6BC', -66, 7.6);
 const WHEAT = [], SUNF = [], LAV = [];
 function wheatField(x, z, w, d, ry, kind) { const m = flat(w, d, kind === 'sun' ? '#7FA64A' : kind === 'lav' ? '#8BA86A' : '#D9B653', x, z, 0.03, scene, ry);
   const cs = Math.cos(ry || 0), sn = Math.sin(ry || 0), step = kind === 'wheat' ? 0.55 : kind === 'sun' ? 0.9 : 0.75, list = kind === 'wheat' ? WHEAT : kind === 'sun' ? SUNF : kind === 'lav' ? LAV : null;
+  const i0 = list ? list.length : 0;
   if (list) for (let a = -w / 2 + step / 2; a < w / 2; a += step) for (let b = -d / 2 + step / 2; b < d / 2; b += step) { const px = x + a * cs + b * sn + (rnd() - 0.5) * 0.15, pz = z - a * sn + b * cs + (rnd() - 0.5) * 0.15; list.push([px, pz]); }
-  rects.push([x, z, (Math.abs(cs) * w + Math.abs(sn) * d) / 2, (Math.abs(sn) * w + Math.abs(cs) * d) / 2]); }
-wheatField(-90, -22, 18, 9, 0, 'wheat'); wheatField(-70, -22, 16, 9, 0, 'wheat'); wheatField(-96, 25, 10, 5, 0, 'lav'); wheatField(-62, 24, 18, 5, 0, 'sun');
-wheatField(-78, -36, 22, 9, 0.08, 'wheat'); wheatField(-58, -32, 14, 8, -0.1, 'lav'); wheatField(-100, -38, 10, 12, 0, 'sun');
-[[-80, -14, 0.3], [-76, -15, 1.2], [-58, -18, 0.6], [-95, -16, 2], [-53, 22, 0.4], [-74, 20, 1.1]].forEach((h) => hay(h[0], h[1], h[2]));
+  rects.push([x, z, (Math.abs(cs) * w + Math.abs(sn) * d) / 2, (Math.abs(sn) * w + Math.abs(cs) * d) / 2]); return { x, z, w, d, kind, m, i0, i1: list ? list.length : 0 }; }
+/* les grandes cultures (Romain, 21/11/2026) : les champs posés au hasard sont remplacés par six parcelles carrées en damier, derrière la ferme,
+   bordées de chemins de terre, avec le hangar du tracteur. L'agriculteur (3dc-agriculteur.js) les cultive. */
+const GRANDES = [], GC_X = [-93, -81, -69], GC_Z = [-25.5, -35.5], GC_KIND = ['wheat', 'sun', 'wheat', 'lav', 'wheat', 'sun'];
+GC_Z.forEach((z, j) => GC_X.forEach((x, i) => { const F = wheatField(x, z, 10, 8, 0, GC_KIND[j * 3 + i]); F.m.material = F.m.material.clone(); F.cRipe = F.m.material.color.clone(); GRANDES.push(F); }));
+flat(40, 2, '#CDB58C', -80, -30.5); flat(2, 20, '#CDB58C', -87, -30.5); flat(2, 20, '#CDB58C', -75, -30.5); flat(2, 20, '#CDB58C', -99, -30.5); flat(2, 20, '#CDB58C', -63, -30.5);
+flat(38, 1.4, '#CDB58C', -81, -20.3); flat(38, 1.4, '#CDB58C', -81, -40.7);
+const HANGAR = [-57.5, -30.5], FARM_COST = 6000, FARM_POP = 250, FARM_BONUS = 80, FARM_GROW = 480000; // l'agriculteur : prix, habitants requis, habitants apportés, pousse (8 min)
+{ const g = new THREE.Group(); g.position.set(HANGAR[0], groundY(HANGAR[0], HANGAR[1]), HANGAR[1]); g.rotation.y = -Math.PI / 2; scene.add(g);
+  box(6.2, 0.15, 5.0, '#B9AE96', 0, 0, 0, g); [[-2.9, -2.3], [2.9, -2.3], [-2.9, 2.3], [2.9, 2.3], [0, 2.3], [0, -2.3]].forEach((q) => box(0.25, 3.0, 0.25, '#7A5234', q[0], 0, q[1], g));
+  box(6.2, 3.0, 0.15, '#9A7048', 0, 0, -2.4, g); box(0.15, 3.0, 4.8, '#9A7048', -3.0, 0, 0, g); box(0.15, 3.0, 4.8, '#9A7048', 3.0, 0, 0, g);
+  roof(6.6, 5.0, 1.5, '#A94F36', 0, 3.0, 0, g); for (let k = 0; k < 4; k++) hay(HANGAR[0] + 3.6, HANGAR[1] - 2 + k * 1.3, Math.PI / 2);
+  rects.push([HANGAR[0], HANGAR[1], 2.6, 3.2]); window.HANGAR_G = g; }
 /* les peupliers du bord de la route sont devenus des décors qu'on peut déplacer (Eugénie, 21/11/2026) : ils sont posés dans la partie au démarrage, voir cityBoot */
 const PEUPLIERS = []; for (let x = -100; x < -44; x += 5) { if ((x > -78 && x < -60) || (x > -97 && x < -80)) continue; PEUPLIERS.push([x, -5]); } // pas devant la façade de la ferme
 for (let x = -100; x < -44; x += 6) { if (x > -79 && x < -42) continue; PEUPLIERS.push([x + 2, 5]); }
@@ -1105,7 +1115,7 @@ function inst(geo, color, list, setup, shadow) { const m = new THREE.InstancedMe
   const wg = new THREE.ConeGeometry(0.16, 0.9, 4); wg.translate(0, 0.45, 0);
   AMBH.wheat = inst(wg, null, WHEAT, (p, M, c) => { tmpQ.setFromAxisAngle(AX, (rnd() - 0.5) * 0.3); M.compose(tmpP.set(p[0], 0, p[1]), tmpQ, tmpS.set(1, 0.8 + rnd() * 0.4, 1)); c.set(rnd() < 0.5 ? '#E8C056' : '#DDB04A'); }); ambPatch(AMBH.wheat.material, 'sway nosnow');
   const sg = new THREE.CylinderGeometry(0.05, 0.06, 1.5, 4); sg.translate(0, 0.75, 0);
-  inst(sg, null, SUNF, (p, M, c) => { M.compose(tmpP.set(p[0], 0, p[1]), tmpQ.identity(), tmpS.set(1, 0.85 + rnd() * 0.3, 1)); c.set('#5E8F3E'); });
+  AMBH.sunS = inst(sg, null, SUNF, (p, M, c) => { M.compose(tmpP.set(p[0], 0, p[1]), tmpQ.identity(), tmpS.set(1, 0.85 + rnd() * 0.3, 1)); c.set('#5E8F3E'); });
   const hg = new THREE.CylinderGeometry(0.3, 0.3, 0.08, 8); hg.rotateX(Math.PI / 2.4);
   AMBH.sunf = inst(hg, null, SUNF, (p, M, c) => { M.compose(tmpP.set(p[0], 1.45 + rnd() * 0.2, p[1] + 0.05), tmpQ.identity(), tmpS.set(1, 1, 1)); c.set(rnd() < 0.85 ? '#F2C14E' : '#E3A73C'); }, true);
   const lg = new THREE.SphereGeometry(0.42, 7, 5);
@@ -1408,6 +1418,7 @@ function ups() {
   if (L2.bq > 0) a.push({ ic: '👕', t: L2.bq ? 'Boutique de vêtements · niveau ' + L2.bq : 'Ouvrir la boutique de vêtements', s: L2.bq < 3 ? '2 laines = 1 pull, vendu ' + BQPR[L2.bq + 1] + ' écus d’or. Elle tricote et vend toute seule.' : 'Au maximum.', cost: L2.bq < 3 ? BQCOST[L2.bq] : null, buy: () => { L2.bq++; pop(bqG); } });
   { const sl = S.lv.stock || 0; a.push({ ic: '🏚️', t: 'Grenier et réserves · niveau ' + (sl + 1), s: sl < 5 ? 'Pendant ton absence, l\'équipe vend jusqu\'à ' + 2 * STOCK[sl] + ' baguettes. Niveau suivant : ' + 2 * STOCK[sl + 1] + ', et ' + STOCK[sl + 1] + ' blés et pains en réserve.' : 'Au maximum : ' + 2 * STOCK[5] + ' baguettes vendues pendant ton absence.', cost: sl < 5 ? STOCKCOST[sl] : null, buy: () => { S.lv.stock = sl + 1; } }); }
   { const ms = S.masons || 1; a.push({ ic: '🧱', t: 'Équipe de maçons · ' + ms + (ms > 1 ? ' équipes' : ' équipe'), s: ms < 5 ? 'Une équipe de plus : un chantier de maison de plus en même temps.' : 'Au maximum.', cost: ms < 5 ? MASONCOST[ms] : null, buy: () => { S.masons = ms + 1; } }); }
+  if (!S.hired.marcel && (S.popMax || S.pop || 0) >= FARM_POP) a.push({ ic: '🚜', t: 'Embaucher Marcel, l’agriculteur, et son tracteur', s: 'Il cultive au tracteur les six grandes parcelles derrière la ferme : tournesol et lavande pour la coopérative, blé payé et versé au grenier. Rapporte gros, et ' + FARM_BONUS + ' habitants s’installent au village.', cost: FARM_COST, buy: () => { S.hired.marcel = true; farmStart(); } });
   if (reserveOn() && !S.garde) a.push({ ic: '🧑‍🌾', t: 'Gaspard, le garde forestier', s: 'Il veille sur la réserve naturelle : plus aucun animal ne s\'en échappe.', cost: 1500, buy: () => { S.garde = true; } });
   if ((S.popMax || S.pop || 0) >= 60) { const nf = S.fetes || 0, fc = feteCost(nf); a.push({ ic: '🎉', t: 'Fête du village' + (nf ? ' · ' + nf + ' donnée' + (nf > 1 ? 's' : '') : ''), s: 'Bal, lampions et grande tablée sur la place. +' + feteRenom(fc) + ' de renommée, et +5 % de beauté pendant une heure. Une fête toutes les 20 minutes au plus.', cost: fc, wait: (S.feteNext || 0) > now() ? 'Dans ' + Math.ceil((S.feteNext - now()) / 60000) + ' min' : '', buy: () => { S.feteNext = now() + 1200000; S.feteB = now() + 3600000; S.fetes = nf + 1; S.renom = (S.renom || 0) + feteRenom(fc); S.feteUntil = now() + 240000; toast('🎉 Fête du village', 'Renommée : ' + fmt(S.renom) + ' ⭐'); }, noXp: true }); }
   { const o = nextHouseUp(), nf = S.city ? S.city.items.filter((it) => it.t === 'h' && it.l >= 1 && it.l < 3 && !(it.end > 0)).length : 0; if (o) a.push({ ic: '🌷', t: 'Embellir les maisons · ' + nf + ' à embellir', s: (o.it.l === 1 ? 'Fleurir' : 'Faire une maison de maître de') + ' « ' + HOUSE_T[o.it.m].n + ' » : +' + Math.round(HOUSE_T[o.it.m].cap * 0.3) + ' habitants et de la beauté.' + (busyMasons() >= S.masons ? ' Maçons occupés.' : ''), cost: o.c, wait: busyMasons() >= S.masons ? 'Maçons occupés' : '', buy: () => upHouse(o), noXp: true }); }
@@ -1743,7 +1754,7 @@ function autoWork(k, c, u, n, dt) {
     u.target.copy(SPOT.shop); if (S.shop > 0) { u.cool = 2.5; QUIET = true; try { tapShop(); } finally { QUIET = false; } }
   }
 }
-const NAME = { lucie: 'Lucie', camille: 'Camille', paul: 'Paul', leo: 'Léo', ines: 'Inès', margot: 'Margot', jules: 'Jules' };
+const NAME = { marcel: 'Marcel', lucie: 'Lucie', camille: 'Camille', paul: 'Paul', leo: 'Léo', ines: 'Inès', margot: 'Margot', jules: 'Jules' };
 function assign(who, task) {
   if (who === 'ines' && S.mode === 'comp') return toast('Inès reste au fournil', 'En Coup de feu, personne d\'autre ne cuit le pain : elle ne part pas en mission.');
   if (!task.ok()) return toast('Pas encore possible', task.s);
@@ -3234,7 +3245,7 @@ const WSPEC = {
 const W_TARGET = { plot: 'le champ de blé', garden: 'le potager', hen: 'le poulailler', cow: 'l\'étable', sheep: 'la bergerie' };
 const W_ZONES = { lapin: [[-8, 13], [-58, -18], [-88, -22], [24, 20], [-30, 14], [44, -22]], cerf: [[-76, -44], [-22, -46], [6, -44]], sanglier: [[-98, -30], [-96, 20], [-50, 22]], aigle: [[-64, -22], [-20, 18]] };
 const WILD = [], WR = { at: 0, blocks: 0 }, WLAB = [];
-const RESERVE_P = [-70, -34], RES_HW = 11, RES_HD = 8;
+const RESERVE_P = [-78, -50], RES_HW = 11, RES_HD = 8; // au nord des grandes cultures (21/11/2026)
 const reserveOn = () => typeof MOV !== 'undefined' && MOV.reserve && MOV.reserve.placed;
 
 /* ---- la réserve naturelle : un grand enclos de nature, à la mode d'un village ---- */
@@ -3662,7 +3673,7 @@ const rentMult = () => 1 + Math.min(1.5, beauty() / 150);
 function capOf(it) { if (it.t !== 'h') return 0; const l = it.end > 0 ? (it.l || 1) - 1 : it.l || 1; return HOUSE_T[it.m].cap * [0, 1, 1.3, 1.6][l]; } // pendant qu'on l'embellit, elle garde les habitants de son niveau précédent
 function capTotal() { if (!links) computeLinks(); return S.city.items.reduce((a, it, i) => a + (links[i] ? capOf(it) : 0), 0); }
 function servCap() { for (const [n, k, lb] of SERV) { const ok = k === 'chateau' ? S.cst >= 3 : MOV[k].placed; if (!ok) return [n, k, lb]; } return [Infinity, null, '']; }
-function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.4 + 0.6 * Math.min(1, b / (cap + 1)); return Math.min(Math.max(10, 10 + cap * fill), servCap()[0]); } /* les dix anciens du village n'ont pas besoin de maison */
+function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.4 + 0.6 * Math.min(1, b / (cap + 1)); return Math.min(Math.max(10, 10 + cap * fill), servCap()[0]) + (S.hired && S.hired.marcel ? 80 : 0); } /* + les familles de la ferme de Marcel, l'agriculteur */ /* les dix anciens du village n'ont pas besoin de maison */
 function cityBoost() { return 0.7 + Math.min(3, (S.pop || 0) / 150); }
 const busyMasons = () => S.city.items.filter((it) => it.end > 0).length;
 // équilibrage 16/11 (beta14/equilibrage/simu.py) : le prix suit la taille du village, la durée grandit doucement et plafonne
@@ -3986,13 +3997,14 @@ function tableau() { if (!S.started || VISIT.on) return; ledB(); const el = docu
   const L = ledSum(TDB_SPAN), tot = (o) => Object.values(o).reduce((a, v) => a + v, 0), R = tot(L.r), D = tot(L.d);
   const lines = (o) => { const k = Object.keys(o).sort((a, b) => o[b] - o[a]); return k.length ? k.map((n) => '<div class="ln"><span>' + tdbEsc(n) + '</span><b>' + fmt(Math.round(o[n])) + '</b></div>').join('') : '<div class="ln none"><span>Rien pour l’instant</span></div>'; };
   const rents = Math.floor(S.city.items.reduce((a, it) => a + (it.t === 'h' ? it.rent || 0 : 0), 0));
-  const wait = [['🏠 Loyers dans les maisons', rents, S.dog ? 'Médor les ramène toutes les 3 minutes.' : 'Touche une maison, ou le bouton 🪙 loyers en haut.'], ['🥖 Caisse de la boulangerie', Math.floor(S.shop || 0), S.hired.margot ? 'Margot la ramasse toute seule.' : 'Touche la boulangerie pour la ramasser.'], ['🥕 Caisse du marché', Math.floor(S.mtill || 0), 'Touche l’étal.'], ['👕 Caisse de la boutique', Math.floor(S.btill || 0), 'Touche la boutique.'], ['🏰 Entrées du château', Math.floor(S.gate || 0), 'Touche la grille du château.']].concat(bizOpen().map((i) => [BIZ[S.city.items[i].k].ic + ' Caisse de ' + BIZ[S.city.items[i].k].n.toLowerCase(), Math.floor(S.city.items[i].till || 0), 'Touche-la, ou « Gérer » plus bas.'])).filter((w) => w[1] > 0);
+  const wait = [['🏠 Loyers dans les maisons', rents, S.dog ? 'Médor les ramène toutes les 3 minutes.' : 'Touche une maison, ou le bouton 🪙 loyers en haut.'], ['🥖 Caisse de la boulangerie', Math.floor(S.shop || 0), S.hired.margot ? 'Margot la ramasse toute seule.' : 'Touche la boulangerie pour la ramasser.'], ['🥕 Caisse du marché', Math.floor(S.mtill || 0), 'Touche l’étal.'], ['👕 Caisse de la boutique', Math.floor(S.btill || 0), 'Touche la boutique.'], ['🏰 Entrées du château', Math.floor(S.gate || 0), 'Touche la grille du château.'], ['🚜 Coopérative agricole', Math.floor((S.farm && S.farm.till) || 0), 'Passe au hangar du tracteur, derrière la ferme.']].concat(bizOpen().map((i) => [BIZ[S.city.items[i].k].ic + ' Caisse de ' + BIZ[S.city.items[i].k].n.toLowerCase(), Math.floor(S.city.items[i].till || 0), 'Touche-la, ou « Gérer » plus bas.'])).filter((w) => w[1] > 0);
   const team = [['🌾 Le champ de blé', 'leo', 'Léo sème et récolte tout seul.', 'Personne : tu sèmes et tu récoltes toi-même. Embauche Léo.'],
     ['⚙️ Le moulin', 'jules', 'Jules fait la farine tout seul.', 'Personne : touche le moulin pour moudre le blé. Embauche Jules.'],
     ['🔥 Le four', 'ines', 'Inès enfourne et pose le pain en vitrine.', 'Personne : touche le four pour cuire. Embauche Inès.'],
     ['🧾 La caisse', 'margot', 'Margot sert les clients et ramasse la caisse.', 'Personne : tu ramasses la caisse toi-même. Embauche Margot.']];
   if (S.lv.mk > 0) team.push(['🥬 Le potager et l’étal', 'paul', 'Paul cultive et garnit l’étal du marché.', 'Personne : tu récoltes le potager toi-même. Embauche Paul.']);
   if (S.lv.hen + S.lv.cow + S.lv.sheep > 0) team.push(['🐑 Les animaux', 'lucie', 'Lucie ramasse les œufs, le lait et la laine.', 'Personne : tu passes toi-même à l’enclos. Embauche Lucie.']);
+  if (S.hired.marcel || (S.popMax || S.pop || 0) >= FARM_POP) team.push(['🚜 Les grandes cultures', 'marcel', 'Marcel récolte et ressème au tracteur les six parcelles.', 'Personne : embauche Marcel, l’agriculteur (' + FARM_COST + ' écus, dans Améliorer ou au hangar).']);
   if (S.lv.cake > 0) team.push(['🧁 Les gâteaux', 'camille', 'Camille prépare les gâteaux.', 'Personne : touche la pâtisserie pour cuire. Embauche Camille.']);
   const teamH = team.map(([n, k, yes, no]) => { const busy = S.hired[k] && S.tasks[k]; return '<div class="tm ' + (S.hired[k] && !busy ? 'ok' : 'no') + '"><i>' + (S.hired[k] ? busy ? '⏳' : '✅' : '✋') + '</i><div><b>' + n + '</b><span>' + (S.hired[k] ? busy ? NAME[k] + ' est en mission : son poste attend son retour.' : yes : no) + '</span></div></div>'; }).join('');
   const rph = Math.round(rentPerHour());
@@ -4318,6 +4330,75 @@ function tickResidents(dt, t, n) { DOORS.forEach((D) => { if (D.t > 0) { D.t -= 
     if (walkTo(g, R.dest[0], R.dest[1], 1.6, dt) || R.t > 60) { if (R.to) { R.ph = 'in'; R.t = 0; doorAt(R.to[0], R.to[1], R.to[2]); g.position.set(R.to[0], groundY(R.to[0], R.to[1]), R.to[1]); } else { R.ph = 'in'; R.t = 0; } continue; }
     if (R.cd <= 0) for (let j = 0; j < RES.length; j++) { const h = RES[j]; if (h === g) continue; const Q = h.userData.r; if (Q.ph !== 'walk' || Q.cd > 0 || Math.hypot(h.position.x - g.position.x, h.position.z - g.position.z) > 1.5) continue;
       R.ph = Q.ph = 'chat'; R.chat = Q.chat = 2.5 + Math.random() * 2.5; g.rotation.y = Math.atan2(h.position.x - g.position.x, h.position.z - g.position.z); h.rotation.y = g.rotation.y + Math.PI; if (zoom < 60) floatAt(g, ['💬', '😄', '👋', '☕ ?', '🥖 !'][Math.floor(Math.random() * 5)]); break; } } }
+/* ================= l'agriculteur et son tracteur (Romain, 21/11/2026) =================
+   Marcel cultive au tracteur les six grandes parcelles derrière la ferme. Il coûte cher à embaucher, mais :
+   - chaque récolte remplit la caisse de la coopérative (tournesol et lavande vendus, blé payé et versé en partie au grenier du boulanger) ;
+   - les familles de la ferme s'installent au village : des habitants en plus.
+   Léo garde ses 24 petites parcelles de blé pour la boulangerie : les deux métiers se complètent. */
+const CROP = { wheat: { n: 'blé', ic: '🌾', v: 35, ble: 10 }, sun: { n: 'tournesol', ic: '🌻', v: 45 }, lav: { n: 'lavande', ic: '💜', v: 60 } };
+const farmS = () => { if (!S.farm || !Array.isArray(S.farm.p) || S.farm.p.length !== GRANDES.length) S.farm = { p: GRANDES.map(() => ({ s: 'pret', end: 0 })), till: 0 }; return S.farm; };
+const farmOn = () => !!(S.hired && S.hired.marcel);
+const farmCap = () => 3000 + 10 * (S.pop || 0);
+const cropValue = (k) => Math.round(CROP[k].v * (1 + (S.pop || 0) / 800));
+
+/* ---- le tracteur et son conducteur ---- */
+const tractor = new THREE.Group(); scene.add(tractor); tractor.visible = false; tractor.userData.dyn = true;
+try { DECOS.tracteur.build(tractor); } catch (e) {}
+{ const d = new THREE.Group(); d.position.set(0, 1.12, -0.42); tractor.add(d); cyl(0.17, 0.2, 0.55, '#3F6B8C', 0, 0, 0, d); mesh(new THREE.SphereGeometry(0.16, 10, 8), '#E8BFA0', 0, 0.72, 0, d);
+  cyl(0.19, 0.19, 0.06, '#2B2535', 0, 0.84, 0, d); cyl(0.07, 0.0, 0.08, '#2B2535', 0, 0.9, 0, d); }
+const TR = { x: HANGAR[0] - 3.5, z: HANGAR[1], ry: -Math.PI / 2, path: [], job: null, harv: -1, dust: 0 };
+const farmLabel = label(tractor, 2.4, 'name'); setLabel(farmLabel, '', 'name');
+
+/* ---- la pousse des cultures : on agrandit les épis instance par instance ---- */
+const FIELD_BASE = new Map(), SOIL = new THREE.Color('#8A6A48');
+function fieldGrow(i, g) { const F = GRANDES[i]; if (!F || F.g === g) return; const meshes = F.kind === 'wheat' ? [AMBH.wheat] : F.kind === 'sun' ? [AMBH.sunS, AMBH.sunf] : [AMBH.lav];
+  if (meshes.some((m) => !m)) return; F.g = g; const s = Math.max(0.001, g);
+  meshes.forEach((m) => { let base = FIELD_BASE.get(m); if (!base) { base = m.instanceMatrix.array.slice(); FIELD_BASE.set(m, base); } const a = m.instanceMatrix.array;
+    for (let k = F.i0; k < F.i1; k++) { const o = k * 16; for (let e = 0; e < 16; e++) a[o + e] = base[o + e]; a[o + 4] *= s; a[o + 5] *= s; a[o + 6] *= s; a[o + 13] = base[o + 13] * s;
+      if (g < 0.03) { a[o] *= 0.001; a[o + 1] *= 0.001; a[o + 2] *= 0.001; a[o + 8] *= 0.001; a[o + 9] *= 0.001; a[o + 10] *= 0.001; } }
+    m.instanceMatrix.needsUpdate = true; });
+  F.m.material.color.copy(F.cRipe).lerp(SOIL, Math.max(0, Math.min(1, 1 - g * 2.2))); }
+
+/* ---- le trajet : par le chemin du milieu, puis la parcelle rang par rang ---- */
+const TRACK_Z = -30.5;
+function routeTo(x, z) { const P = []; if (Math.abs(TR.z - TRACK_Z) > 0.3) P.push([TR.x, TRACK_Z]); P.push([x, TRACK_Z]); if (Math.abs(z - TRACK_Z) > 0.3) P.push([x, z]); return P; }
+function goField(i) { const F = GRANDES[i], rows = [-3, -1, 1, 3].map((o) => F.z + o).sort((a, b) => Math.abs(a - TRACK_Z) - Math.abs(b - TRACK_Z));
+  TR.path = routeTo(F.x - 4.5, rows[0]); TR.job = () => {
+    farmS().p[i].s = 'recolte'; TR.harv = i; const P = []; rows.forEach((z, r) => { const a = F.x - 4.5, b = F.x + 4.5; if (r % 2) P.push([b, z], [a, z]); else P.push([a, z], [b, z]); }); P.push([F.x + (rows.length % 2 ? 4.5 : -4.5), TRACK_Z]);
+    TR.path = P; TR.rows = P.length; TR.job = () => harvestField(i); }; }
+function harvestField(i) { const F = GRANDES[i], st = farmS(), p = st.p[i], C = CROP[F.kind], v = cropValue(F.kind); TR.harv = -1;
+  st.till = Math.min(farmCap(), (st.till || 0) + v); let extra = '';
+  if (C.ble && typeof stockCap === 'function') { const add = Math.min(C.ble, Math.max(0, stockCap() - (S.ble || 0))); if (add > 0) { S.ble = (S.ble || 0) + add; extra = ' · +' + add + ' blés au grenier'; } }
+  p.s = 'pousse'; p.end = now() + dur(FARM_GROW); fieldGrow(i, 0); dirty = true; gain(3); floatAt(tractor, C.ic + ' +' + v + ' ' + C.n + extra); }
+function farmStart() { const st = farmS(); st.p.forEach((p) => { p.s = 'pret'; p.end = 0; }); TR.x = HANGAR[0] - 3.5; TR.z = HANGAR[1]; TR.path = []; TR.job = null; dirty = true; toast('🚜 Marcel est arrivé avec son tracteur', 'Il récolte les grandes parcelles et ressème aussitôt. Passe au hangar pour encaisser la coopérative.'); }
+function collectFarm() { const st = farmS(), v = Math.floor(st.till || 0); if (v < 1) return false; led('🚜 Grandes cultures', v); S.coins += v; st.till = 0; dirty = true; floatAt(HANGAR_G, '+' + v + ' ' + C); SFX.coin(); burst(HANGAR[0], 3, HANGAR[1], ['#E3A73C', '#F3CF7A'], 12, 4); return true; }
+function farmSheet() { if (!S.started) return; const st = farmS(), pop = Math.floor(S.pop || 0), on = farmOn(), opts = [];
+  if (on) opts.push({ t: '🪙 Encaisser la coopérative', s: Math.floor(st.till || 0) + ' écus d’or dans la caisse (elle se remplit jusqu’à ' + farmCap() + ').', btn: 'Encaisser', ok: (st.till || 0) >= 1, run: () => { collectFarm(); closeSheet(); } });
+  else opts.push({ t: '🚜 Embaucher Marcel, l’agriculteur', s: pop < FARM_POP ? 'Il faut ' + FARM_POP + ' habitants (tu en as ' + pop + ').' : 'Il cultive les six grandes parcelles au tracteur et ' + FARM_BONUS + ' habitants s’installent au village.', btn: FARM_COST + ' ' + C, ok: pop >= FARM_POP && S.coins >= FARM_COST,
+    run: () => { if (S.coins < FARM_COST || farmOn()) return; led('👩‍🍳 Employés', -FARM_COST); gain(Math.ceil(FARM_COST / 8)); S.coins -= FARM_COST; S.hired.marcel = true; farmStart(); closeSheet(); } });
+  const rows = GRANDES.map((F, i) => { const p = st.p[i], C2 = CROP[F.kind]; return C2.ic + ' ' + C2.n + ' : ' + (!on ? 'en friche, à reprendre' : p.s === 'pousse' ? 'pousse, prêt dans ' + Math.max(1, Math.ceil((p.end - now()) / 60000)) + ' min' : p.s === 'recolte' ? 'récolte en cours' : 'prêt à récolter'); });
+  opts.push({ t: '📋 Les six parcelles', s: rows.join(' · '), btn: 'Y aller', ok: true, run: () => { closeSheet(); goTo(HANGAR[0] - 4, HANGAR[1], 1.5, null); } });
+  openSheet('🚜 Les grandes cultures', on ? 'Marcel récolte et ressème au tracteur. Une récolte de blé ≈ ' + cropValue('wheat') + ' écus, tournesol ≈ ' + cropValue('sun') + ', lavande ≈ ' + cropValue('lav') + '.' : 'Six parcelles de blé, de tournesol et de lavande, derrière la ferme.', opts); }
+const hangarLabel = label(HANGAR_G, 4.6); hangarLabel.act = () => (farmOn() && (farmS().till || 0) >= 1 ? collectFarm() : farmSheet());
+
+/* ---- chaque image ---- */
+let farmT = 9;
+function tickCultures(dt, n) { if (!S.started || !GRANDES.length) return; const st = farmS(), on = farmOn();
+  if ((farmT += dt) > 0.5) { farmT = 0;
+    st.p.forEach((p, i) => { if (!on) { fieldGrow(i, 1); return; } if (p.s === 'pousse') { if (n >= p.end) { p.s = 'pret'; fieldGrow(i, 1); } else fieldGrow(i, Math.round(Math.max(0, 1 - (p.end - n) / dur(FARM_GROW)) * 20) / 20); } else if (p.s === 'pret') fieldGrow(i, 1); });
+    const t = Math.floor(st.till || 0), pop = Math.floor(S.pop || 0);
+    if (on && t >= 1) setLabel(hangarLabel, '🪙 +' + t + ' coopérative', 'coin'); else if (on) setLabel(hangarLabel, '🚜 Grandes cultures', ''); else if (pop >= FARM_POP) setLabel(hangarLabel, '🚜 Embaucher un agriculteur · ' + FARM_COST + ' ' + C, S.coins >= FARM_COST ? 'ready' : ''); else setLabel(hangarLabel, '🔒 Agriculteur · ' + FARM_POP + ' habitants', 'lock');
+    setLabel(farmLabel, on ? 'Marcel' : '', 'name');
+    if (on && t >= 1 && Math.hypot(player.position.x - HANGAR[0], player.position.z - HANGAR[1]) < 4.5) collectFarm(); }
+  tractor.visible = on; if (!on) return;
+  if (TR.path.length) { const q = TR.path[0], dx = q[0] - TR.x, dz = q[1] - TR.z, d = Math.hypot(dx, dz), sp = (TR.harv >= 0 ? 2.6 : 4.5) * dt;
+    if (d <= sp) { TR.x = q[0]; TR.z = q[1]; TR.path.shift(); if (TR.harv >= 0 && TR.rows) fieldGrow(TR.harv, Math.max(0, TR.path.length - 1) / TR.rows); } else { TR.x += dx / d * sp; TR.z += dz / d * sp; }
+    if (d > 0.05) { const ty = Math.atan2(dx, dz); let dy = ty - TR.ry; while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI; TR.ry += dy * Math.min(1, dt * 8); }
+    if (TR.harv >= 0 && (TR.dust += dt) > 0.25) { TR.dust = 0; const k = GRANDES[TR.harv].kind; burst(TR.x, 0.7, TR.z, k === 'wheat' ? ['#E8C056', '#C9A54E'] : k === 'sun' ? ['#F2C14E', '#5E8F3E'] : ['#9B7AD6', '#6E8F4E'], 4, 2); } }
+  else if (TR.job) { const j = TR.job; TR.job = null; j(); }
+  else { const i = st.p.findIndex((p) => p.s === 'pret'); if (i >= 0) goField(i); else if (Math.hypot(TR.x - (HANGAR[0] - 3.5), TR.z - HANGAR[1]) > 0.5) TR.path = routeTo(HANGAR[0] - 3.5, HANGAR[1]); }
+  tractor.position.set(TR.x, groundY(TR.x, TR.z), TR.z); tractor.rotation.y = TR.ry; }
+if (location.hash === "#debug") window.__farm = { farmS, farmStart, collectFarm, farmSheet, GRANDES, TR, fieldGrow };
 /* ================= ambiance : l'heure qu'il est en France, les saisons, la météo, le vent, la vie ================= */
 // La saison suit la date de Paris ; la journée du village dure 15 minutes. __pf.amb.set({ day (0 à 1), hour, season, wind }) force une valeur pour essayer ; set(null) revient au réel.
 const AMB = { hour: 12, h: 1, season: 'ete', weather: 'clair', wind: 0.1, night: 0, force: {}, rain: 0, snow: 0, mist: 0, cloud: 0.4, cover: 0 };
@@ -4563,7 +4644,7 @@ window.addEventListener('unhandledrejection', (ev) => showErr('promesse', ev.rea
 function frame() { if (!(window.__bot && window.__bot.manual)) { try { step(); } catch (e) { showErr('boucle', e); } } requestAnimationFrame(frame); }
 function step() {
   const raw = clockT.getDelta(), dt = Math.min(0.1, raw), t = clockT.elapsedTime, n = now();
-  ledTick(); tickPrix(dt); tickPlay(raw);
+  ledTick(); tickPrix(dt); tickPlay(raw); tickCultures(dt, n);
   if (S.started && raw < 0.5) { perfN++; perfT += raw; if (perfN >= 90) { if (perfN / perfT < 38 && quality > 0) { quality--; applyQuality(); } perfN = 0; perfT = 0; } }
   // ---- the player walks (or rides) ----
   let wx = 0, wz = 0;
