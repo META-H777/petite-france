@@ -1853,7 +1853,7 @@ const Q = [
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Atteins 150 habitants.', say: 'Cent cinquante administrés ! Il va falloir agrandir la salle des fêtes. Ou réduire mon discours.', build: 1, goal: () => (S.pop || 0) >= 150, xp: 24, coins: 60 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Embellis une maison : touche-la, puis « La fleurir ».', say: 'Une maison fleurie, c\'est une maison heureuse. Et des voisins jaloux, ce qui est encore mieux.', goal: () => S.city.items.filter((it) => it.t === 'h' && it.l >= 2 && !(it.end > 0)).length >= 1, xp: 20, coins: 40 },
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Ouvre un nouveau quartier (touche son panneau en mode Construire).', say: 'Y a de la place partout autour ! On pourrait mettre des vaches. Ou des maisons. Surtout des vaches.', build: 1, goal: () => Object.keys(landS().open).length >= 3, xp: 24, coins: 60 },
-  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis la grande fontaine.', say: 'Une fontaine sur la place ! Les enfants y jetteront des écus. Que je récupérerai pour le budget.', build: 1, goal: () => !!MOV.fontaine.placed, xp: 30, coins: 80 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis la grande fontaine de la place (Construire › Bâtiments).', say: 'Une fontaine sur la place ! Les enfants y jetteront des écus. Que je récupérerai pour le budget.', build: 1, goal: () => !!MOV.fontaine.placed, xp: 30, coins: 80 },
   { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Lance la deuxième étape du château.', say: 'Les tours tiennent debout. La plupart. Il est temps de s\'occuper des remparts.', goal: () => (S.cst >= 2 || (S.cst === 1 && S.cbuild > 0)), xp: 30, coins: 0 },
   { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Atteins 300 habitants.', say: 'Trois cents âmes ! J\'en connais déjà la moitié par leur prénom, et l\'autre moitié par leurs péchés.', build: 1, goal: () => (S.pop || 0) >= 300, xp: 30, coins: 100 },
   { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Construis l\'église.', say: 'Une église, mon enfant. Pas pour moi, hein. Enfin si, un peu pour moi.', build: 1, goal: () => !!MOV.church.placed, xp: 40, coins: 120 },
@@ -1891,7 +1891,7 @@ function questTick() {
   const b = $('q-btn');
   if (q.up) { b.hidden = false; b.textContent = '🔨 Améliorer'; b.onclick = openUp; }
   else if (q.visit) { b.hidden = false; b.textContent = '👀 Visiter'; b.onclick = () => startVisit(); }
-  else if (q.build) { b.hidden = false; b.textContent = '🏗️ Construire'; b.onclick = openBuild; }
+  else if (q.build) { b.hidden = false; b.textContent = '🏗️ Construire'; const mk = /MOV\.(\w+)\.placed/.exec(q.goal.toString()); b.onclick = mk && MOV[mk[1]] ? () => openBuildAt(mk[1]) : openBuild; }
   else if (q.map && player.position.x < -20) { b.hidden = false; b.textContent = '🗺️ Carte'; b.onclick = () => { renderMap(); $('map').hidden = false; }; }
   else b.hidden = true;
 }
@@ -3211,7 +3211,7 @@ fountain.userData.kind = 'fontaine';
 movable('parking', { n: 'Parking', ic: '🅿️', pivot: [-13, 6.4], rot: false, objs: [parkG], fp: [14, 6], cols: [], c: 400, need: () => ((S.pop || 0) < 20 ? '20 habitants' : ''),
   pts: [{ get: () => [(PARK.x0 + PARK.x1) / 2, PARK.z], set: (x, z) => { PARK.x0 = x - 6; PARK.x1 = x + 6; PARK.z = z; SLOTS.forEach((s, k) => { s.x = PARK.x0 + 1.45 + k * 2.3; }); } }],
   desc: 'À poser le long de la grand-rue. Les gens des villages voisins viennent en voiture : +15 % de clients.' });
-movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 1500, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'La fierté de la place. Nécessaire au-delà de 400 habitants. +30 beauté.' });
+movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 1500, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'Une grande fontaine de pierre à vasques, au milieu de la place du village. Les habitants la réclament au-delà de 400 habitants. +30 beauté.' });
 movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
 movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 15000, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
 movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], rot: false, objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand coin de nature clos : cerfs, sangliers, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Sans garde forestier, il arrive qu\'un animal s\'échappe. +35 beauté.' });
@@ -3456,6 +3456,10 @@ const GRID = new THREE.Mesh(new THREE.PlaneGeometry(80, 80).rotateX(-Math.PI / 2
 const snapC = (v, size) => (Math.round(size / 2) % 2 ? Math.floor(v / TILE) * TILE + TILE / 2 : Math.round(v / TILE) * TILE);
 
 function openBuild() { if (!S.started) return; renderBuild(); $('build').hidden = false; }
+// ouvre Construire directement sur le bâtiment demandé par une mission, la ligne mise en évidence (Romain, 21/11/2026)
+function openBuildAt(k) { if (!S.started) return; const M = MOV[k]; if (!M) return openBuild(); BTAB = 'batiments'; renderBuild(); $('build').hidden = false;
+  const row = [...$('bd-list').querySelectorAll('.item')].find((it) => it.querySelector('b') && it.querySelector('b').textContent === M.n); if (!row) return;
+  row.scrollIntoView({ block: 'center' }); row.style.transition = 'box-shadow .3s'; row.style.boxShadow = '0 0 0 3px #E3A73C'; setTimeout(() => { row.style.boxShadow = ''; }, 2600); }
 let BTAB = 'logements';
 function renderBuild() {
   $('bd-coins').textContent = fmt(S.coins); $('bd-pop').textContent = fmt(S.pop); $('bd-b').textContent = Math.round(beauty());
