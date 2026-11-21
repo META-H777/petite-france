@@ -1561,7 +1561,7 @@ function setLabel(l, txt, cls) { if (l.st && GOD) txt = compactTxt(txt, l.ic); i
 const fieldAnchor = new THREE.Object3D(); fieldAnchor.position.set(-72, 0, 4.2); scene.add(fieldAnchor);
 const L = {
   plots: plotMeshes.map((p) => { const l = label(p, 0.9); l.plot = true; return l; }), field: label(fieldAnchor, 1.6), mill: label(mill, 8.4), oven: label(oven, 3.9), shop: label(shop, 7.2),
-  chateau: label(chateau, 5), market: label(stallG, 3.6), cake: label(cakeG, 5.2), bq: label(bqG, 5), mairie: label(mairie, 7.8), church: label(church, 13.5), bistrot: label(bistrot, 6.6),
+  chateau: label(chateau, 5), market: label(stallG, 3.6), cake: label(cakeG, 5.2), bq: label(bqG, 5), mairie: label(mairie, 7.8), church: label(church, 9), bistrot: label(bistrot, 6.6),
   lucie: label(crew.lucie, 2.3, 'name'), camille: label(crew.camille, 2.3, 'name'), paul: label(crew.paul, 2.3, 'name'), jules: label(crew.jules, 2.3, 'name'), leo: label(crew.leo, 2.3, 'name'), ines: label(crew.ines, 2.3, 'name'), margot: label(crew.margot, 2.3, 'name')
 };
 const PL = {}; PKEYS.forEach((k) => { PL[k] = label(PEN[k].g, 3.1); PL[k].act = () => penGo(k); });
@@ -2127,7 +2127,7 @@ L.plots.forEach((l, i) => { l.act = () => plotGo(i); });
 ['field', 'mill', 'oven', 'shop'].forEach((k) => { $('c-' + k).addEventListener('click', () => { if (!S.started) return; if (k === 'field') L.field.act(); else stationGo(k); }); });
 
 /* ---------------- loading the Blender models, nearest quarter first ---------------- */
-const GLBV = 2, loader = new GLTFLoader(), models = {}, glbFail = new Set(); let glbBusy = 0, glbDone = 0;
+const GLBV = 3, loader = new GLTFLoader(), models = {}, glbFail = new Set(); let glbBusy = 0, glbDone = 0;
 function prepModel(scn) {
   scn.traverse((o) => { if (!o.isMesh) return; const m0 = o.material, nm = (m0 && m0.name || '').toLowerCase(), hasCol = !!o.geometry.attributes.color;
     o.material = /lumiere/.test(nm) ? (hasCol ? VLIT : new THREE.MeshBasicMaterial({ color: m0.color })) : hasCol ? VCOLF : new THREE.MeshLambertMaterial({ color: m0 && m0.color ? m0.color : '#ddd', flatShading: true });
