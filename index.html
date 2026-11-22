@@ -171,6 +171,19 @@
   body.fpgame #visitbar { display:none !important; }
   .sonbox .btn.wide { width:100%; margin:4px 0 12px; } .sonlab { display:flex; justify-content:space-between; font:800 14px Nunito,sans-serif; } #son-r { width:100%; margin:8px 0; accent-color:#E3A73C; height:28px; } .sonmodes { display:flex; flex-direction:column; gap:6px; margin:6px 0; } .sonmodes .btn { width:100%; text-align:left; }
   .sonp { font:700 12.5px/1.35 Nunito,sans-serif; color:var(--mute); margin:6px 0 0; }
+  /* le guide du village (22/11/2026) */
+  #gd { position:fixed; inset:0; z-index:30; background:rgba(43,37,53,.55); display:flex; align-items:center; justify-content:center; padding:14px; box-sizing:border-box; }
+  #gd[hidden] { display:none; }
+  .gd-card { position:relative; width:min(460px, 100%); max-height:calc(100% - 8px); overflow:auto; background:var(--white); border:3px solid var(--ink); border-radius:24px; box-shadow:0 6px 0 rgba(43,37,53,.35); display:flex; flex-direction:column; }
+  .gd-card .x { position:absolute; right:10px; top:10px; z-index:2; }
+  .gd-pic { position:relative; margin:12px 12px 0; aspect-ratio:16/10; border-radius:16px; border:2.5px solid var(--ink); overflow:hidden; background:linear-gradient(160deg,#F4DDB4,#CFE3B0); flex:none; }
+  .gd-pic img { width:100%; height:100%; object-fit:cover; display:block; transition:opacity .35s; }
+  .gd-pic span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:64px; }
+  .gd-body { padding:12px 18px 4px; } .gd-body h2 { font:900 21px/1.15 Fraunces,Georgia,serif; margin:4px 0 8px; color:var(--ink); }
+  .gd-body p { font:700 14.5px/1.45 Nunito,sans-serif; margin:0 0 8px; color:var(--ink); } .gd-body b { color:#8A4A1E; }
+  .gd-dots { display:flex; gap:7px; justify-content:center; margin:4px 0 10px; } .gd-dots button { width:9px; height:9px; padding:0; border-radius:50%; border:2px solid var(--ink); background:var(--white); cursor:pointer; } .gd-dots button.on { background:var(--gold); width:22px; border-radius:6px; }
+  .gd-nav { display:flex; gap:10px; padding:0 14px 14px; } .gd-nav .btn { flex:1; }
+  .gd-help { display:block; margin:10px auto 0; border:2px dashed var(--ink); background:rgba(243,207,122,.35); border-radius:999px; padding:6px 14px; font:800 13px Nunito,sans-serif; color:var(--ink); cursor:pointer; }
   .hint { font-size:13.5px; font-weight:800; color:var(--mute); margin:10px 0 0; }
   .pill.bump { animation:bump .25s ease-out; } @keyframes bump { 40% { transform:scale(1.14); } }
   #b-snd { position:fixed; left:calc(env(safe-area-inset-left,0px) + 10px); bottom:calc(env(safe-area-inset-bottom,0px) + 104px); width:42px; height:42px; border-radius:50%; border:2.5px solid var(--ink); background:var(--white); box-shadow:0 3px 0 var(--ink); font-size:18px; padding:0; }
@@ -4102,7 +4115,7 @@ function renderBuild() {
   if (!shown.some(([id]) => id === BTAB)) BTAB = 'logements';
   const te = $('bd-tabs'); te.innerHTML = ''; shown.forEach(([id, n, ic]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tab' + (BTAB === id ? ' on' : ''); b.textContent = ic + ' ' + n; b.addEventListener('click', () => { BTAB = id; renderBuild(); }); te.appendChild(b); });
   if (nextT) { const b = document.createElement('span'); b.className = 'tab lock'; b.textContent = '🔒 ' + nextT[1] + ' · niveau ' + TAB_LVL[nextT[0]]; te.appendChild(b); }
-  const el = $('bd-list'); el.innerHTML = ''; const lv = level();
+  const el = $('bd-list'); el.innerHTML = ''; const lv = level(); { const h = guideHelp(4, 'Comment construire ?'); h.style.margin = '0 auto 10px'; el.appendChild(h); }
   const row = (ic, n, s, price, ok, why, fn) => { const it = document.createElement('div'); it.className = 'item' + (ok ? ' best' : ''); it.innerHTML = '<div class="ic"></div><div class="t"><b></b><span></span></div><button class="btn" type="button"></button>';
     it.querySelector('.ic').textContent = ic; it.querySelector('b').textContent = n; rich(it.querySelector('span'), s); const bt = it.querySelector('button'); if (why) { bt.textContent = '🔒'; bt.disabled = true; rich(it.querySelector('span'), s + ' · ' + why); } else { rich(bt, price); bt.classList.toggle('gold', ok); bt.disabled = !ok; bt.addEventListener('click', fn); } el.appendChild(it); };
   { const vm = villageMul(), nx = PALIERS[palierI() + 1]; if (BTAB !== 'rues' && BTAB !== 'batiments') { const d = document.createElement('div'); d.style.cssText = 'font-size:12px;font-weight:800;opacity:.75;margin:0 2px 8px;line-height:1.3'; d.textContent = '📌 Prix fixes : acheter ne fait pas monter le suivant.' + (vm > 1 ? ' Palier du village × ' + String(vm).replace('.', ',') + '.' : '') + (nx ? ' Au prochain palier (' + nx[0] + ' habitants), les prix passeront à × ' + String(nx[1]).replace('.', ',') + '.' : ''); el.appendChild(d); } }
@@ -4302,6 +4315,7 @@ function tickVisit(dt) { const V = VISIT; if (!V.on) return; const s = V.stops[V
   target.set(V.pos.x, 0, V.pos.z); }
 $('v-quit').addEventListener('click', () => endVisit(false)); $('v-build').addEventListener('click', () => endVisit(true));
 $('b-menu').addEventListener('click', () => { if (!S.started || VISIT.on) return; const na = ups().filter((u) => u.cost !== null && !u.wait && S.coins >= u.cost).length, nd = S.orders.filter(canDeliver).length, nm = missionsReady(); openSheet('Menu', 'Village de ' + vil().n, [
+  { t: '📘 Guide du village', s: 'Le but du jeu et comment tout fonctionne, en huit pages illustrées.', btn: 'Lire', ok: true, run: () => { closeSheet(); guideOpen(0); } },
   { t: '📊 Tableau de bord', s: 'Ce qui rentre, ce qui sort, ce qu’il reste à ramasser et qui s’occupe de quoi.', btn: 'Voir', ok: true, run: () => { closeSheet(); tableau(); } },
   { t: '🏗️ Construire', s: 'Maisons, rues, bâtiments, jardins et décor.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openBuild(); } },
   { t: '✋ Aménager', s: 'Déplace, tourne ou démolis tout ce que tu as posé.', btn: 'Aménager', ok: true, run: () => { closeSheet(); amenager(); } },
@@ -4459,7 +4473,7 @@ function gerer(k, idx) { if (!S.started) return; const el = document.createEleme
   const opts = []; if (till >= 1) opts.push({ t: '🪙 Encaisser ' + fmt(till) + ' ' + C, s: 'Le boulanger va jusqu’à la caisse et ramasse l’argent en arrivant.', btn: 'Y aller', ok: true, run: () => { closeSheet(); if (biz) walkBiz(idx); else if (k === 'reserve') walkReserve(); else stationGo(k); } });
   if (G) opts.push({ t: '🔨 Améliorer et embaucher', s: 'Un niveau de plus, c’est un meilleur prix de vente.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } }, { t: '🚲 Y aller', s: 'Tu t’y rends à vélo.', btn: 'Y aller', ok: true, run: () => { closeSheet(); if (k === 'reserve') { const d = reserveDoor(); goTo(d[0], d[1], 1.5, null); } else stationGo(k); } });
   else opts.push({ t: '✋ Déplacer', s: 'La déplacer, la tourner ou la démolir.', btn: 'Déplacer', ok: true, run: () => { closeSheet(); amenager(idx); } });
-  openSheet('Gérer', 'Un réglage simple : le prix.', opts, null, el); }
+  el.appendChild(guideHelp(5, 'Comment gagnent les commerces ?')); openSheet('Gérer', 'Un réglage simple : le prix.', opts, null, el); }
 /* ================= les quartiers et les îlots : une carte bornée, quadrillée, qu'on ouvre dans un ordre lisible ================= */
 // Cahier des charges : CAHIER-DES-CHARGES-QUARTIERS.md. Neuf quartiers ; chacun est découpé en îlots d'environ 16 m qu'on achète un par un.
 // On ne construit que sur un îlot acheté. Les chiffres (habitants, prix) sont des premiers réglages.
@@ -5073,6 +5087,54 @@ function jeuxSheet() { if (!S.started) return; const lv = level();
     return { t: G.ic + ' ' + G.n + (giftOn(G.gift) ? ' · 🎁' : ''), s: 'Contre ' + foe.name + (foe.qn ? ' (' + foe.qn + ')' : '') + ' · ' + st.w + ' victoire' + (st.w > 1 ? 's' : '') + ' en ' + st.n + ' partie' + (st.n > 1 ? 's' : '') + (giftOn(G.gift) ? '' : ' · cadeau à la première victoire') + (left > 0 ? ' · encore ' + Math.ceil(left / 60000) + ' min' : ''), btn: left > 0 ? 'Bientôt' : 'Jouer', ok: left <= 0, run: () => mgOpen(id) }; })); }
 
 if (location.hash === '#debug') window.__mg = { get R() { return MGR; }, FPV, mgOpen, mgFinish };
+/* ================= le guide du village (Romain, 22/11/2026 : « on complexifie le jeu de jour en jour, un petit guide serait le bienvenu ») =================
+   Huit pages courtes, illustrées par de vraies images du jeu (guide/g1.webp … g8.webp, prises dans un village de 900 habitants).
+   Menu → 📘 Guide du village. Il s'ouvre une fois tout seul (S.guideSeen), et les fenêtres Construire et Gérer ont un « ❓ » vers la bonne page. */
+const GUIDE = [
+  { ic: '🥖', t: 'Bienvenue à Petite France', img: 'g1',
+    p: ['Tu es <b>le boulanger du village</b>.', 'Au début, il n’y a qu’une boulangerie, un champ de blé et une dizaine d’habitants. À toi d’en faire un vrai village français, maison après maison, <b>jusqu’à 3 000 habitants</b>.'] },
+  { ic: '🎯', t: 'Le but : faire grandir le village', img: 'g2',
+    p: ['Des habitants viennent quand il y a <b>des maisons</b> pour eux, <b>reliées à une rue</b>, dans un village <b>agréable</b>.', 'À chaque palier (150, 250, 400… 3 000 habitants), le village s’agrandit : nouveaux quartiers, nouveaux bâtiments, nouveaux voisins. Les prix montent un peu à chaque palier, et c’est toujours annoncé à l’avance.'] },
+  { ic: '🌾', t: 'Le pain, le cœur du village', img: 'g3',
+    p: ['<b>Le blé</b> pousse au champ → <b>le moulin</b> en fait de la farine → <b>le four</b> cuit les baguettes → elles vont <b>en vitrine</b>, où les clients les achètent.', 'Embauche Léo, Jules, Inès et Margot (Menu → Améliorer) : tout tourne alors tout seul. Garde toujours du pain en vitrine, les restaurants du village en achètent aussi.'] },
+  { ic: '🪙', t: 'Gagner des écus d’or', img: 'g4',
+    p: ['L’argent vient de <b>la caisse de la boulangerie</b>, des <b>loyers</b> des maisons, et des <b>commerces</b> et attractions.', 'Quand une pastille 🪙 apparaît, touche-la : <b>le boulanger y va à pied</b> et encaisse en arrivant. Une caisse se remplit pendant quelques heures, puis s’arrête : reviens la vider de temps en temps.'] },
+  { ic: '🏗️', t: 'Construire et aménager', img: 'g5',
+    p: ['<b>Menu → Construire</b> : maisons, rues, bâtiments et décors. Une maison doit <b>toucher une rue</b> pour être habitée.', 'Plus le village est <b>beau</b> (fleurs, arbres, fontaines), plus les maisons se remplissent. <b>Menu → Aménager</b> : touche ce que tu as posé pour le déplacer, le tourner ↻ ou le démolir.'] },
+  { ic: '🍽️', t: 'Des commerces bien pensés', img: 'g6',
+    p: ['<b>Un de chaque vaut mieux que plusieurs pareils</b> : deux guinguettes se partagent les mêmes clients.', 'Les <b>restaurants</b> (guinguette, café du parc, bistrot) achètent leur pain à ta boulangerie : sans pain en vitrine, ils vendent peu. Les <b>attractions</b> (réserve, grande roue, barques, Guignol) ont des frais d’entretien. Touche un commerce pour voir ce qu’il rapporte et choisir son prix.'] },
+  { ic: '💬', t: 'Les habitants et leurs secrets', img: 'g7',
+    p: ['Chaque quartier a son habitant : Firmin, Lili, Gaspard, Yvon… Un <b>❗</b> au-dessus de sa tête : il a une mission pour toi.', 'Après trois missions, il raconte <b>son histoire</b> en trois chapitres, avec un cadeau à la fin. Cherche aussi les <b>lettres de la comtesse</b>, les clins d’œil cachés, et défie-le aux <b>jeux du village</b> (pétanque, pêche…). Tout est noté dans le 📖 Carnet du village.'] },
+  { ic: '⚙️', t: 'Les bons réflexes', img: 'g8',
+    p: ['💾 <b>Sauvegarde</b> : la partie s’enregistre seule. Copie ton code de temps en temps (Menu → Sauvegarde).', '🎵 <b>Son et musique</b> : couper, régler le volume, choisir la musique.', '🔭 <b>Le bouton sous le télescope</b> : vue de tout le village, puis retour au boulanger.', '📊 <b>Tableau de bord</b> : ce qui rentre, ce qui sort, ce qui attend d’être ramassé.'] },
+];
+let gdI = 0;
+const gdEl = document.createElement('div'); gdEl.id = 'gd'; gdEl.hidden = true;
+gdEl.innerHTML = '<div class="gd-card"><button type="button" class="x" id="gd-x" aria-label="Fermer">×</button><div class="gd-pic"><img id="gd-img" alt=""><span id="gd-ic"></span></div>'
+  + '<div class="gd-body"><div class="kick" id="gd-k"></div><h2 id="gd-t"></h2><div id="gd-p"></div></div>'
+  + '<div class="gd-dots" id="gd-dots"></div><div class="gd-nav"><button type="button" class="btn ghost" id="gd-prev">‹ Précédent</button><button type="button" class="btn gold" id="gd-next">Suivant ›</button></div></div>';
+document.body.appendChild(gdEl);
+GUIDE.forEach((g, i) => { const d = document.createElement('button'); d.type = 'button'; d.setAttribute('aria-label', 'Page ' + (i + 1)); d.addEventListener('click', () => guideShow(i)); $('gd-dots').appendChild(d); });
+function guideShow(i) { gdI = Math.max(0, Math.min(GUIDE.length - 1, i)); const g = GUIDE[gdI], img = $('gd-img');
+  img.style.opacity = '0'; img.onload = () => { img.style.opacity = '1'; $('gd-ic').hidden = true; }; img.onerror = () => { img.removeAttribute('src'); $('gd-ic').hidden = false; };
+  $('gd-ic').textContent = g.ic; $('gd-ic').hidden = false; img.src = './guide/' + g.img + '.webp?v=1';
+  $('gd-k').textContent = 'Guide du village · ' + (gdI + 1) + ' / ' + GUIDE.length; $('gd-t').textContent = g.ic + ' ' + g.t;
+  $('gd-p').innerHTML = g.p.map((t) => '<p>' + t + '</p>').join('');
+  [...$('gd-dots').children].forEach((d, k) => d.classList.toggle('on', k === gdI));
+  $('gd-prev').style.visibility = gdI ? 'visible' : 'hidden'; $('gd-next').textContent = gdI === GUIDE.length - 1 ? 'C’est parti !' : 'Suivant ›';
+  if (gdI + 1 < GUIDE.length) { const pre = new Image(); pre.src = './guide/' + GUIDE[gdI + 1].img + '.webp?v=1'; } }
+function guideOpen(i) { if (typeof closeSheet === 'function') closeSheet(); gdEl.hidden = false; guideShow(i || 0); }
+function guideClose() { gdEl.hidden = true; if (S && !S.guideSeen) { S.guideSeen = true; S.introSeen = true; dirty = true; } }
+$('gd-x').addEventListener('click', guideClose);
+$('gd-prev').addEventListener('click', () => guideShow(gdI - 1));
+$('gd-next').addEventListener('click', () => (gdI === GUIDE.length - 1 ? guideClose() : guideShow(gdI + 1)));
+gdEl.addEventListener('click', (e) => { if (e.target === gdEl) guideClose(); });
+// glisser à gauche ou à droite pour tourner les pages
+{ let sx = null; gdEl.addEventListener('pointerdown', (e) => { sx = e.clientX; }); gdEl.addEventListener('pointerup', (e) => { if (sx === null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 60) guideShow(gdI + (dx < 0 ? 1 : -1)); }); }
+// une petite pastille « ❓ » qui ouvre directement la bonne page
+function guideHelp(page, label) { const b = document.createElement('button'); b.type = 'button'; b.className = 'gd-help'; b.textContent = '❓ ' + (label || 'Comment ça marche ?'); b.addEventListener('click', () => guideOpen(page)); return b; }
+// la première fois (nouvelle partie comme partie en cours), le guide s'ouvre tout seul, une fois
+function guideFirst() { if (S && S.started && !S.guideSeen && gdEl.hidden && (!$('intro') || $('intro').hidden)) guideOpen(0); }
 /* ================= lot 4 : l'histoire du village, ses secrets, ses clins d'œil et ses jeux (Romain, 22/11/2026) =================
    - Chaque habitant de quartier, après ses trois premières missions, raconte son histoire en trois chapitres. Le dernier offre un cadeau
      (un décor qu'on ne trouve nulle part ailleurs).
@@ -5895,7 +5957,7 @@ function startPlay(mode) {
   try { window.focus(); canvas.focus(); } catch (e) {} dirty = true; loadNear();
   if (GOD && MOV.shop) { target.set(MOV.shop.x, 0, MOV.shop.z + 4); placeCam(); }
   musicTo(musicWant()); // après avoir placé la caméra : on entend tout de suite le quartier de la boulangerie
-  if (!S.introSeen) showIntro();
+  if (!S.guideSeen) setTimeout(() => { if (!S.guideSeen) guideOpen(0); }, 900); // le guide du village remplace l'ancienne introduction, et s'ouvre une fois pour tous (même les parties en cours)
 }
 // home screen: continue, or a brand-new game in one of the two modes
 let hadSave = false;
