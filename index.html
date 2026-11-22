@@ -2165,6 +2165,9 @@ function pushOut(nx, nz) {
   }
   return [Math.max(BX0, Math.min(BX1, nx)), Math.max(BZ0, Math.min(BZ1, nz))];
 }
+/* encaisser : le boulanger va jusqu'à la caisse, l'argent n'est ramassé qu'à son arrivée (Romain, 22/11/2026 : « ça permet de se promener dans la map »).
+   S'il est déjà sur place, c'est immédiat. S'il part ailleurs en route, rien n'est ramassé. */
+function walkCollect(x, z, fn, r) { r = r || 1.6; if (Math.hypot(player.position.x - x, player.position.z - z) <= r + 1.2) return fn(); goTo(x, z, r, fn); if (!QUIET) floatAt(player, '🚶 Je vais encaisser'); return true; }
 function goTo(x, z, r, act) { P.goal = new THREE.Vector3(x, 0, z); P.goalR = r; P.act = act || null; P.stuck = 0; P.path = findPath(player.position.x, player.position.z, x, z); P.usedPath = P.path.length > 0; ripple.position.set(x, groundY(x, z) + 0.08, z); rippleT = 0; }
 let pickList = [], pickAt = -1e9;
 function pickRoots() { const t = performance.now(); if (t - pickAt < 1500) return pickList; pickAt = t; const all = []; scene.traverse((o) => { if (o.userData && o.userData.kind) all.push(o); });
@@ -2213,6 +2216,8 @@ function stationGo(kind) {
     church: () => toast('L\'église · saison 4', 'Bientôt : restaure les vitraux et fais sonner les cloches.'),
     bistrot: () => (!MOV.bistrot.placed ? toast('Le bistrot · à bâtir', 'Construis-le (Construire › Bâtiments) : café, pastis et jambon-beurre, il rapporte des écus d’or.') : (S.bitill || 0) >= 1 ? collectBistro() : gerer('bistrot')) }[kind];
   const helper = { mill: 'jules', oven: 'ines', shop: 'margot', market: 'paul', cake: 'camille' }[kind], menu = /^(chateau|mairie|gate|church|bistrot)$/.test(kind);
+  const money = { shop: S.shop > 0, market: S.mtill > 0, bq: S.btill > 0, chateau: S.gate > 0, bistrot: (S.bitill || 0) >= 1 }[kind]; // de l'argent à ramasser : on y va d'abord
+  if (GOD && money) { cd[kind] = now() + 60000; return walkCollect(s[0], s[1], () => { cd[kind] = now() + 900; act(); }, s[2]); }
   if (GOD && (menu || (helper && S.hired[helper]))) { cd[kind] = now() + 900; act(); goTo(S.carry > 0 ? SH[0] : s[0], S.carry > 0 ? SH[1] : s[1], S.carry > 0 ? 1.6 : s[2], null); return; } // touched = done; the baker strolls over by himself (and carries the loaves to the shop)
   cd[kind] = now() + 60000;
   return goTo(s[0], s[1], s[2], () => { const go = () => { cd[kind] = now() + 900; act(); }; if (menu || !startWork(kind, go, [s[0], s[1]])) go(); });
@@ -4027,7 +4032,8 @@ function tickCity(n, dt) {
 let popT = 0;
 
 function collectRents() { let tot = 0; S.city.items.forEach((it, i) => { if (it.t !== 'h') return; const r = Math.floor(it.rent || 0); if (r >= 1) { it.rent -= r; tot += r; if (cityObjs[i] && tot < 4000) burst(it.x, 2.5, it.z, ['#E3A73C', '#F3CF7A'], 3, 3); } }); if (!tot) return 0; led('🏠 Loyers', tot); S.coins += tot; dirty = true; SFX.coin(); buzz(25); toast('🪙 Loyers ramassés', '+' + fmt(tot) + ' écus d’or'); return tot; }
-$('b-rents').addEventListener('click', () => collectRents());
+// le bouton « loyers » : tous les loyers se ramassent à la mairie (ou à la boulangerie tant qu'il n'y a pas de mairie) ; le boulanger y va
+$('b-rents').addEventListener('click', () => { const M = MOV.mairie && MOV.mairie.placed && STN.mairie ? STN.mairie : null, x = M ? M[0] : STN.shop[0], z = M ? M[1] : STN.shop[1]; walkCollect(x, z, () => collectRents(), M ? M[2] || 2 : 1.8); if (!QUIET) toast('🪙 Les loyers', M ? 'Le boulanger va les ramasser à la mairie.' : 'Le boulanger va les ramasser à la boulangerie.'); });
 /* ---- tapping a house in play mode: rent, level up ---- */
 /* embellir l'existant, depuis « Améliorer » : la maison la moins chère à fleurir (ou à passer maison de maître) */
 function upHouseCost(it) { return Math.round(housePrice(it.m) * (it.l === 1 ? 0.5 : 1)); }
@@ -4035,13 +4041,13 @@ function nextHouseUp() { let best = -1, bc = 1e18; if (!S.city) return null; S.c
 function upHouse(o) { const it = o.it, T = HOUSE_T[it.m]; it.end = now() + dur(T.t * 60000 * (it.l === 1 ? 1 : 2) * timeMul()); it.l++; dirty = true; floatAt(cityObjs[o.i], it.l === 2 ? '🌷' : '✨'); }
 function tapCityHouse(i) {
   if (!S.started) return; const it = S.city.items[i]; if (!it) return; const T = HOUSE_T[it.m];
-  const r = Math.floor(it.rent || 0); if (r >= 1) { it.rent -= r; led('🏠 Loyers', r); S.coins += r; dirty = true; floatAt(cityObjs[i], '+' + r + ' ' + C); burst(it.x, 2.5, it.z, ['#E3A73C', '#F3CF7A'], 8, 4); }
+  if (Math.floor(it.rent || 0) >= 1) { const f = itemFp(it); walkCollect(it.x, it.z, () => { const r = Math.floor(it.rent || 0); if (r < 1) return; it.rent -= r; led('🏠 Loyers', r); S.coins += r; dirty = true; floatAt(cityObjs[i], '+' + r + ' ' + C); burst(it.x, 2.5, it.z, ['#E3A73C', '#F3CF7A'], 8, 4); SFX.coin(); }, Math.max(f[0], f[1]) / 2 + 0.8); } /* le loyer se ramasse en arrivant devant la maison */
   if (it.end > 0) { const prime = Math.round((20 + Math.max(0, it.end - now()) / 60000 * 30) * villageMul()); return openSheet(T.n + ' · chantier', 'Les maçons travaillent.', [{ t: '💰 Prime aux maçons', s: 'Le temps de chantier restant est divisé par deux.', btn: prime + ' ' + C, ok: S.coins >= prime, run: () => { if (S.coins < prime) return; led('🏠 Maisons', -prime); S.coins -= prime; it.end = now() + (it.end - now()) / 2; dirty = true; closeSheet(); } }], { end: () => it.end, skip: () => { it.end = now(); } }); }
   const cost = Math.round(housePrice(it.m) * (it.l === 1 ? 0.5 : 1)), tm = dur(T.t * 60000 * (it.l === 1 ? 1 : 2) * timeMul());
   const opts = it.l < 3 ? [{ t: (it.l === 1 ? '🌷 La fleurir' : '✨ En faire une maison de maître') + ' · ' + cost + ' ' + C, s: longT(tm) + ' de chantier · +' + Math.round(T.cap * 0.3) + ' habitants' + (busyMasons() >= S.masons ? ' · maçons occupés' : ''), btn: 'Bâtir', ok: S.coins >= cost && busyMasons() < S.masons,
     run: () => { led('🏠 Maisons', -cost); S.coins -= cost; it.end = now() + tm; it.l++; dirty = true; closeSheet(); } }] : [];
   opts.push({ t: '✋ Déplacer cette maison', s: 'La déplacer, la tourner ou la démolir.', btn: 'Déplacer', ok: true, run: () => { closeSheet(); amenager(i); } });
-  openSheet(T.n + ' · ' + HLV[it.l], (links && !links[i] ? '🚧 Aucune rue ne la dessert : personne ne peut y habiter. ' : '') + Math.round(capOf(it)) + ' habitants · loyer ' + Math.round(capOf(it) * RENT_K * rentMult() * 60) + ' ' + C + '/h' + (r ? ' · +' + r + ' ' + C + ' ramassés' : ''), opts);
+  openSheet(T.n + ' · ' + HLV[it.l], (links && !links[i] ? '🚧 Aucune rue ne la dessert : personne ne peut y habiter. ' : '') + Math.round(capOf(it)) + ' habitants · loyer ' + Math.round(capOf(it) * RENT_K * rentMult() * 60) + ' ' + C + '/h' + (Math.floor(it.rent || 0) >= 1 ? ' · 🚶 le boulanger va ramasser ' + Math.floor(it.rent) + ' ' + C : ''), opts);
 }
 
 /* ================= the build mode ================= */
@@ -4383,7 +4389,10 @@ function collectBistro() { const v = Math.floor(S.bitill || 0); if (v < 1) retur
 const RES_CAP = 4;
 function reserveRate() { if (!MOV.reserve || !MOV.reserve.placed) return 0; return (300 + 1.2 * (S.pop || 0)) * prixM('reserve') * (S.garde ? 1.4 : 1); }
 function collectReserve() { const v = Math.floor(S.rtill || 0); if (v < 1) return 0; S.rtill -= v; led('🦌 Réserve', v); S.coins += v; dirty = true; SFX.coin(); floatAt(reserveG, '+' + v + ' ' + C); burst(MOV.reserve.x, 2, MOV.reserve.z, ['#E3A73C', '#F3CF7A'], 12, 4); return v; }
-const reserveLab = label(reserveG, 3.2); reserveLab.act = () => { if (!MOV.reserve.placed) return openBuildAt('reserve'); if (!collectReserve()) gerer('reserve'); };
+const reserveDoor = () => { const q = rotP(0, RES_HD + 1.5, MOV.reserve.r || 0); return [MOV.reserve.x + q[0], MOV.reserve.z + q[1]]; }; // le porche de la réserve, quelle que soit son orientation
+const walkReserve = () => { const d = reserveDoor(); return walkCollect(d[0], d[1], () => collectReserve(), 1.6); };
+const walkBiz = (i) => { const it = S.city.items[i]; if (!it) return; const f = itemFp(it); return walkCollect(it.x, it.z, () => collectBiz(i), Math.max(f[0], f[1]) / 2 + 0.8); };
+const reserveLab = label(reserveG, 3.2); reserveLab.act = () => { if (!MOV.reserve.placed) return openBuildAt('reserve'); if ((S.rtill || 0) >= 1) walkReserve(); else gerer('reserve'); };
 function bizOpen() { const L = []; if (S.city) S.city.items.forEach((it, i) => { if (it.t === 'd' && BIZ[it.k]) L.push(i); }); return L; }
 function tickPrix(dt) { tickSpin(dt); if (!S.started || !S.city) return; const n = now(); setLabel(maisonLab, MOV.chezmoi.placed ? '🏡 Chez moi' : '', 'name');
   if (MOV.bistrot && MOV.bistrot.placed) { const r = bistroRate(); if (!S.bitt) S.bitt = n; S.bitill = Math.min(r * BISTRO_CAP, (S.bitill || 0) + r * (n - S.bitt) / 3600000); S.bitt = n;
@@ -4391,7 +4400,7 @@ function tickPrix(dt) { tickSpin(dt); if (!S.started || !S.city) return; const n
   if (MOV.reserve && MOV.reserve.placed) { const r = reserveRate(); if (!S.rtt) S.rtt = n; S.rtill = Math.min(r * RES_CAP, (S.rtill || 0) + r * (n - S.rtt) / 3600000); S.rtt = n; const t = Math.floor(S.rtill || 0); setLabel(reserveLab, t >= 1 ? '🪙 +' + t + ' · réserve' : '🦌 La réserve', t >= 1 ? 'coin' : ''); } else { S.rtt = n; setLabel(reserveLab, '', ''); }
   const bo = bizOpen(); bo.forEach((i) => { const it = S.city.items[i], r = bizRate(it); if (!it.tt) it.tt = n; it.till = Math.min(r * BIZ[it.k].cap, (it.till || 0) + r * (n - it.tt) / 3600000); it.tt = n; });
   /* la caisse de chaque commerce posé (guinguette, barques, guignol, café, grande roue) se voit sur la carte (22/11/2026) */
-  bo.forEach((i, j) => { let l = BIZLAB[j]; if (!l) { l = BIZLAB[j] = label(scene, 3.2); } const o = cityObjs[i], t = Math.floor(S.city.items[i].till || 0); if (!o) return; l.obj = o; l.dy = S.city.items[i].k === 'grande_roue' ? 8.2 : 3.4; l.act = () => { if (!collectBiz(i)) gerer(undefined, i); }; setLabel(l, t >= 1 ? '🪙 +' + t + ' · ' + BIZ[S.city.items[i].k].ic : '', 'coin'); });
+  bo.forEach((i, j) => { let l = BIZLAB[j]; if (!l) { l = BIZLAB[j] = label(scene, 3.2); } const o = cityObjs[i], t = Math.floor(S.city.items[i].till || 0); if (!o) return; l.obj = o; l.dy = S.city.items[i].k === 'grande_roue' ? 8.2 : 3.4; l.act = () => { if (Math.floor((S.city.items[i] || {}).till || 0) >= 1) walkBiz(i); else gerer(undefined, i); }; setLabel(l, t >= 1 ? '🪙 +' + t + ' · ' + BIZ[S.city.items[i].k].ic : '', 'coin'); });
   for (let j = bo.length; j < BIZLAB.length; j++) setLabel(BIZLAB[j], '', '');
   let f = PRIX[prixI('shop')].f + (S.lv.mk > 0 ? PRIX[prixI('market')].f : 0) + (S.lv.bq > 0 ? PRIX[prixI('bq')].f : 0) + (MOV.bistrot && MOV.bistrot.placed ? PRIX[prixI('bistrot')].f : 0) + (MOV.reserve && MOV.reserve.placed ? PRIX[prixI('reserve')].f : 0); bizOpen().forEach((i) => { f += PRIX[prixI(S.city.items[i].k)].f; });
   if (f) { const v = S.freq + f * dt / 300; S.freq = f > 0 ? Math.min(100, v) : Math.max(Math.min(S.freq, 30), v); } }
@@ -4414,8 +4423,8 @@ function gerer(k, idx) { if (!S.started) return; const el = document.createEleme
     + '<p class="ex">' + PRIX[pi].ic + ' <b>' + PRIX[pi].n + '</b> : ' + PRIX[pi].s + '.</p>'
     + (G ? '<h4>Qui y travaille</h4><div class="tm ' + (S.hired[G.who] || G.auto || (G.ok && G.ok()) ? 'ok' : 'no') + '"><i>' + (S.hired[G.who] || G.auto || (G.ok && G.ok()) ? '✅' : '✋') + '</i><div><span>' + (S.hired[G.who] || G.auto || (G.ok && G.ok()) ? G.whoY : G.whoN) + '</span></div></div>' : '');
   el.querySelectorAll('.prix button').forEach((b) => b.addEventListener('click', () => { if (!S.prix) S.prix = {}; S.prix[k] = +b.dataset.p; dirty = true; gerer(biz ? undefined : k, idx); }));
-  const opts = []; if (till >= 1) opts.push({ t: '🪙 Encaisser ' + fmt(till) + ' ' + C, s: 'Ramasser la caisse maintenant.', btn: 'Encaisser', ok: true, run: () => { if (biz) collectBiz(idx); else G.collect(); gerer(biz ? undefined : k, idx); } });
-  if (G) opts.push({ t: '🔨 Améliorer et embaucher', s: 'Un niveau de plus, c’est un meilleur prix de vente.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } }, { t: '🚲 Y aller', s: 'Tu t’y rends à vélo.', btn: 'Y aller', ok: true, run: () => { closeSheet(); if (k === 'reserve') goTo(MOV.reserve.x, MOV.reserve.z + RES_HD + 1.5, 1.5, null); else stationGo(k); } });
+  const opts = []; if (till >= 1) opts.push({ t: '🪙 Encaisser ' + fmt(till) + ' ' + C, s: 'Le boulanger va jusqu’à la caisse et ramasse l’argent en arrivant.', btn: 'Y aller', ok: true, run: () => { closeSheet(); if (biz) walkBiz(idx); else if (k === 'reserve') walkReserve(); else stationGo(k); } });
+  if (G) opts.push({ t: '🔨 Améliorer et embaucher', s: 'Un niveau de plus, c’est un meilleur prix de vente.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } }, { t: '🚲 Y aller', s: 'Tu t’y rends à vélo.', btn: 'Y aller', ok: true, run: () => { closeSheet(); if (k === 'reserve') { const d = reserveDoor(); goTo(d[0], d[1], 1.5, null); } else stationGo(k); } });
   else opts.push({ t: '✋ Déplacer', s: 'La déplacer, la tourner ou la démolir.', btn: 'Déplacer', ok: true, run: () => { closeSheet(); amenager(idx); } });
   openSheet('Gérer', 'Un réglage simple : le prix.', opts, null, el); }
 /* ================= les quartiers et les îlots : une carte bornée, quadrillée, qu'on ouvre dans un ordre lisible ================= */
@@ -4737,13 +4746,13 @@ function harvestField(i) { const F = GRANDES[i], st = farmS(), p = st.p[i], C = 
 function farmStart() { const st = farmS(); st.p.forEach((p) => { p.s = 'pret'; p.end = 0; }); TR.x = HANGAR[0] - 3.5; TR.z = HANGAR[1]; TR.path = []; TR.job = null; dirty = true; toast('🚜 Marcel est arrivé avec son tracteur', 'Il récolte les grandes parcelles et ressème aussitôt. Passe au hangar pour encaisser la coopérative.'); }
 function collectFarm() { const st = farmS(), v = Math.floor(st.till || 0); if (v < 1) return false; led('🚜 Grandes cultures', v); S.coins += v; st.till = 0; dirty = true; floatAt(HANGAR_G, '+' + v + ' ' + C); SFX.coin(); burst(HANGAR[0], 3, HANGAR[1], ['#E3A73C', '#F3CF7A'], 12, 4); return true; }
 function farmSheet() { if (!S.started) return; const st = farmS(), pop = Math.floor(S.pop || 0), on = farmOn(), opts = [];
-  if (on) opts.push({ t: '🪙 Encaisser la coopérative', s: Math.floor(st.till || 0) + ' écus d’or dans la caisse (elle se remplit jusqu’à ' + farmCap() + ').', btn: 'Encaisser', ok: (st.till || 0) >= 1, run: () => { collectFarm(); closeSheet(); } });
+  if (on) opts.push({ t: '🪙 Encaisser la coopérative', s: Math.floor(st.till || 0) + ' écus d’or dans la caisse (elle se remplit jusqu’à ' + farmCap() + '). Le boulanger va au hangar.', btn: 'Y aller', ok: (st.till || 0) >= 1, run: () => { closeSheet(); walkCollect(HANGAR[0] - 4, HANGAR[1], collectFarm, 1.5); } });
   else opts.push({ t: '🚜 Embaucher Marcel, l’agriculteur', s: pop < FARM_POP ? 'Il faut ' + FARM_POP + ' habitants (tu en as ' + pop + ').' : 'Il cultive les six grandes parcelles au tracteur et ' + FARM_BONUS + ' habitants s’installent au village.', btn: FARM_COST + ' ' + C, ok: pop >= FARM_POP && S.coins >= FARM_COST,
     run: () => { if (S.coins < FARM_COST || farmOn()) return; led('👩‍🍳 Employés', -FARM_COST); gain(Math.ceil(FARM_COST / 8)); S.coins -= FARM_COST; S.hired.marcel = true; farmStart(); closeSheet(); } });
   const rows = GRANDES.map((F, i) => { const p = st.p[i], C2 = CROP[F.kind]; return C2.ic + ' ' + C2.n + ' : ' + (!on ? 'en friche, à reprendre' : p.s === 'pousse' ? 'pousse, prêt dans ' + Math.max(1, Math.ceil((p.end - now()) / 60000)) + ' min' : p.s === 'recolte' ? 'récolte en cours' : 'prêt à récolter'); });
   opts.push({ t: '📋 Les six parcelles', s: rows.join(' · '), btn: 'Y aller', ok: true, run: () => { closeSheet(); goTo(HANGAR[0] - 4, HANGAR[1], 1.5, null); } });
   openSheet('🚜 Les grandes cultures', on ? 'Marcel récolte et ressème au tracteur. Une récolte de blé ≈ ' + cropValue('wheat') + ' écus, tournesol ≈ ' + cropValue('sun') + ', lavande ≈ ' + cropValue('lav') + '.' : 'Six parcelles de blé, de tournesol et de lavande, derrière la ferme.', opts); }
-const hangarLabel = label(HANGAR_G, 4.6); hangarLabel.act = () => (farmOn() && (farmS().till || 0) >= 1 ? collectFarm() : farmSheet());
+const hangarLabel = label(HANGAR_G, 4.6); hangarLabel.act = () => (farmOn() && (farmS().till || 0) >= 1 ? walkCollect(HANGAR[0] - 4, HANGAR[1], collectFarm, 1.5) : farmSheet());
 
 /* ---- chaque image ---- */
 let farmT = 9;
