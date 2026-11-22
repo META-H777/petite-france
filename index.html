@@ -2187,7 +2187,7 @@ function pushOut(nx, nz) {
 /* encaisser : le boulanger va jusqu'à la caisse, l'argent n'est ramassé qu'à son arrivée (Romain, 22/11/2026 : « ça permet de se promener dans la map »).
    S'il est déjà sur place, c'est immédiat. S'il part ailleurs en route, rien n'est ramassé. */
 function walkCollect(x, z, fn, r) { r = r || 1.6; if (Math.hypot(player.position.x - x, player.position.z - z) <= r + 1.2) return fn(); goTo(x, z, r, fn); if (!QUIET) floatAt(player, '🚶 Je vais encaisser'); return true; }
-function goTo(x, z, r, act) { P.goal = new THREE.Vector3(x, 0, z); P.goalR = r; P.act = act || null; P.stuck = 0; P.path = findPath(player.position.x, player.position.z, x, z); P.usedPath = P.path.length > 0; ripple.position.set(x, groundY(x, z) + 0.08, z); rippleT = 0; }
+function goTo(x, z, r, act) { P.goal = new THREE.Vector3(x, 0, z); P.goalR = r; P.act = act || null; P.stuck = 0; P.unstuck = false; P.path = findPath(player.position.x, player.position.z, x, z); P.usedPath = P.path.length > 0; ripple.position.set(x, groundY(x, z) + 0.08, z); rippleT = 0; }
 let pickList = [], pickAt = -1e9;
 function pickRoots() { const t = performance.now(); if (t - pickAt < 1500) return pickList; pickAt = t; const all = []; scene.traverse((o) => { if (o.userData && o.userData.kind) all.push(o); });
   const set = new Set(all); pickList = all.filter((o) => { for (let a = o.parent; a; a = a.parent) if (set.has(a)) return false; return true; }); return pickList; }
@@ -5596,7 +5596,8 @@ function step() {
     } else if (P.goal) {
       const dx = P.goal.x - px0, dz = P.goal.z - pz0, d = Math.hypot(dx, dz);
       while (P.path.length > 1 && Math.hypot(P.path[0][0] - px0, P.path[0][1] - pz0) < 0.5) P.path.shift();
-      if (d < P.goalR || P.stuck > 1.6 || (P.usedPath && !P.path.length)) {
+      if (P.stuck > 1.6 && !P.unstuck && d >= P.goalR) { P.unstuck = true; P.stuck = 0; if (bakerUnstick()) floatAt(player, '🙂 Ouf, je passe !'); } // coincé : une fois, on le dégage et il continue
+      else if (d < P.goalR || P.stuck > 1.6 || (P.usedPath && !P.path.length)) {
         const act = (d < P.goalR + 1.6) ? P.act : null; P.goal = null; P.act = null; P.stuck = 0;
         Object.keys(cd).forEach((k) => { if (cd[k] > n + 2000) cd[k] = 0; });
         if (act) act();
@@ -5892,11 +5893,20 @@ function bakerSafe() { const p = player.position; let x = p.x, z = p.z;
   if (lost) { x = STN.shop[0]; z = STN.shop[1]; } else if (!blocked(x, z, 0)) return false;
   if (blocked(x, z, 0.35)) { let f = null; for (let r = 1; r <= 40 && !f; r += 1) { const n = Math.max(8, r * 3); for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2, qx = x + Math.cos(a) * r, qz = z + Math.sin(a) * r; if (qx > BX0 && qx < BX1 && qz > BZ0 && qz < BZ1 && !blocked(qx, qz, 0.4) && !roadAt(qx, qz)) { f = [qx, qz]; break; } } } if (f) { x = f[0]; z = f[1]; } }
   P.goal = null; P.act = null; P.path = []; player.position.set(x, groundY(x, z), z); dirty = true; return true; }
+// coincé entre deux obstacles (Romain, 22/11/2026 : le boulanger s'était glissé entre un pilier de la porte du village et le panneau, sans pouvoir en ressortir) :
+// s'il veut marcher mais ne bouge plus depuis 3 secondes, on le pose sur la place dégagée la plus proche et il reprend son chemin (et ce qu'il allait faire)
+function bakerUnstick() { const p = player.position; let f = null;
+  for (let r = 0.6; r <= 8 && !f; r += 0.4) { const n = Math.max(10, Math.round(r * 8)); for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2, qx = p.x + Math.cos(a) * r, qz = p.z + Math.sin(a) * r; if (qx > BX0 && qx < BX1 && qz > BZ0 && qz < BZ1 && !blocked(qx, qz, 0.7)) { f = [qx, qz]; break; } } }
+  if (!f) return bakerSafe(); player.position.set(f[0], groundY(f[0], f[1]), f[1]); P.stuck = 0;
+  if (P.goal) { P.path = findPath(f[0], f[1], P.goal.x, P.goal.z); P.usedPath = P.path.length > 0; } dirty = true; return true; }
+let bakerLast = null, bakerStill = 0;
 let bakerT = 0, bakerStuck = 0;
 function tickBaker(dt) { if (!S.started) return; if (!player.visible && !FPV.on) player.visible = true;
   if ((bakerT += dt) < 1) return; bakerT = 0; if (FPV.on || VISIT.on) return;
   const p = player.position, inside = !isFinite(p.x) || !isFinite(p.z) || p.x < BX0 - 2 || p.x > BX1 + 2 || p.z < BZ0 - 2 || p.z > BZ1 + 2 || blocked(p.x, p.z, 0);
-  bakerStuck = inside ? bakerStuck + 1 : 0; if (bakerStuck >= 2) { bakerStuck = 0; if (bakerSafe()) floatAt(player, '🙂 Me revoilà !'); } }
+  bakerStuck = inside ? bakerStuck + 1 : 0; if (bakerStuck >= 2) { bakerStuck = 0; if (bakerSafe()) floatAt(player, '🙂 Me revoilà !'); }
+  const moved = bakerLast ? Math.hypot(p.x - bakerLast[0], p.z - bakerLast[1]) : 1; bakerLast = [p.x, p.z];
+  bakerStill = P.goal && !P.work && moved < 0.12 ? bakerStill + 1 : 0; if (bakerStill >= 3) { bakerStill = 0; if (bakerUnstick()) floatAt(player, '🙂 Ouf, je passe !'); } }
 /* ---------------- la musique : une boucle par quartier (Romain, 22/11/2026), toutes sur le thème du village ----------------
    Composée et synthétisée ici (beta13/musique_src/quartiers.py), sans échantillon ni droit tiers. On entend le quartier que l'on regarde ;
    en passant d'un quartier à l'autre, les deux boucles se croisent en fondu pendant 3 secondes. Web Audio les joue au sample près (pas de trou à la reprise).
