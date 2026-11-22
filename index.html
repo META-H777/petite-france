@@ -3567,7 +3567,7 @@ const reserveG = group(RESERVE_P[0], RESERVE_P[1], 0, 'reserve', 'reserve'), RES
   ambAdopt(g);
 }
 // a quiet spot inside the reserve (not in the pond, not under the hide)
-function reserveSpot(k) { const M = MOV.reserve; for (let t = 0; t < 12; t++) { const x = (rnd01(k * 3.7 + t * 1.3 + 1) - 0.5) * 2 * (RES_HW - 1.4), z = (rnd01(k * 9.1 + t * 2.9 + 2) - 0.5) * 2 * (RES_HD - 1.4); if (Math.hypot((x + 4) / 1.25, z - 0.5) > 4.3 && Math.hypot(x - 6.6, z + 4.2) > 2.4) return [M.x + x, M.z + z]; } return [M.x + 2, M.z + 1]; }
+function reserveSpot(k) { const M = MOV.reserve; for (let t = 0; t < 12; t++) { const x = (rnd01(k * 3.7 + t * 1.3 + 1) - 0.5) * 2 * (RES_HW - 1.4), z = (rnd01(k * 9.1 + t * 2.9 + 2) - 0.5) * 2 * (RES_HD - 1.4); if (Math.hypot((x + 4) / 1.25, z - 0.5) > 4.3 && Math.hypot(x - 6.6, z + 4.2) > 2.4) { const q = rotP(x, z, M.r || 0); return [M.x + q[0], M.z + q[1]]; } } const q = rotP(2, 1, M.r || 0); return [M.x + q[0], M.z + q[1]]; } /* les places suivent l'orientation de la réserve (Romain, 22/11/2026) */
 
 /* ---- l'épouvantail : il tient les cerfs et les aigles à distance (9 m autour de lui) ---- */
 function buildScarecrow(g) {
@@ -3662,7 +3662,7 @@ function tickWildGround(a, dt, t, n) {
     if (a.st === 'idle' && a.pose === 'look') a.head.rotation.y = Math.sin(t * 0.5 + a.id * 2) * 0.5; else a.head.rotation.y *= 0.9; }
 }
 function tickWildEagle(a, dt, t, n) {
-  const g = a.g, SP = WSPEC.aigle, res = reserveOn(), c = res ? [MOV.reserve.x + 3, MOV.reserve.z - 1] : a.zone, R = res ? 8 : 15, H = res ? 10 : 17; let flap = 0.12 + 0.1 * Math.sin(t * 1.1 + a.id), bank = 0;
+  const g = a.g, SP = WSPEC.aigle, res = reserveOn(), c = res ? (() => { const q = rotP(3, -1, MOV.reserve.r || 0); return [MOV.reserve.x + q[0], MOV.reserve.z + q[1]]; })() : a.zone, R = res ? 8 : 15, H = res ? 10 : 17; let flap = 0.12 + 0.1 * Math.sin(t * 1.1 + a.id), bank = 0;
   wV2.copy(g.position);
   if (a.st === 'soar') { a.ang += dt * (res ? 0.42 : 0.3); wV.set(c[0] + Math.cos(a.ang) * R, H + Math.sin(t * 0.3 + a.id) * 1.4, c[1] + Math.sin(a.ang) * R); const d = g.position.distanceTo(wV); if (d > 3) g.position.addScaledVector(wV.sub(g.position).normalize(), Math.min(d, 9 * dt)); else g.position.copy(wV); bank = -0.32; if (Math.sin(t * 0.23 + a.id * 3) > 0.92) flap = 0.5 * Math.sin(t * 9); }
   else if (a.st === 'raid') { const T = a.target; if (a.lb) setLabel(a.lb, '🦅 Ouste !', 'warn');
@@ -3679,7 +3679,7 @@ function tickGarde(dt, t) { const on = !!S.garde && reserveOn(); if (!gardeG) { 
   const M = MOV.reserve, w = RES_HW - 1.3, d = RES_HD - 1.3, per = 4 * (w + d); gardeU = (gardeU + dt * 1.1) % per; let u = gardeU, x, z;
   if (u < 2 * w) { x = -w + u; z = d; } else if ((u -= 2 * w) < 2 * d) { x = w; z = d - u; } else if ((u -= 2 * d) < 2 * w) { x = w - u; z = -d; } else { u -= 2 * w; x = -w; z = -d + u; }
   if (Math.hypot(x + 4, z - 0.5) < 4.6) z = z > 0.5 ? Math.max(z, 5.2) : Math.min(z, -4.2);
-  stepToward(gardeG, wV.set(M.x + x, 0, M.z + z), 3, dt); gardeG.userData.body.position.y = Math.abs(Math.sin(t * 7)) * 0.06; }
+  { const q = rotP(x, z, M.r || 0); x = q[0]; z = q[1]; } stepToward(gardeG, wV.set(M.x + x, 0, M.z + z), 3, dt); gardeG.userData.body.position.y = Math.abs(Math.sin(t * 7)) * 0.06; }
 
 function tickFaune(dt, t, n) {
   if (!WILD.length) return; const res = reserveOn();
@@ -3784,7 +3784,7 @@ movable('parking', { n: 'Parking', ic: '🅿️', pivot: [-13, 6.4], rot: false,
 movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 1500, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'Une grande fontaine de pierre à vasques, au milieu de la place du village. Les habitants la réclament au-delà de 400 habitants. +30 beauté.' });
 movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
 movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 15000, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Le café de Gégé : il rapporte des écus d’or toute la journée et achète son pain à ta boulangerie. Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
-movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], rot: false, objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand domaine de nature clos : cerfs, sangliers, renards, hérissons, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Les visiteurs paient la visite guidée : la caisse se remplit toute seule. Avec Gaspard, le garde forestier, plus aucun animal ne s\'échappe et les visites rapportent 40 % de plus. +35 beauté.' });
+movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand domaine de nature clos : cerfs, sangliers, renards, hérissons, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Les visiteurs paient la visite guidée : la caisse se remplit toute seule. Avec Gaspard, le garde forestier, plus aucun animal ne s\'échappe et les visites rapportent 40 % de plus. +35 beauté.' });
 /* la chapelle, l'église, la cathédrale (Eugénie, 22/11/2026) : une chapelle romane dès 10 habitants, l'église gothique à 300, une cathédrale à 2 000 */
 const CHAPELP = [24, -12], CATHP = [52, -36];
 const chapelG = group(CHAPELP[0], CHAPELP[1], 0, 'chapelle', 'chapelle');
