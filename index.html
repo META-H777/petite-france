@@ -3986,7 +3986,7 @@ function cityBoot() { const fresh = !(S.city && S.city.v === 1); ensureCity(); i
     S.city.items = S.city.items.filter((it) => { if (!(it.free && it.k === 'peuplier')) return true; const f = itemFp(it);
       if (PROD_KEYS.some((k) => { const M = MOV[k], p = S.city.prods[k]; if (!p || !p[3]) return false; const g = mfp(M, p[2]); return hit(it.x, it.z, f[0], f[1], p[0], p[1], g[0], g[1]); })) return false;
       if (S.city.items.some((o) => o !== it && !o.free && hit(it.x, it.z, f[0], f[1], o.x, o.z, ...itemFp(o)))) return false;
-      if (roadAt(it.x, it.z) || (it.x > -96 && it.x < -80 && it.z > -14.5 && it.z < -4)) return false; return true; }); dirty = true; } /* le dernier cas : devant la façade de la ferme */ rebuildCity(); landBoot(); cityReady = true; if (window.__pf) window.__pf.city = { capTotal, popTarget, beauty, servCap, links: () => links, MOV, DECOS, decoGroup, houseGroup, openBuild, exitBuild, cellFree, areaFree, amenager, tableau, enterBuild, startMoveProd, startPlace, startRoad, paintRoad, confirmPlace, buildTap, get PLC() { return PLC; } }; if (fresh || !S.px) { player.position.set(6, 0, 1.6); target.set(6, 0, 1.6); placeCam(); } }
+      if (roadAt(it.x, it.z) || (it.x > -96 && it.x < -80 && it.z > -14.5 && it.z < -4)) return false; return true; }); dirty = true; } /* le dernier cas : devant la façade de la ferme */ rebuildCity(); landBoot(); cityReady = true; if (window.__pf) window.__pf.city = { gerer: (k, i) => gerer(k, i), bizRate: (i) => bizRate(S.city.items[i]), reserveRate: () => reserveRate(), bistroRate: () => bistroRate(), capTotal, popTarget, beauty, servCap, links: () => links, MOV, DECOS, decoGroup, houseGroup, openBuild, exitBuild, cellFree, areaFree, amenager, tableau, enterBuild, startMoveProd, startPlace, startRoad, paintRoad, confirmPlace, buildTap, get PLC() { return PLC; } }; if (fresh || !S.px) { player.position.set(6, 0, 1.6); target.set(6, 0, 1.6); placeCam(); } }
 
 /* ---- links, beauty, population ---- */
 let links = null;
@@ -4388,24 +4388,43 @@ const nearWater = (x, z) => Math.min(Math.abs(x - RIVER.x0), Math.abs(x - RIVER.
 let spinPrune = 0;
 function tickSpin(dt) { for (const o of SPIN) o.rotation[o.userData.ax] += o.userData.spin * dt;
   if ((spinPrune += dt) > 6) { spinPrune = 0; for (let i = SPIN.length - 1; i >= 0; i--) { let o = SPIN[i]; while (o.parent) o = o.parent; if (o !== scene) SPIN.splice(i, 1); } } }
-function bizRate(it) { const B2 = BIZ[it.k]; if (!B2) return 0; return (B2.base + B2.perPop * (S.pop || 0)) * prixM(it.k) * (nearWater(it.x, it.z) ? 1.25 : 1); } /* écus d'or par heure */
+/* ================= l'argent des commerces a une logique (Romain, 22/11/2026 : « là j'ai l'impression que c'est de l'argent illimité ») =================
+   A. Les clients se partagent : n commerces du même type rapportent ensemble 1 + 0,5 + 0,25 + … fois un seul (jamais plus de 2 fois) ; chacun touche sa part.
+   B. Les restaurants (guinguette, café du parc, bistrot) achètent leur pain à la boulangerie : une baguette toutes les 3 minutes chacun, payée au prix du comptoir.
+      Sans pain frais, ils ne vendent presque rien (30 %).
+   C. Les attractions (réserve, grande roue, barques, Guignol) paient leur entretien : nourriture des bêtes, salaires, réparations, retirés de leurs recettes. */
+const FOOD = { guinguette_quai: 1, cafe_parc: 1, bistrot: 1 };
+const UPKEEP = { reserve: 0.3, grande_roue: 0.3, etang_barques: 0.25, guignol: 0.2 };
+const UPKEEP_WHAT = { reserve: 'nourriture des bêtes et salaire du garde', grande_roue: 'graissage, peinture et électricité', etang_barques: 'calfatage des barques et gilets', guignol: 'marionnettes et costumes' };
+const bizCount = (k) => (S.city ? S.city.items.filter((it) => it.t === 'd' && it.k === k).length : 0);
+const shareK = (n) => (n <= 1 ? 1 : (2 - Math.pow(0.5, n - 1)) / n); // la part de chaque commerce quand il y en a n du même type
+const FED_MS = 240000; // un restaurant est « approvisionné » s'il a eu son pain il y a moins de 4 minutes
+const fedOk = (t) => now() - (t || 0) < dur(FED_MS);
+function bizFed(it) { return !FOOD[it.k] || fedOk(it.fed); }
+function bizRate(it) { const B2 = BIZ[it.k]; if (!B2) return 0; return (B2.base + B2.perPop * (S.pop || 0)) * prixM(it.k) * (nearWater(it.x, it.z) ? 1.25 : 1) * shareK(bizCount(it.k)) * (bizFed(it) ? 1 : 0.3) * (1 - (UPKEEP[it.k] || 0)); } /* écus d'or par heure, frais déduits */
+// les restaurants viennent chercher leur pain à la boulangerie (le plus affamé d'abord) ; le boulanger encaisse la baguette au prix du comptoir
+let feedT = 0;
+function tickFeed(dt) { if ((feedT += dt) < 2) return; feedT = 0; const n = now(), need = [];
+  bizOpen().forEach((i) => { const it = S.city.items[i]; if (FOOD[it.k] && n - (it.fed || 0) >= dur(180000)) need.push({ o: it, k: 'fed' }); });
+  if (MOV.bistrot && MOV.bistrot.placed && n - (S.bifed || 0) >= dur(180000)) need.push({ o: S, k: 'bifed' });
+  need.sort((a, b) => (a.o[a.k] || 0) - (b.o[b.k] || 0)).forEach((q) => { if ((S.pain || 0) < 1) return; S.pain--; S.shop = (S.shop || 0) + breadPrice(); q.o[q.k] = n; dirty = true; }); }
 /* le bistrot de Gégé (Romain, 22/11/2026) : café, pastis, jambon-beurre. Il a enfin une caisse : elle se remplit selon les habitants et le prix choisi,
    et s'il y a du pain en vitrine à la boulangerie, il en achète une baguette toutes les 3 minutes pour ses jambon-beurre (+30 % de ventes). */
 const BISTRO_CAP = 4; let bistroBread = 0;
-function bistroRate() { if (!MOV.bistrot || !MOV.bistrot.placed) return 0; return (600 + 1.6 * (S.pop || 0)) * prixM('bistrot') * ((S.pain || 0) > 0 ? 1.3 : 1); } /* écus d'or par heure */
+function bistroRate() { if (!MOV.bistrot || !MOV.bistrot.placed) return 0; return (600 + 1.6 * (S.pop || 0)) * prixM('bistrot') * (fedOk(S.bifed) ? 1.3 : 0.4); } /* écus d'or par heure */
 function collectBistro() { const v = Math.floor(S.bitill || 0); if (v < 1) return 0; S.bitill -= v; led('☕ Bistrot', v); S.coins += v; dirty = true; SFX.coin(); floatAt(bistrot, '+' + v + ' ' + C); burst(BISTROTP[0], 3, BISTROTP[1] + 3, ['#E3A73C', '#F3CF7A'], 12, 4); return v; }
 /* la réserve naturelle et ses visites guidées (Romain, 22/11/2026) : une caisse qui se remplit selon les habitants, +40 % avec le garde forestier */
 const RES_CAP = 4;
-function reserveRate() { if (!MOV.reserve || !MOV.reserve.placed) return 0; return (300 + 1.2 * (S.pop || 0)) * prixM('reserve') * (S.garde ? 1.4 : 1); }
+function reserveRate() { if (!MOV.reserve || !MOV.reserve.placed) return 0; return (300 + 1.2 * (S.pop || 0)) * prixM('reserve') * (S.garde ? 1.4 : 1) * (1 - UPKEEP.reserve); } /* frais d'entretien déduits */
 function collectReserve() { const v = Math.floor(S.rtill || 0); if (v < 1) return 0; S.rtill -= v; led('🦌 Réserve', v); S.coins += v; dirty = true; SFX.coin(); floatAt(reserveG, '+' + v + ' ' + C); burst(MOV.reserve.x, 2, MOV.reserve.z, ['#E3A73C', '#F3CF7A'], 12, 4); return v; }
 const reserveDoor = () => { const q = rotP(0, RES_HD + 1.5, MOV.reserve.r || 0); return [MOV.reserve.x + q[0], MOV.reserve.z + q[1]]; }; // le porche de la réserve, quelle que soit son orientation
 const walkReserve = () => { const d = reserveDoor(); return walkCollect(d[0], d[1], () => collectReserve(), 1.6); };
 const walkBiz = (i) => { const it = S.city.items[i]; if (!it) return; const f = itemFp(it); return walkCollect(it.x, it.z, () => collectBiz(i), Math.max(f[0], f[1]) / 2 + 0.8); };
 const reserveLab = label(reserveG, 3.2); reserveLab.act = () => { if (!MOV.reserve.placed) return openBuildAt('reserve'); if ((S.rtill || 0) >= 1) walkReserve(); else gerer('reserve'); };
 function bizOpen() { const L = []; if (S.city) S.city.items.forEach((it, i) => { if (it.t === 'd' && BIZ[it.k]) L.push(i); }); return L; }
-function tickPrix(dt) { tickSpin(dt); if (!S.started || !S.city) return; const n = now(); setLabel(maisonLab, MOV.chezmoi.placed ? '🏡 Chez moi' : '', 'name');
+function tickPrix(dt) { tickSpin(dt); if (!S.started || !S.city) return; tickFeed(dt); const n = now(); setLabel(maisonLab, MOV.chezmoi.placed ? '🏡 Chez moi' : '', 'name');
   if (MOV.bistrot && MOV.bistrot.placed) { const r = bistroRate(); if (!S.bitt) S.bitt = n; S.bitill = Math.min(r * BISTRO_CAP, (S.bitill || 0) + r * (n - S.bitt) / 3600000); S.bitt = n;
-    if ((bistroBread += dt) > 180) { bistroBread = 0; if ((S.pain || 0) > 0) { S.pain--; S.shop = (S.shop || 0) + breadPrice(); dirty = true; } } } else S.bitt = n;
+  } else S.bitt = n;
   if (MOV.reserve && MOV.reserve.placed) { const r = reserveRate(); if (!S.rtt) S.rtt = n; S.rtill = Math.min(r * RES_CAP, (S.rtill || 0) + r * (n - S.rtt) / 3600000); S.rtt = n; const t = Math.floor(S.rtill || 0); setLabel(reserveLab, t >= 1 ? '🪙 +' + t + ' · réserve' : '🦌 La réserve', t >= 1 ? 'coin' : ''); } else { S.rtt = n; setLabel(reserveLab, '', ''); }
   const bo = bizOpen(); bo.forEach((i) => { const it = S.city.items[i], r = bizRate(it); if (!it.tt) it.tt = n; it.till = Math.min(r * BIZ[it.k].cap, (it.till || 0) + r * (n - it.tt) / 3600000); it.tt = n; });
   /* la caisse de chaque commerce posé (guinguette, barques, guignol, café, grande roue) se voit sur la carte (22/11/2026) */
@@ -4420,15 +4439,20 @@ const GERE = {
   shop: { n: '🥖 La boulangerie', sells: 'Le pain du four, vendu au comptoir.', unit: () => breadPrice() + ' ' + C + ' la baguette', till: () => Math.floor(S.shop || 0), collect: collectShopTill, cat: '🥖 Pain vendu', who: 'margot', whoY: 'Margot sert et ramasse la caisse.', whoN: 'Personne à la caisse : embauche Margot pour vendre plus vite.', lv: () => S.lv.shop },
   market: { n: '🥕 Le marché', sells: 'Les cagettes du potager, sur l’étal.', unit: () => Math.max(1, Math.round(PROD[Math.max(0, Math.min(3, S.lv.mk - 1))].p * prixM('market'))) + ' ' + C + ' la cagette', till: () => Math.floor(S.mtill || 0), collect: () => (collectMarket() ? 1 : 0), cat: '🥕 Marché', who: 'paul', whoY: 'Paul cultive et garnit l’étal.', whoN: 'Personne au potager : embauche Paul pour garnir l’étal tout seul.', lv: () => S.lv.mk, on: () => S.lv.mk > 0 },
   bq: { n: '👕 La boutique de vêtements', sells: 'Des pulls tricotés avec la laine des moutons.', unit: () => Math.round(BQPR[Math.max(1, S.lv.bq)] * prixM('bq')) + ' ' + C + ' le pull', till: () => Math.floor(S.btill || 0), collect: () => (collectBq() ? 1 : 0), cat: '👕 Boutique de vêtements', who: 'lucie', whoY: 'Lucie apporte la laine.', whoN: 'Personne pour la laine : embauche Lucie.', lv: () => S.lv.bq, on: () => S.lv.bq > 0 },
-  bistrot: { n: '☕ Le bistrot de Gégé', sells: 'Café, pastis et jambon-beurre au comptoir et en terrasse. Il achète son pain à ta boulangerie.', unit: () => 'environ ' + fmt(Math.round(bistroRate())) + ' ' + C + ' par heure' + ((S.pain || 0) > 0 ? ' (dont +30 % grâce au pain frais)' : ' · avec du pain en vitrine, +30 %'), till: () => Math.floor(S.bitill || 0), collect: () => (collectBistro() ? 1 : 0), cat: '☕ Bistrot', who: 'gege', auto: true, whoY: 'Gégé tient le comptoir. Sa caisse se remplit sur ' + BISTRO_CAP + ' heures au plus.', whoN: '', on: () => MOV.bistrot && MOV.bistrot.placed } };
+  bistrot: { n: '☕ Le bistrot de Gégé', sells: 'Café, pastis et jambon-beurre au comptoir et en terrasse. Il achète son pain à ta boulangerie.', unit: () => 'environ ' + fmt(Math.round(bistroRate())) + ' ' + C + ' par heure' + (fedOk(S.bifed) ? ' (pain frais livré)' : ' · sans pain frais, il vend peu'), till: () => Math.floor(S.bitill || 0), collect: () => (collectBistro() ? 1 : 0), cat: '☕ Bistrot', who: 'gege', auto: true, whoY: 'Gégé tient le comptoir. Sa caisse se remplit sur ' + BISTRO_CAP + ' heures au plus.', whoN: '', on: () => MOV.bistrot && MOV.bistrot.placed } };
 function gerer(k, idx) { if (!S.started) return; const el = document.createElement('div'); el.className = 'tdb';
   const biz = idx !== undefined ? S.city.items[idx] : null, G = biz ? null : GERE[k]; if (!biz && !G) return; if (biz) k = biz.k; const B2 = biz ? BIZ[k] : null;
   const title = biz ? B2.ic + ' ' + B2.n : G.n, till = biz ? Math.floor(biz.till || 0) : G.till(), cat = biz ? B2.ic + ' ' + B2.n.replace(/^La |^Le /, '') : G.cat;
   const sold = Math.round(ledSum(3600000).r[cat] || 0), pi = prixI(k);
   const info = biz ? 'Environ <b>' + fmt(Math.round(bizRate(biz))) + ' ' + C + ' par heure</b>' + (nearWater(biz.x, biz.z) ? ' (dont +25 % pour la vue sur l’eau)' : ' · posé au bord de l’eau ou d’un étang, il rapporterait 25 % de plus') + '. Plus le village a d’habitants, plus elle a de clients. La caisse se remplit sur ' + B2.cap + ' heures au plus.' : 'Prix actuel : <b>' + G.unit() + '</b>' + (G.lv ? ' · niveau ' + G.lv() : '') + '.';
+  // ce qui fait gagner plus ou moins ce commerce : clients partagés, pain, entretien (22/11/2026)
+  const lg = [], nb = biz ? bizCount(k) : 1;
+  if (nb > 1) lg.push('👥 <b>Tu en as ' + nb + ', ils se partagent les clients</b> : chacun touche ' + Math.round(shareK(nb) * 100) + ' % de ce qu’il gagnerait seul.');
+  if (FOOD[k]) { const ok = biz ? bizFed(biz) : fedOk(S.bifed); lg.push(ok ? '🥖 <b>Pain frais livré</b> : il achète une baguette toutes les 3 minutes à ta boulangerie.' : '🥖 <b>Plus de pain frais</b> : sans baguettes en vitrine à la boulangerie, il ne vend presque rien (30 %).'); }
+  if (UPKEEP[k]) lg.push('🔧 <b>Entretien</b> (' + UPKEEP_WHAT[k] + ') : ' + Math.round(UPKEEP[k] * 100) + ' % des recettes, déjà retirés.');
   el.innerHTML = '<div class="who"><b>' + tdbEsc(title) + '</b>' + tdbEsc(biz ? B2.sells : G.sells) + '</div>'
     + '<div class="kpi" style="grid-template-columns:repeat(2,1fr)"><div><small>Dans la caisse</small><b>' + fmt(till) + '</b></div><div><small>Vendu (1 h)</small><b>' + fmt(sold) + '</b></div></div>'
-    + '<p class="ex">' + info + '</p><h4>Les prix</h4><div class="span prix">' + PRIX.map((p, i) => '<button type="button" data-p="' + i + '" class="' + (i === pi ? 'on' : '') + '">' + p.ic + ' ' + p.n + '</button>').join('') + '</div>'
+    + '<p class="ex">' + info + '</p>' + (lg.length ? '<p class="ex">' + lg.join('<br>') + '</p>' : '') + '<h4>Les prix</h4><div class="span prix">' + PRIX.map((p, i) => '<button type="button" data-p="' + i + '" class="' + (i === pi ? 'on' : '') + '">' + p.ic + ' ' + p.n + '</button>').join('') + '</div>'
     + '<p class="ex">' + PRIX[pi].ic + ' <b>' + PRIX[pi].n + '</b> : ' + PRIX[pi].s + '.</p>'
     + (G ? '<h4>Qui y travaille</h4><div class="tm ' + (S.hired[G.who] || G.auto || (G.ok && G.ok()) ? 'ok' : 'no') + '"><i>' + (S.hired[G.who] || G.auto || (G.ok && G.ok()) ? '✅' : '✋') + '</i><div><span>' + (S.hired[G.who] || G.auto || (G.ok && G.ok()) ? G.whoY : G.whoN) + '</span></div></div>' : '');
   el.querySelectorAll('.prix button').forEach((b) => b.addEventListener('click', () => { if (!S.prix) S.prix = {}; S.prix[k] = +b.dataset.p; dirty = true; gerer(biz ? undefined : k, idx); }));
