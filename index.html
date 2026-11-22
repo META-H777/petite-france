@@ -2005,7 +2005,8 @@ const vPool = [], queue = []; let lastServe = 0; const PATIENCE = 30;
 const ECO = { cli0: 3.2, cliStart: 5, cliPop: 110, carPop: 12000, ordK: 120000, ordMin: 28, ordPay: 0.96, prix0: 150, prixK: 60, prixMax: 12 };
 /* L'indice du village : logements, décors et terrains coûtent plus cher à mesure que le village grandit (au-delà de prix0 habitants, +100 % tous les prixK habitants, jusqu'à prixMax). */
 // prix fixes par palier (Eugénie, 22/11/2026) : un prix affiché ne bouge plus quand on achète ; il ne monte qu'au passage d'un palier d'habitants, annoncé à l'avance
-const PALIERS = [[0, 1], [150, 1.5], [250, 3], [400, 5], [600, 8], [900, 12]];
+// courbe adoucie (Romain, 22/11/2026 : « les maisons restent chères ») : des marches plus petites et plus nombreuses, plafond ×8 au lieu de ×12
+const PALIERS = [[0, 1], [150, 1.5], [250, 2], [400, 3], [600, 4], [900, 5.5], [1500, 7], [2200, 8]];
 const palierI = () => { const p = S.popMax || S.pop || 0; let i = 0; PALIERS.forEach((q, k) => { if (p >= q[0]) i = k; }); return i; };
 const villageMul = () => PALIERS[palierI()][1];
 /* au départ 5 clients par minute (la première heure ne traîne plus), puis le village prend le relais ; en Coup de feu, 40 % de clients en plus */
