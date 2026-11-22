@@ -2304,16 +2304,36 @@ const CATALOGUE = (() => {
     RD([-0.2, 0, 0.2], [-0.2, 0.43, 0.17], 0.025, c, h); RD([0.2, 0, 0.2], [0.2, 0.43, 0.17], 0.025, c, h); RD([-0.2, 0, -0.22], [-0.2, 0.86, -0.28], 0.025, c, h); RD([0.2, 0, -0.22], [0.2, 0.86, -0.28], 0.025, c, h);
     for (let k = 0; k < 5; k++) B(0.42, 0.025, 0.06, c, 0, 0.43, 0.15 - k * 0.08, h);
     for (let k = 0; k < 3; k++) { const s = B(0.42, 0.06, 0.02, c, 0, 0, 0, h); s.position.set(0, 0.56 + k * 0.11, -0.24 - k * 0.015); s.rotation.x = -0.12; } }
-  function deuche(g, col, col2) { col2 = col2 || col;
-    RB(1.3, 0.5, 2.7, col, 0, 0.3, 0, g);
-    const hood = mesh(gk('2cvh', () => new THREE.SphereGeometry(0.66, 10, 6, 0, PI * 2, 0, PI / 2)), col2, 0, 0.8, 0.85, g); hood.scale.set(0.98, 0.5, 0.95);
-    const top = mesh(gk('2cvt', () => new THREE.SphereGeometry(0.75, 12, 6, 0, PI * 2, 0, PI / 2)), col2, 0, 0.8, -0.35, g); top.scale.set(0.86, 0.95, 1.35);
-    const gl = mesh(gk('2cvw', () => new THREE.SphereGeometry(0.765, 12, 2, 0, PI * 2, 0.62, 0.42)), '#CFE6EE', 0, 0.8, -0.35, g); gl.scale.set(0.86, 0.95, 1.35); gl.castShadow = false;
-    RB(1.42, 0.38, 0.62, col2, 0, 0.36, 0.95, g); RB(1.42, 0.38, 0.62, col2, 0, 0.36, -0.98, g);
-    [[-0.62, 0.95], [0.62, 0.95], [-0.62, -0.98], [0.62, -0.98]].forEach((w) => { wheelX(g, 0.3, 0.2, '#2B2535', w[0], 0.3, w[1], 12); wheelX(g, 0.14, 0.22, '#C9C9C9', w[0], 0.3, w[1], 8); });
-    B(0.9, 0.12, 0.06, '#C9C9C9', 0, 0.62, 1.37, g); for (let k = 0; k < 4; k++) B(0.6, 0.03, 0.03, '#C9C9C9', 0, 0.68 + k * 0.05, 1.38, g);
-    [-0.42, 0.42].forEach((x) => { const h = SP(0.12, '#FFE9A8', x, 0.86, 1.3, g, 0); h.scale.z = 0.7; });
-    B(1.36, 0.06, 0.06, '#C9C9C9', 0, 0.28, 1.36, g); B(1.36, 0.06, 0.06, '#C9C9C9', 0, 0.28, -1.36, g);
+  /* la 2CV redessinée (Eugénie, 22/11/2026) : la vraie silhouette de profil (capot plongeant, toit arrondi en toile, arrière en goutte d'eau),
+     les ailes rondes détachées, le capot à nervures, les phares ronds sur leur barre et les roues fines. col2 : ailes et toit (Charleston). */
+  function cvShape(pts) { const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) { const q = pts[i]; if (q.length === 4) sh.quadraticCurveTo(q[0], q[1], q[2], q[3]); else sh.lineTo(q[0], q[1]); } return sh; }
+  function cvGeo(key, pts, w, bev) { return gk(key, () => { const geo = new THREE.ExtrudeGeometry(cvShape(pts), { depth: w, curveSegments: 10, bevelEnabled: bev > 0, bevelThickness: bev, bevelSize: bev, bevelSegments: 3 }); geo.rotateY(-PI / 2); geo.translate(w / 2, 0, 0); return geo; }); }
+  function deuche(g, col, col2) { col2 = col2 || col; const CHR = '#D9DCDD', GLS = '#41566A', TYRE = '#2B2535', CANVAS = col2 !== col ? col2 : '#3A3D42';
+    // la caisse, vue de profil (z vers l'avant)
+    mesh(cvGeo('cvBody', [[-1.3, 0.34], [1.28, 0.34], [1.36, 0.42, 1.34, 0.62], [0.62, 0.86], [0.42, 0.96], [0.22, 1.36], [-0.18, 1.44, -0.62, 1.38], [-1.22, 1.08, -1.34, 0.62], [-1.3, 0.34]], 1.04, 0.09), col, 0, 0, 0, g);
+    // les vitres : une bande sombre qui dépasse à peine sur les côtés, le pare-brise et la lunette arrière
+    mesh(cvGeo('cvGlass', [[-1.02, 0.98], [0.36, 0.98], [0.22, 1.3], [-0.16, 1.37, -0.58, 1.32], [-1.0, 1.12, -1.08, 0.98]], 1.24, 0), GLS, 0, 0, 0, g).castShadow = false;
+    mesh(cvGeo('cvWind', [[0.43, 0.97], [0.47, 0.99], [0.27, 1.37], [0.22, 1.36]], 0.98, 0), GLS, 0, 0, 0, g).castShadow = false;
+    { const dk = '#' + new THREE.Color(col).multiplyScalar(0.72).getHexString(); [-0.616, 0.616].forEach((x) => { B(0.02, 0.035, 2.3, dk, x, 0.6, -0.04, g); B(0.02, 0.5, 0.025, dk, x, 0.42, 0.2, g); B(0.02, 0.5, 0.025, dk, x, 0.42, -0.95, g); }); } // nervure de caisse et lignes des portes
+    B(0.04, 0.4, 0.05, col, -0.62, 0.97, -0.38, g); B(0.04, 0.4, 0.05, col, 0.62, 0.97, -0.38, g); // les montants entre les portes
+    // le toit en toile roulé, à peine bombé
+    mesh(cvGeo('cvRoof', [[-0.95, 1.36], [0.18, 1.42], [0.2, 1.47], [-0.18, 1.52, -0.6, 1.47], [-0.96, 1.4]], 0.92, 0.03), CANVAS, 0, 0, 0, g);
+    // les ailes : rondes et détachées à l'avant, jupe pleine à l'arrière
+    [-0.6, 0.6].forEach((x) => { const f = mesh(gk('cvFend2', () => new THREE.CylinderGeometry(0.4, 0.4, 0.28, 16, 1, true, 0, PI).rotateZ(PI / 2)), col2, x, 0.3, 0.86, g); f.scale.set(1, 1.05, 1.2);
+      const sk = mesh(gk('cvSkirt', () => new THREE.CylinderGeometry(0.44, 0.44, 0.06, 16, 1, false, 0, PI).rotateZ(PI / 2)), col2, x * 1.0, 0.3, -0.88, g); sk.scale.set(1, 1, 1.15); // jupe d'aile arrière
+      B(0.14, 0.05, 1.0, '#2B2535', x * 0.95, 0.2, -0.02, g); }); // marchepied
+    // les roues, fines et hautes, enjoliveurs blancs
+    [[-0.6, 0.86], [0.6, 0.86], [-0.6, -0.88], [0.6, -0.88]].forEach((w) => { wheelX(g, 0.3, 0.17, TYRE, w[0], 0.3, w[1], 14); wheelX(g, 0.16, 0.19, CHR, w[0] * 1.01, 0.3, w[1], 10); });
+    // le capot à nervures et la calandre chromée
+    for (let k = -2; k <= 2; k++) { const r = B(0.03, 0.03, 0.78, col, k * 0.16, 0, 0, g); r.position.set(k * 0.16, 0.79, 0.98); r.rotation.x = 0.3; }
+    RB(0.58, 0.24, 0.05, CHR, 0, 0.42, 1.37, g); for (let k = 0; k < 4; k++) B(0.5, 0.025, 0.06, '#8C9196', 0, 0.46 + k * 0.05, 1.385, g);
+    // les phares ronds, posés sur leur barre au-dessus des ailes
+    B(0.98, 0.04, 0.04, CHR, 0, 0.72, 1.18, g);
+    [-0.44, 0.44].forEach((x) => { const lp = mesh(gk('cvLamp', () => new THREE.SphereGeometry(0.13, 12, 8)), CHR, x, 0.8, 1.2, g); lp.scale.z = 0.8; const gl = mesh(gk('cvLens', () => new THREE.CircleGeometry(0.105, 14)), '#FFF3C8', x, 0.8, 1.305, g); gl.castShadow = false; });
+    // pare-chocs fins avant et arrière, poignées, feux arrière
+    RB(1.24, 0.06, 0.08, CHR, 0, 0.3, 1.42, g); RB(1.2, 0.06, 0.08, CHR, 0, 0.32, -1.36, g);
+    [-0.5, 0.5].forEach((x) => B(0.1, 0.07, 0.03, '#C9452F', x, 0.66, -1.33, g));
+    [-0.66, 0.66].forEach((x) => [0.2, -0.95].forEach((z) => B(0.02, 0.025, 0.1, CHR, x, 0.86, z, g)));
   }
   function velo(g, frame, basket) {
     [-0.52, 0.52].forEach((z) => { ringX(g, 0.33, 0.035, '#2B2535', 0, 0.36, z); RD([0, 0.36, z - 0.3], [0, 0.36, z + 0.3], 0.015, '#B9B9B9', g); RD([0, 0.06, z], [0, 0.66, z], 0.015, '#B9B9B9', g); });
@@ -2963,7 +2983,59 @@ const CATALOGUE = (() => {
     for (let k = 0; k < 8; k++) { const a = k * PI / 4, L = k % 2 ? 0.75 : 1.15; const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(0.16, 0.16); sh.lineTo(0, L); sh.lineTo(-0.16, 0.16); sh.lineTo(0, 0);
       const m = mesh(gk('rsp' + L, () => new THREE.ShapeGeometry(sh).rotateX(-PI / 2)), k % 2 ? '#2B2E36' : GOLD, 0, 0.065, 0, g); m.rotation.y = a; m.castShadow = false; }
     CY(0.16, 0.16, 0.03, GOLD, 0, 0.06, 0, g, 12).castShadow = false; }
-  const it = (id, cat, n, ic, c, b, fp, lvl, build) => ({ id, cat, n, ic, c, b, fp, lvl, build });
+  /* ---------------- la grande pépinière (Romain, 22/11/2026) : des arbres de France aux couleurs et aux allures différentes ----------------
+     Les feuillus verts suivent les saisons ; les persistants (cônes, touffes taillées) restent verts ; les feuillages pourpres, dorés, bleutés
+     et les arbres en fleurs gardent leur couleur toute l'année : c'est leur particularité. */
+  const DD = (r, c, x, y, z, p) => mesh(gk('dd' + r, () => new THREE.DodecahedronGeometry(r, 0)), c, x, y, z, p);
+  const GREY = '#8C857A';
+  function tronc(g, h, r, c) { CY(r * 0.75, r, h, c || '#6B4A2E', 0, 0, 0, g, 7); }
+  function boule(g, list) { list.forEach((q) => { const m = SP(q[3], q[4], q[0], q[1], q[2], g); if (q[5]) m.scale.set(q[5][0], q[5][1], q[5][2]); }); }
+  function fleurs(g, n, cols, cx, cy, cz, rx, ry, rz, sz) { upperSphere(n, (x, y, z, k) => SP(sz || 0.12, cols[k % cols.length], cx + x * rx, cy + y * ry, cz + z * rz, g, 0)); }
+  function erableJapon(g) { tronc(g, 1.2, 0.14, GREY); RD([0, 1.0, 0], [0.7, 1.7, 0.2], 0.08, GREY, g); RD([0, 1.0, 0], [-0.6, 1.6, -0.3], 0.08, GREY, g);
+    [[0, 2.0, 0, 1.1, '#9E2B3A', [1.35, 0.45, 1.2]], [0.8, 1.7, 0.3, 0.75, '#B8384A', [1.3, 0.45, 1.2]], [-0.75, 1.65, -0.35, 0.7, '#8C2432', [1.3, 0.45, 1.2]], [0.1, 2.5, -0.1, 0.7, '#C2434F', [1.3, 0.5, 1.2]]].forEach((q) => boule(g, [q])); }
+  function hetrePourpre(g) { tronc(g, 2.2, 0.32, '#8E8A80');
+    boule(g, [[0, 4.2, 0, 2.2, '#6B2A3A', [1, 0.9, 1]], [1.3, 3.6, 0.6, 1.3, '#7E3646'], [-1.2, 3.7, -0.5, 1.35, '#5F2533'], [0.2, 5.5, -0.2, 1.3, '#83404F'], [-0.4, 3.3, 1.2, 1.1, '#73303F']]); }
+  function ginkgo(g) { tronc(g, 2.0, 0.22, '#7A6A55');
+    boule(g, [[0, 3.6, 0, 1.3, '#E9C23A', [1, 1.5, 1]], [0, 5.2, 0, 0.95, '#F2D25A', [1, 1.3, 1]], [0.6, 3.2, 0.3, 0.8, '#DDB22E'], [-0.55, 3.4, -0.3, 0.8, '#F0CB48']]); }
+  function mimosa(g) { tronc(g, 1.4, 0.16, GREY); RD([0, 1.2, 0], [0.6, 2.0, 0.2], 0.09, GREY, g); RD([0, 1.2, 0], [-0.55, 1.9, -0.2], 0.09, GREY, g);
+    boule(g, [[0, 2.6, 0, 1.3, '#A9B47A', [1.15, 0.85, 1.1]], [0.7, 2.3, 0.3, 0.8, '#9EAA70'], [-0.7, 2.4, -0.3, 0.8, '#B2BC84']]);
+    fleurs(g, 46, ['#F5D21E', '#FBE04A', '#EFC514'], 0, 2.65, 0, 1.45, 1.1, 1.3, 0.16); }
+  function arbreJudee(g) { tronc(g, 1.5, 0.16, '#5A3F33'); RD([0, 1.3, 0], [0.7, 2.2, 0.3], 0.09, '#5A3F33', g); RD([0, 1.3, 0], [-0.65, 2.1, -0.3], 0.09, '#5A3F33', g);
+    boule(g, [[0, 2.9, 0, 1.4, '#D0508A', [1.2, 0.85, 1.15]], [0.85, 2.6, 0.4, 0.85, '#E07AA8'], [-0.8, 2.7, -0.4, 0.85, '#C4447E'], [0.1, 3.6, -0.1, 0.8, '#E68BB4']]); }
+  function paulownia(g) { tronc(g, 2.0, 0.24, '#7E7468');
+    boule(g, [[0, 3.6, 0, 1.8, '#6E9E43', [1.15, 0.8, 1.1]], [1.1, 3.2, 0.5, 1.0, '#7FAE4E'], [-1.0, 3.3, -0.5, 1.0, '#5E8F3E']]);
+    fleurs(g, 30, ['#A98BD0', '#B9A0DE', '#9476C4'], 0, 3.75, 0, 2.05, 1.45, 1.95, 0.2); }
+  function cedreBleu(g) { tronc(g, 1.6, 0.26, '#6A5444');
+    [[1.6, 2.3, 0.45], [1.35, 2.9, 0.42], [1.1, 3.5, 0.4], [0.85, 4.1, 0.38], [0.55, 4.7, 0.36]].forEach((q, i) => { const c = CY(q[0] * 0.8, q[0], q[2], i % 2 ? '#7F9DA8' : '#6F8E9A', 0, q[1], 0, g, 9); c.rotation.y = i * 0.4; });
+    CO(0.35, 0.8, '#7F9DA8', 0, 5.0, 0, g, 7); }
+  function sapin(g) { tronc(g, 0.7, 0.2, '#5A3F2A'); [[1.5, 2.0, 0.6], [1.2, 1.8, 1.6], [0.9, 1.6, 2.5], [0.55, 1.4, 3.4]].forEach((q, i) => CO(q[0], q[1], i % 2 ? '#2F5B3A' : '#356642', 0, q[2], 0, g, 9)); }
+  function pinSylvestre(g) { CY(0.16, 0.24, 4.2, '#C2703E', 0, 0, 0, g, 7); RD([0, 3.6, 0], [0.9, 4.3, 0.2], 0.08, '#C2703E', g); RD([0, 3.8, 0], [-0.8, 4.5, -0.3], 0.08, '#C2703E', g);
+    [[0, 4.7, 0, 1.1], [0.95, 4.35, 0.25, 0.75], [-0.85, 4.55, -0.3, 0.75], [0.2, 5.3, 0.1, 0.7]].forEach((q, i) => { const d = DD(q[3], i % 2 ? '#3E6B45' : '#33603C', q[0], q[1], q[2], g); d.scale.set(1.25, 0.6, 1.15); }); }
+  function sauleDore(g) { CY(0.2, 0.3, 1.9, '#7A6A48', 0, 0, 0, g, 7); boule(g, [[0, 3.0, 0, 1.3, '#D7C24A', [1, 0.75, 1]]]);
+    for (let k = 0; k < 16; k++) { const a = k * 0.39, r = 1.15 + (k % 3) * 0.12, l = 1.7 + (k % 4) * 0.25; const b = B(0.12, l, 0.34, k % 2 ? '#E2CF5C' : '#CDB63E', Math.cos(a) * r, 3.1 - l, Math.sin(a) * r, g); b.rotation.y = -a; } }
+  function tamaris(g) { tronc(g, 1.1, 0.12, '#6E5244'); RD([0, 0.9, 0], [0.6, 1.8, 0.1], 0.07, '#6E5244', g); RD([0, 0.9, 0], [-0.5, 1.7, -0.2], 0.07, '#6E5244', g);
+    for (let k = 0; k < 22; k++) { const a = k * 2.399, r = 0.3 + (k % 5) * 0.2, h = 1.6 + (k % 4) * 0.35; const m = SP(0.38, k % 3 ? '#E8A6C0' : '#F2C0D4', Math.cos(a) * r, h, Math.sin(a) * r, g, 0); m.scale.set(0.6, 1.4, 0.6); } }
+  function palmier(g) { for (let k = 0; k < 9; k++) CY(0.22 - k * 0.006, 0.25 - k * 0.006, 0.5, k % 2 ? '#8A6A48' : '#7A5C3E', Math.sin(k * 0.4) * 0.06, k * 0.48, 0, g, 8);
+    for (let k = 0; k < 10; k++) { const a = k * 0.628, f = sub(g, 0.05, 4.4, 0); f.rotation.y = a; const p = B(0.5, 0.04, 2.0, k % 2 ? '#4E8A3A' : '#5E9A44', 0, 0, 1.0, f); p.rotation.x = 0.45; p.position.y = -0.35; }
+    SP(0.22, '#7A5C3E', 0.05, 4.45, 0, g, 0); }
+  function noyer(g) { tronc(g, 2.0, 0.34, '#6B5A4A'); RD([0, 1.8, 0], [1.2, 2.8, 0.3], 0.18, '#6B5A4A', g); RD([0, 1.8, 0], [-1.1, 2.7, -0.4], 0.18, '#6B5A4A', g);
+    boule(g, [[0, 3.8, 0, 2.0, '#6E9E43', [1.25, 0.8, 1.2]], [1.5, 3.3, 0.5, 1.3, '#7FAE4E'], [-1.5, 3.4, -0.5, 1.3, '#5E8F3E'], [0.3, 4.6, -0.3, 1.2, '#86B454']]); }
+  function prunusPourpre(g) { tronc(g, 1.4, 0.16, '#4E3530');
+    boule(g, [[0, 2.6, 0, 1.25, '#6E2E44', [1.1, 0.95, 1.05]], [0.7, 2.3, 0.3, 0.8, '#7C3650'], [-0.65, 2.4, -0.3, 0.8, '#622840']]);
+    fleurs(g, 36, ['#F7D4DE', '#FBE6EC', '#F2B9CA'], 0, 2.65, 0, 1.4, 1.2, 1.35, 0.11); }
+  function catalpa(g) { tronc(g, 1.8, 0.26, '#7A6A55');
+    boule(g, [[0, 3.3, 0, 1.8, '#A8C84A', [1.3, 0.7, 1.25]], [1.2, 3.0, 0.5, 1.0, '#B5D45A'], [-1.2, 3.1, -0.5, 1.0, '#9CBC40']]);
+    fleurs(g, 22, ['#FFFDF8', '#F4ECF6'], 0, 3.4, 0, 2.2, 1.25, 2.1, 0.15); }
+  function laurierRose(g) { [[0, 0.8, 0, 0.75], [0.55, 0.7, 0.25, 0.55], [-0.5, 0.75, -0.25, 0.55], [0.1, 1.3, -0.1, 0.55]].forEach((q) => { const d = DD(q[3], '#3F6B3A', q[0], q[1], q[2], g); d.scale.set(1, 0.95, 1); });
+    fleurs(g, 26, ['#E86A9A', '#F08CB2', '#FFFDF8'], 0, 0.9, 0, 0.95, 0.85, 0.9, 0.11); }
+  function vieilOlivier(g) { RD([0, 0, 0], [0.3, 1.0, 0.1], 0.3, '#7A6E5E', g); RD([0.3, 1.0, 0.1], [-0.1, 1.7, 0], 0.22, '#7A6E5E', g); RD([0.3, 1.0, 0.1], [0.9, 1.6, 0.3], 0.16, '#7A6E5E', g);
+    boule(g, [[0, 2.4, 0, 1.15, '#9AAA82', [1.3, 0.7, 1.2]], [0.9, 2.1, 0.4, 0.8, '#A6B48E'], [-0.8, 2.2, -0.4, 0.8, '#8E9E78'], [0.1, 2.9, 0, 0.75, '#AEBC96']]); }
+  function hetreCommun(g) { tronc(g, 2.2, 0.3, '#9C978C');
+    boule(g, [[0, 4.1, 0, 2.1, '#5E9A44', [1, 0.95, 1]], [1.3, 3.5, 0.6, 1.3, '#6EA84E'], [-1.2, 3.6, -0.5, 1.3, '#548C3C'], [0.2, 5.4, -0.2, 1.2, '#78B256']]); }
+  /* des arbres à l'échelle des maisons (Eugénie, 22/11/2026) : ils étaient deux fois trop petits ; les arbres déjà posés grandissent aussi */
+  const BIG = { platane: 1.6, tilleul: 1.6, peuplier: 1.6, cypres: 1.5, pommier: 1.3, marronnier: 1.4, cerisier: 1.4, saule: 1.35, chene: 1.35, bouleau: 1.5, pin_parasol: 1.3, figuier: 1.3, magnolia: 1.4 };
+  const grand = (f, k) => (g) => { const h = new THREE.Group(); h.scale.setScalar(k); g.add(h); f(h); };
+  const it = (id, cat, n, ic, c, b, fp, lvl, build) => ({ id, cat, n, ic, c, b, fp, lvl, build: BIG[id] ? grand(build, BIG[id]) : build });
   return [
     // nature
     it('platane', 'nature', 'Platane', '🌳', 60, 2, [1, 1], 1, treeOf('platane', 1.1)),
@@ -3108,6 +3180,24 @@ const CATALOGUE = (() => {
     it('figuier', 'nature', 'Figuier', '🌿', 130, 3, [1, 1], 5, figuier),
     it('lilas', 'nature', 'Buisson de lilas', '💜', 70, 2, [1, 1], 2, lilas),
     it('magnolia', 'nature', 'Magnolia en fleurs', '🌸', 260, 7, [1, 1], 8, magnolia),
+    it('erable_japon', 'nature', 'Érable du Japon pourpre', '🍁', 190, 5, [1, 1], 3, erableJapon),
+    it('hetre_pourpre', 'nature', 'Hêtre pourpre', '🌳', 320, 8, [2, 2], 9, hetrePourpre),
+    it('hetre', 'nature', 'Grand hêtre', '🌳', 200, 5, [2, 2], 4, hetreCommun),
+    it('ginkgo', 'nature', 'Ginkgo doré', '💛', 260, 7, [1, 1], 8, ginkgo),
+    it('mimosa', 'nature', 'Mimosa en fleurs', '💛', 210, 6, [1, 1], 5, mimosa),
+    it('arbre_judee', 'nature', 'Arbre de Judée', '🌸', 230, 6, [1, 1], 6, arbreJudee),
+    it('paulownia', 'nature', 'Paulownia aux fleurs mauves', '💜', 280, 7, [2, 2], 9, paulownia),
+    it('prunus', 'nature', 'Prunier pourpre en fleurs', '🌸', 200, 5, [1, 1], 4, prunusPourpre),
+    it('catalpa', 'nature', 'Catalpa en fleurs', '🌳', 240, 6, [2, 2], 7, catalpa),
+    it('noyer', 'nature', 'Vieux noyer', '🌰', 220, 6, [2, 2], 5, noyer),
+    it('saule_dore', 'nature', 'Saule doré', '💛', 300, 8, [2, 2], 10, sauleDore),
+    it('tamaris', 'nature', 'Tamaris rose', '🌸', 170, 4, [1, 1], 4, tamaris),
+    it('laurier_rose', 'nature', 'Laurier-rose', '🌺', 110, 3, [1, 1], 2, laurierRose),
+    it('vieil_olivier', 'nature', 'Vieil olivier', '🫒', 290, 7, [1, 1], 7, vieilOlivier),
+    it('sapin', 'nature', 'Sapin', '🎄', 120, 3, [1, 1], 2, sapin),
+    it('pin_sylvestre', 'nature', 'Pin sylvestre', '🌲', 160, 4, [1, 1], 5, pinSylvestre),
+    it('cedre_bleu', 'nature', 'Cèdre bleu de l’Atlas', '🌲', 380, 10, [2, 2], 11, cedreBleu),
+    it('palmier', 'nature', 'Palmier de la Côte d’Azur', '🌴', 340, 9, [1, 1], 10, palmier),
     it('geraniums', 'jardins', 'Pots de géraniums', '🌺', 45, 1, [1, 1], 1, geraniums),
     it('pivoines', 'jardins', 'Massif de pivoines', '🌸', 70, 2, [1, 1], 2, roses('#E05A8C', '#F4B3CB')),
     it('dahlias', 'jardins', 'Massif de dahlias', '🌼', 75, 2, [1, 1], 3, roses('#E8732E', '#F2C14E')),
@@ -3344,8 +3434,8 @@ function wildDamage(a) { const T = a.target, SP = WSPEC[a.sp], n = now(); let do
 
 /* ---- une visite : quelques animaux quittent leur coin et viennent se servir ---- */
 function wildDev() { return 1 + (S.pop || 0) / 150 + (level() - 1) / 12; }
-const FAUNE_RAIDS = false;
-function wildInterval(res) { const base = (S.mode === 'comp' ? 130 : 200) / wildDev(), s = Math.max(S.mode === 'comp' ? 40 : 55, base) * (0.7 + Math.random() * 0.6) * (res ? 2.6 : 1); return (fast ? s / 3 : s) * 1000; }
+const FAUNE_RAIDS = true; /* de retour le 22/11/2026 (Eugénie : « on a l'impression que ce sont des éléments décoratifs ») : des visites rares, bien visibles, qu'on chasse d'un geste */
+function wildInterval(res) { const base = (S.mode === 'comp' ? 130 : 420) / wildDev(), s = Math.max(S.mode === 'comp' ? 40 : 240, base) * (0.7 + Math.random() * 0.6) * (res ? 2.6 : 1); return (fast ? s / 3 : s) * 1000; }
 function startWildRaid(res, force) {
   const T = wildTargets(); if (!T.length) return false; const kinds = {}; T.forEach((t) => { kinds[t.kind] = 1; });
   const pool = Object.keys(WSPEC).filter((sp) => (!force || force === sp) && WILD.some((a) => a.sp === sp && a.raider !== false && (a.st === 'idle' || a.st === 'walk' || a.st === 'soar'))); if (!pool.length) return false;
@@ -4425,6 +4515,7 @@ if (location.hash === "#debug") window.__farm = { farmS, farmStart, collectFarm,
 /* ================= ambiance : l'heure qu'il est en France, les saisons, la météo, le vent, la vie ================= */
 // La saison suit la date de Paris ; la journée du village dure 15 minutes. __pf.amb.set({ day (0 à 1), hour, season, wind }) force une valeur pour essayer ; set(null) revient au réel.
 const AMB = { hour: 12, h: 1, season: 'ete', weather: 'clair', wind: 0.1, night: 0, force: {}, rain: 0, snow: 0, mist: 0, cloud: 0.4, cover: 0 };
+/* les saisons tournent seules, aux vraies dates : le joueur ne les choisit pas (Romain, 22/11/2026) */
 const parisFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 function parisNow() { const p = {}, d = new Date(); parisFmt.formatToParts(d).forEach((q) => { p[q.type] = +q.value; }); if (p.hour === 24) p.hour = 0;
   const hour = p.hour + p.minute / 60 + p.second / 3600, utc = d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600, off = Math.round(((hour - utc + 36) % 24) - 12);
@@ -4435,7 +4526,7 @@ const SEASON_DOY = { printemps: 110, ete: 200, automne: 300, hiver: 20 };
 const SEASON = {
   printemps: { mix: 0.6, a: '#A5D86A', b: '#F6B4CB', c: '#FFF1EC', t: [0.6, 0.83], tint: ['#A9E070', 0.16], flowers: 1, snow: 0, smoke: 0.35, leaves: 0.5, petal: 1, wx: [['clair', 0.5], ['nuageux', 0.22], ['pluie', 0.2], ['brume', 0.08]], gust: 34 },
   ete: { mix: 0, a: '#6E9E43', b: '#6E9E43', c: '#6E9E43', t: [0.4, 0.7], tint: ['#9CC35A', 0], flowers: 0.75, snow: 0, smoke: 0.12, leaves: 0.05, petal: 0, wx: [['clair', 0.7], ['nuageux', 0.18], ['pluie', 0.1], ['brume', 0.02]], gust: 48 },
-  automne: { mix: 0.93, a: '#E2852A', b: '#C4452C', c: '#EDBB3A', t: [0.4, 0.68], tint: ['#C9B257', 0.3], flowers: 0.22, snow: 0, smoke: 0.6, leaves: 1, petal: 0, wx: [['clair', 0.32], ['nuageux', 0.25], ['pluie', 0.23], ['brume', 0.2]], gust: 22 },
+  automne: { mix: 0.93, a: '#76A145', b: '#D9782C', c: '#EDBB3A', t: [0.45, 0.72], /* près d'un arbre sur deux reste vert (Eugénie, 22/11/2026) */ tint: ['#C9B257', 0.3], flowers: 0.22, snow: 0, smoke: 0.6, leaves: 1, petal: 0, wx: [['clair', 0.32], ['nuageux', 0.25], ['pluie', 0.23], ['brume', 0.2]], gust: 22 },
   hiver: { mix: 0.9, a: '#9C8F86', b: '#A89A8C', c: '#8F8580', t: [0.4, 0.7], tint: ['#DCE4E8', 0.45], flowers: 0, snow: 0.92, smoke: 0.92, leaves: 0, petal: 0, wx: [['clair', 0.32], ['nuageux', 0.23], ['neige', 0.35], ['brume', 0.1]], gust: 26 }
 };
 // light by the height of the sun (h: 1 at noon, 0 on the horizon, below 0 at night)
