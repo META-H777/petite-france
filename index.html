@@ -2241,8 +2241,11 @@ const CATEGORIES = [
   { id: 'vehicules', n: 'Véhicules', ic: '🚲' },
   { id: 'clotures', n: 'Clôtures et murets', ic: '🧱' },
   { id: 'sols', n: 'Sols et dallages', ic: '🟫' },
-  { id: 'quais', n: 'Bords de l’eau', ic: '🦆' }
+  { id: 'quais', n: 'Bords de l’eau', ic: '🦆' },
+  { id: 'parc', n: 'Parc et jardin botanique', ic: '🎡' }
 ];
+/* ce qui tourne tout seul (grande roue, barques de l'étang, tourniquet) : le jeu fait avancer chaque pièce, voir tickSpin */
+const SPIN = [];
 const CATALOGUE = (() => {
   /* ---- shared geometry cache: every shape is built once, whatever the number of copies ---- */
   const GC = {}, gk = (k, f) => GC[k] || (GC[k] = f());
@@ -2983,6 +2986,71 @@ const CATALOGUE = (() => {
     for (let k = 0; k < 8; k++) { const a = k * PI / 4, L = k % 2 ? 0.75 : 1.15; const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(0.16, 0.16); sh.lineTo(0, L); sh.lineTo(-0.16, 0.16); sh.lineTo(0, 0);
       const m = mesh(gk('rsp' + L, () => new THREE.ShapeGeometry(sh).rotateX(-PI / 2)), k % 2 ? '#2B2E36' : GOLD, 0, 0.065, 0, g); m.rotation.y = a; m.castShadow = false; }
     CY(0.16, 0.16, 0.03, GOLD, 0, 0.06, 0, g, 12).castShadow = false; }
+  /* ---------------- l'étang et le parc (Eugénie, 22/11/2026) ---------------- */
+  function pondShape(rx, rz, k) { const sh = new THREE.Shape(), n = 28; for (let i = 0; i <= n; i++) { const a = i / n * 2 * PI, w = 1 + 0.08 * Math.sin(a * 3 + k) + 0.05 * Math.cos(a * 5 + k * 2), x = Math.cos(a) * rx * w, y = Math.sin(a) * rz * w; if (i) sh.lineTo(x, y); else sh.moveTo(x, y); } return sh; }
+  function pondFlat(key, rx, rz, k, c, y, p, x0) { const m = mesh(gk(key, () => new THREE.ShapeGeometry(pondShape(rx, rz, k), 2).rotateX(-PI / 2)), c, x0 || 0, y, 0, p, { noShadow: true }); m.castShadow = false; return m; }
+  function etangCore(g, x0, rx, rz) {
+    pondFlat('pb' + rx, rx + 0.7, rz + 0.6, 1.3, '#86A653', 0.025, g, x0); pondFlat('pm' + rx, rx + 0.25, rz + 0.22, 1.3, '#8C7A5C', 0.035, g, x0); pondFlat('pw' + rx, rx, rz, 1.3, WATER, 0.05, g, x0);
+    for (let i = 0; i < 22; i++) { const a = i / 22 * 2 * PI, w = 1 + 0.08 * Math.sin(a * 3 + 1.3) + 0.05 * Math.cos(a * 5 + 2.6); if (i % 7 === 3) continue; const d = mesh(gk('pst' + (i % 3), () => new THREE.DodecahedronGeometry(0.16 + (i % 3) * 0.05, 0)), ['#BFB49C', '#A89C84', '#CFC3A8'][i % 3], x0 + Math.cos(a) * (rx + 0.22) * w, 0.07, Math.sin(a) * (rz + 0.2) * w, g); d.scale.y = 0.6; }
+    // roseaux et massettes
+    [[0.75, 0.15], [0.45, 0.62], [-0.6, -0.55]].forEach((q, j) => { for (let k = 0; k < 9; k++) { const x = x0 + q[0] * rx + (k % 3 - 1) * 0.22, z = q[1] * rz + (Math.floor(k / 3) - 1) * 0.2, h = 0.9 + (k % 4) * 0.18; CY(0.015, 0.02, h, '#4E7A3A', x, 0, z, g, 4); if (k % 2) { const c = CY(0.045, 0.045, 0.2, '#6B4A2E', x, h - 0.05, z, g, 6); c.castShadow = false; } } });
+    // nénuphars
+    [[-0.3, 0.3], [0.1, -0.4], [-0.55, -0.05], [0.3, 0.45], [0.55, -0.3]].forEach((q, k) => { CY(0.26, 0.26, 0.02, '#5E8F3E', x0 + q[0] * rx, 0.06, q[1] * rz, g, 9).castShadow = false; if (k % 2 === 0) SP(0.07, '#F0A6B8', x0 + q[0] * rx + 0.05, 0.1, q[1] * rz, g, 0); });
+  }
+  function ponton(g, x, z, len) { for (let k = 0; k < Math.round(len / 0.28); k++) B(0.9, 0.06, 0.24, k % 2 ? LWOOD : WOOD, x, 0.16, z - k * 0.28, g); [[-0.42, 0], [0.42, 0], [-0.42, -len + 0.2], [0.42, -len + 0.2]].forEach((q) => CY(0.05, 0.05, 0.3, '#5A3B26', x + q[0], -0.05, z + q[1], g, 6)); }
+  function etang(g) { etangCore(g, 0, 5.0, 3.2); ponton(g, 1.6, 3.6, 1.6); }
+  function rowboat(p, c) { const h = SP(0.5, c, 0, 0.12, 0, p, 1); h.scale.set(0.62, 0.32, 1.35); const h2 = SP(0.5, WHITE, 0, 0.1, 0, p, 1); h2.scale.set(0.64, 0.18, 1.37); B(0.56, 0.04, 0.16, LWOOD, 0, 0.2, 0.05, p);
+    CY(0.11, 0.13, 0.32, ['#C9573F', '#2F4B7C', '#E3A73C'][Math.floor(Math.random() * 3)], 0, 0.22, -0.1, p, 7); SP(0.09, '#E8BFA0', 0, 0.62, -0.1, p, 1); CY(0.13, 0.13, 0.02, '#E8D49A', 0, 0.7, -0.1, p, 10);
+    [-1, 1].forEach((s) => { const o = RD([s * 0.12, 0.38, -0.05], [s * 0.85, 0.08, 0.15], 0.02, LWOOD, p); o.castShadow = false; }); }
+  function etangBarques(g) { etangCore(g, -0.8, 4.3, 2.9); ponton(g, 1.6, 3.7, 1.4);
+    const piv = sub(g, -0.8, 0, 0); piv.userData.spin = 0.12; piv.userData.ax = 'y'; SPIN.push(piv);
+    [[1.7, 0, 0, '#2F6B8C'], [-1.6, 0, PI, '#B5543C']].forEach((q) => { const b = sub(piv, q[0], 0, q[1], q[2]); rowboat(b, q[3]); });
+    // le kiosque de location
+    const k = sub(g, 4.7, 0, 2.4); RB(1.3, 1.6, 1.1, CREAM, 0, 0, 0, k); stripes(k, 1.05, 0.7, 10, '#2F6B8C', WHITE, 1.6, 0, 0); B(1.0, 0.5, 0.05, '#5A3A2A', 0, 0.75, 0.56, k);
+    lab(k, 'BARQUES', 1.0, 0.24, '#FFFDF8', '#2F6B8C', 80, 0, 1.38, 0.57); const sb = sub(g, 3.6, 0, 3.4); rowboat(sb, '#E3A73C'); sb.rotation.y = 0.4; }
+  function tablePique(g) { B(1.8, 0.06, 0.8, LWOOD, 0, 0.72, 0, g); [-0.55, 0.55].forEach((z) => B(1.8, 0.05, 0.28, LWOOD, 0, 0.42, z * 1.25, g));
+    [-0.75, 0.75].forEach((x) => { RD([x, 0, -0.75], [x, 0.72, 0.1], 0.05, WOOD, g); RD([x, 0, 0.75], [x, 0.72, -0.1], 0.05, WOOD, g); });
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) B(0.3, 0.012, 0.27, (i + j) % 2 ? '#D9483B' : WHITE, -0.75 + i * 0.3, 0.755, -0.27 + j * 0.27, g).castShadow = false;
+    CY(0.16, 0.13, 0.2, BAMBOO, 0.35, 0.76, 0.05, g, 8); B(0.08, 0.2, 0.08, '#6B2A3A', -0.4, 0.76, -0.1, g); SP(0.09, '#E8B94A', -0.1, 0.82, 0.1, g, 0); }
+  function grandeRoue(g) { const H = 4.2, R = 3.2, STEEL = '#F4E9D3', BLUE = '#2F6B8C';
+    [-1, 1].forEach((z) => { RD([-1.6, 0, z * 0.7], [0, H, z * 0.55], 0.1, STEEL, g); RD([1.6, 0, z * 0.7], [0, H, z * 0.55], 0.1, STEEL, g); });
+    RB(3.8, 0.3, 2.0, '#D8CDB6', 0, 0, 0, g); B(1.2, 0.9, 0.9, CREAM, 2.3, 0, 1.6, g); stripes(sub(g, 2.3, 0.9, 1.6), 0.8, 0.5, 8, RED, WHITE, 0, 0, 0);
+    const wh = sub(g, 0, H, 0); wh.userData.spin = 0.18; wh.userData.ax = 'z'; SPIN.push(wh);
+    [-0.45, 0.45].forEach((z) => { const t = TO(R, 0.06, PI * 2, STEEL, 0, 0, z, wh, 36); t.rotation.set(0, 0, 0); const t2 = TO(R * 0.55, 0.04, PI * 2, BLUE, 0, 0, z, wh, 28); t2.rotation.set(0, 0, 0);
+      for (let k = 0; k < 8; k++) { const a = k / 8 * 2 * PI; RD([0, 0, z], [Math.cos(a) * R, Math.sin(a) * R, z], 0.03, STEEL, wh); } });
+    CY(0.18, 0.18, 1.1, '#C9C9C9', 0, -0.55, 0, wh, 10).rotation.x = PI / 2;
+    for (let k = 0; k < 8; k++) { const a = k / 8 * 2 * PI, cab = sub(wh, Math.cos(a) * R, Math.sin(a) * R, 0); cab.userData.spin = -0.18; cab.userData.ax = 'z'; SPIN.push(cab);
+      RD([0, 0, -0.4], [0, 0, 0.4], 0.03, STEEL, cab); B(0.05, 0.4, 0.05, STEEL, 0, -0.4, 0, cab); const c = RB(0.62, 0.42, 0.62, [RED, BLUE, '#E3A73C', '#3F6B3A'][k % 4], 0, -0.85, 0, cab); c.castShadow = true; B(0.7, 0.06, 0.7, WHITE, 0, -0.43, 0, cab); }
+    lab(g, 'GRANDE ROUE', 1.4, 0.3, '#FFFDF8', RED, 80, 2.3, 1.75, 2.06); }
+  function guignol(g) { RB(2.2, 2.6, 0.8, RED, 0, 0, 0, g); for (let k = 0; k < 6; k++) B(0.18, 2.62, 0.02, WHITE, -0.9 + k * 0.36, 0, 0.41, g);
+    B(1.5, 0.75, 0.06, '#2B2535', 0, 1.35, 0.42, g); [-0.68, 0.68].forEach((x) => { const c = B(0.28, 0.8, 0.05, '#7A1F2B', x, 1.32, 0.46, g); c.rotation.z = x > 0 ? -0.08 : 0.08; });
+    B(2.4, 0.35, 0.95, '#E3A73C', 0, 2.6, 0, g); lab(g, 'GUIGNOL', 1.6, 0.3, '#E3A73C', '#7A1F2B', 90, 0, 2.77, 0.49);
+    SP(0.13, '#E8BFA0', -0.3, 1.62, 0.45, g, 1); CO(0.12, 0.24, '#2B2535', -0.3, 1.72, 0.45, g, 8); SP(0.14, '#F0C8A8', 0.32, 1.6, 0.45, g, 1); CY(0.17, 0.17, 0.05, '#2B2535', 0.32, 1.72, 0.45, g, 10); B(0.2, 0.2, 0.12, '#2F4B7C', -0.3, 1.38, 0.45, g); B(0.2, 0.2, 0.12, '#3F6B3A', 0.32, 1.38, 0.45, g);
+    [1.5, 2.2].forEach((z) => B(1.9, 0.06, 0.3, LWOOD, 0, 0.42, z, g)); [1.5, 2.2].forEach((z) => [-0.8, 0.8].forEach((x) => B(0.08, 0.42, 0.25, WOOD, x, 0, z, g))); }
+  function cafeParc(g) { CY(1.1, 1.1, 0.12, '#D8CDB6', 0, 0, -0.9, g, 12); CY(0.95, 0.95, 2.0, '#3F6B4E', 0, 0.12, -0.9, g, 12); for (let k = 0; k < 6; k++) { const a = k / 6 * 2 * PI + 0.5; B(0.5, 0.9, 0.04, '#CFE6EE', Math.sin(a) * 0.96, 1.0, -0.9 + Math.cos(a) * 0.96, g).rotation.y = a; }
+    CO(1.35, 0.9, '#3F6B4E', 0, 2.1, -0.9, g, 12); SP(0.1, GOLD, 0, 3.05, -0.9, g, 0); lab(g, 'CAFÉ DU PARC', 1.2, 0.24, '#FFFDF8', '#3F6B4E', 80, 0, 1.75, 0.07);
+    terrasse('#3F6B4E', '#F4E9D3')(sub(g, -1.1, 0, 1.2)); terrasse('#C9573F', '#F4E9D3')(sub(g, 1.1, 0, 1.3)); }
+  function aireJeux(g) { FL(5.6, 3.6, '#E8D7A8', 0, 0, 0, g);
+    // toboggan
+    const t = sub(g, -1.6, 0, 0); [[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]].forEach((q) => CY(0.05, 0.05, 1.5, '#2F6B8C', q[0], 0, q[1], t, 6)); B(0.8, 0.06, 0.8, '#E3A73C', 0, 1.5, 0, t); CO(0.62, 0.6, RED, 0, 2.6, 0, t, 4).rotation.y = PI / 4;
+    [-0.35, 0.35].forEach((x) => CY(0.04, 0.04, 1.1, '#2F6B8C', x, 1.5, 0.35, t, 5)); const sl = B(0.6, 0.05, 2.0, '#E3A73C', 0, 0, 1.2, t); sl.position.y = 0.8; sl.rotation.x = 0.72; for (let k = 0; k < 5; k++) B(0.7, 0.04, 0.05, '#2F6B8C', 0, 0.25 + k * 0.28, -0.45, t);
+    // balançoires
+    const b = sub(g, 1.4, 0, 0); [-1.1, 1.1].forEach((x) => { RD([x, 0, -0.6], [x, 2.0, 0], 0.06, RED, b); RD([x, 0, 0.6], [x, 2.0, 0], 0.06, RED, b); }); CY(0.06, 0.06, 2.3, RED, 0, 2.0, 0, b, 6).rotation.z = PI / 2;
+    [-0.5, 0.5].forEach((x) => { RD([x - 0.18, 2.0, 0], [x - 0.18, 0.5, 0], 0.012, '#888', b); RD([x + 0.18, 2.0, 0], [x + 0.18, 0.5, 0], 0.012, '#888', b); B(0.45, 0.05, 0.2, x < 0 ? '#E3A73C' : '#3F6B3A', x, 0.47, 0, b); });
+    // bac à sable
+    B(1.4, 0.2, 1.4, LWOOD, 0, 0, 1.6, g); FL(1.25, 1.25, '#EED9A0', 0, 1.6, 0.18, g); CO(0.18, 0.16, '#D9483B', 0.3, 0.2, 1.5, g, 8); }
+  function tourniquet(g) { FL(2.4, 2.4, '#E8D7A8', 0, 0, 0, g); const t = sub(g, 0, 0, 0); t.userData.spin = 0.6; t.userData.ax = 'y'; SPIN.push(t);
+    CY(1.0, 1.0, 0.12, '#2F6B8C', 0, 0.1, 0, t, 16); for (let k = 0; k < 4; k++) { const a = k * PI / 2; B(0.06, 0.6, 0.06, '#E3A73C', Math.cos(a) * 0.75, 0.22, Math.sin(a) * 0.75, t); RD([Math.cos(a) * 0.75, 0.8, Math.sin(a) * 0.75], [0, 0.8, 0], 0.03, '#E3A73C', t); } CY(0.08, 0.08, 0.9, '#C9C9C9', 0, 0, 0, t, 6); }
+  function serre(g) { const GL = '#CFE6EE', FR = '#FFFDF8'; B(4.4, 0.25, 2.8, '#D8CDB6', 0, 0, 0, g);
+    B(4.2, 1.6, 2.6, GL, 0, 0.25, 0, g).castShadow = false; for (let k = 0; k <= 7; k++) { B(0.05, 1.62, 2.62, FR, -2.1 + k * 0.6, 0.25, 0, g); }
+    [-1, 1].forEach((s) => { const r = B(4.25, 0.04, 1.55, GL, 0, 0, s * 0.68, g); r.position.y = 2.3; r.rotation.x = s * 0.6; r.castShadow = false; }); B(4.3, 0.08, 0.08, FR, 0, 2.72, 0, g);
+    for (let k = 0; k < 7; k++) SP(0.28 + (k % 3) * 0.08, ['#3F7A3A', '#5E9A44', '#2E6B40'][k % 3], -1.7 + k * 0.56, 0.6 + (k % 2) * 0.3, (k % 2 ? 0.5 : -0.5), g, 1);
+    const pl = sub(g, 1.4, 0.25, 0); CY(0.08, 0.1, 1.6, '#6B4A2E', 0, 0, 0, pl, 6); for (let k = 0; k < 6; k++) { const f = B(0.12, 0.03, 0.9, '#4E8A3A', 0, 1.55, 0, pl); f.rotation.set(0.5, k * 1.05, 0); f.position.set(Math.sin(k * 1.05) * 0.4, 1.4, Math.cos(k * 1.05) * 0.4); }
+    B(0.8, 1.3, 0.05, FR, 0, 0.25, 1.32, g); lab(g, 'SERRE BOTANIQUE', 1.6, 0.24, '#FFFDF8', '#3F6B3A', 80, 0, 2.05, 1.32); }
+  function carresBota(g) { [[-1, -0.9], [1, -0.9], [-1, 0.9], [1, 0.9]].forEach((q, i) => { B(1.6, 0.3, 1.4, LWOOD, q[0], 0, q[1], g); FL(1.45, 1.25, '#7E5E40', q[0], q[1], 0.3, g);
+      const cols = [['#D9483B', '#F2C14E'], ['#8FB3E0', '#B49ADB'], ['#F0A6B8', '#FFFDF8'], ['#E3A73C', '#9B7AD6']][i]; for (let k = 0; k < 9; k++) { const x = q[0] - 0.5 + (k % 3) * 0.5, z = q[1] - 0.45 + Math.floor(k / 3) * 0.45; SP(0.16, '#5E8F3E', x, 0.45, z, g, 0); SP(0.07, cols[k % 2], x, 0.6, z, g, 0); }
+      const st = sub(g, q[0] + 0.7, 0, q[1] + 0.6); CY(0.02, 0.02, 0.5, WOOD, 0, 0, 0, st, 4); B(0.22, 0.12, 0.02, WHITE, 0, 0.5, 0, st); }); }
+  function fontaineBoire(g) { CY(0.16, 0.2, 0.9, '#2E5A43', 0, 0, 0, g, 8); CY(0.25, 0.22, 0.12, '#2E5A43', 0, 0.9, 0, g, 10); SP(0.07, GOLD, 0, 1.05, 0, g, 0); B(0.05, 0.05, 0.18, '#C9C9C9', 0, 0.82, 0.18, g); CY(0.28, 0.28, 0.05, '#BFB49C', 0, 0, 0, g, 10); }
   /* ---------------- la grande pépinière (Romain, 22/11/2026) : des arbres de France aux couleurs et aux allures différentes ----------------
      Les feuillus verts suivent les saisons ; les persistants (cônes, touffes taillées) restent verts ; les feuillages pourpres, dorés, bleutés
      et les arbres en fleurs gardent leur couleur toute l'année : c'est leur particularité. */
@@ -3245,6 +3313,18 @@ const CATALOGUE = (() => {
     it('heron', 'quais', 'Héron cendré', '🪶', 80, 2, [1, 1], 4, heron),
     it('filets', 'quais', 'Filets de pêche qui sèchent', '🎣', 90, 2, [1, 1], 4, filets),
     it('barque', 'quais', 'Barque retournée sur tréteaux', '🛶', 140, 3, [1, 2], 5, barque),
+    // l'étang et le parc (Eugénie, 22/11/2026)
+    it('etang', 'quais', 'Étang aux nénuphars', '🪷', 1400, 30, [6, 4], 4, etang),
+    it('etang_barques', 'quais', 'Étang et location de barques (rapporte des écus)', '🛶', 2600, 40, [6, 4], 7, etangBarques),
+    it('table_pique', 'parc', 'Table de pique-nique', '🧺', 120, 3, [1, 1], 2, tablePique),
+    it('fontaine_boire', 'parc', 'Fontaine à boire', '🚰', 90, 2, [1, 1], 2, fontaineBoire),
+    it('aire_jeux', 'parc', 'Aire de jeux : toboggan, balançoires, bac à sable', '🛝', 900, 18, [3, 2], 4, aireJeux),
+    it('tourniquet', 'parc', 'Tourniquet des enfants', '🌀', 300, 6, [1, 1], 3, tourniquet),
+    it('carres_bota', 'parc', 'Carrés du jardin botanique', '🌼', 400, 10, [2, 2], 4, carresBota),
+    it('serre', 'parc', 'Serre du jardin botanique', '🪴', 1800, 36, [3, 2], 8, serre),
+    it('guignol', 'parc', 'Théâtre de Guignol (rapporte des écus)', '🎭', 1500, 24, [2, 2], 6, guignol),
+    it('cafe_parc', 'parc', 'Café du parc (rapporte des écus)', '☕', 1900, 26, [2, 2], 7, cafeParc),
+    it('grande_roue', 'parc', 'Grande roue (rapporte des écus)', '🎡', 7500, 120, [4, 3], 12, grandeRoue),
     it('pelouse', 'sols', 'Carré de pelouse', '🟩', 5, 0, [1, 1], 1, pelouse),
     it('prairie', 'sols', 'Prairie fleurie', '🌼', 12, 1, [1, 1], 1, prairie),
     it('sol_terre', 'sols', 'Terre battue', '🟫', 6, 0, [1, 1], 1, sol(1)),
@@ -3302,6 +3382,21 @@ function makeWildBoar() {
   const legs = [[0.17, 0.4, 0.24], [-0.17, 0.4, 0.24], [0.17, 0.4, -0.34], [-0.17, 0.4, -0.34]].map((q) => wpivot(g, q[0], q[1], q[2], (b) => { wlimb(0.085, 0.045, [0, 0.06, 0], [0, -0.33, 0], DK, b); cyl(0.05, 0.045, 0.07, '#1E1612', 0, -0.4, 0, b, 6); }));
   return { g, head, legs };
 }
+/* le renard et le hérisson : ils vivent dans la réserve et n'abîment rien (Romain, 22/11/2026) */
+function makeFox() {
+  const g = new THREE.Group(), RX = '#D2702E', WH = '#F6EBDD', DK = '#2B2018';
+  g.add(baked((b) => { wsph(0.2, RX, 0, 0.42, 0, b, 0.9, 0.95, 1.7); wsph(0.13, WH, 0, 0.36, 0.2, b, 0.9, 0.9, 1);
+    wlimb(0.11, 0.06, [0, 0.42, -0.3], [0, 0.34, -0.72], RX, b, 7); wsph(0.09, RX, 0, 0.33, -0.66, b, 1, 1, 1.6); wsph(0.065, WH, 0, 0.32, -0.82, b, 1, 1, 1.2); }));
+  const head = wpivot(g, 0, 0.52, 0.32, (b) => { wsph(0.13, RX, 0, 0.02, 0.04, b, 1, 0.95, 1.05); wlimb(0.07, 0.025, [0, 0, 0.1], [0, -0.03, 0.3], RX, b, 6); wsph(0.05, WH, 0, -0.04, 0.17, b, 1.3, 0.8, 1.4); wsph(0.022, DK, 0, -0.02, 0.31, b);
+    [-1, 1].forEach((s) => { const e = cone(0.055, 0.15, RX, s * 0.075, 0.15, 0.0, b, 4); e.rotation.z = -s * 0.25; wsph(0.018, DK, s * 0.055, 0.04, 0.13, b); }); });
+  const legs = [[0.08, 0.3, 0.2], [-0.08, 0.3, 0.2], [0.08, 0.3, -0.18], [-0.08, 0.3, -0.18]].map((q) => wpivot(g, q[0], q[1], q[2], (b) => { wlimb(0.04, 0.03, [0, 0.04, 0], [0, -0.27, 0], DK, b); }));
+  return { g, head, legs }; }
+function makeHedgehog() {
+  const g = new THREE.Group(), SP = '#6B5440', FA = '#C9A985';
+  g.add(baked((b) => { wsph(0.15, SP, 0, 0.13, -0.02, b, 1, 0.8, 1.3); for (let k = 0; k < 14; k++) { const a = k * 2.399, y = 0.16 + (k % 3) * 0.04; cone(0.03, 0.09, '#4A382B', Math.cos(a) * 0.1, y, -0.02 + Math.sin(a) * 0.12, b, 4).rotation.set(Math.sin(a) * 0.8, 0, -Math.cos(a) * 0.8); } }));
+  const head = wpivot(g, 0, 0.1, 0.15, (b) => { wsph(0.07, FA, 0, 0, 0.04, b, 1, 0.9, 1.3); wsph(0.018, '#1E1612', 0, 0, 0.14, b); [-1, 1].forEach((s) => wsph(0.012, '#1E1612', s * 0.035, 0.03, 0.08, b)); });
+  const legs = [[0.07, 0.05, 0.08], [-0.07, 0.05, 0.08], [0.07, 0.05, -0.1], [-0.07, 0.05, -0.1]].map((q) => wpivot(g, q[0], q[1], q[2], (b) => { wlimb(0.02, 0.015, [0, 0.02, 0], [0, -0.05, 0], FA, b, 4); }));
+  return { g, head, legs }; }
 function makePiglet() { // marcassin : pelage clair rayé
   const g = new THREE.Group();
   g.add(baked((b) => { wsph(0.15, '#C9A06C', 0, 0.22, 0, b, 0.95, 0.95, 1.6); [-0.07, 0, 0.07].forEach((x) => box(0.03, 0.02, 0.34, '#6B4A30', x, 0.345 - Math.abs(x) * 0.35, -0.02, b));
@@ -3341,6 +3436,8 @@ const WSPEC = {
   lapin:    { ic: '🐇', n: 'lapins', un: 'Un lapin', dmg: 1, bites: 3, eat: 2.6, near: 3.5, run: 4.2, flee: 5.6, w: { plot: 3, garden: 3, pen: 1 }, dog: true, fence: false, crow: false, hint: 'Approche-toi pour les faire détaler. Médor s\'en charge aussi.' },
   cerf:     { ic: '🦌', n: 'cerfs', un: 'Un cerf', dmg: 2, bites: 2, eat: 3.6, near: 6, run: 4.6, flee: 6.2, w: { plot: 2, garden: 3, pen: 1 }, dog: false, fence: false, crow: true, hint: 'Très craintif : il fuit dès que tu arrives. Un épouvantail le tient à distance.' },
   sanglier: { ic: '🐗', n: 'sangliers', un: 'Un sanglier', dmg: 3, bites: 2, eat: 3.4, near: 2.4, run: 3.8, flee: 5.2, w: { plot: 3, garden: 2, pen: 2 }, dog: true, fence: true, crow: false, hint: 'Têtu : il faut aller tout près. La barrière du champ et Médor l\'arrêtent.' },
+  renard:   { ic: '🦊', n: 'renards', un: 'Un renard', dmg: 0, bites: 0, eat: 0, near: 4, run: 4.4, flee: 5.8, w: { plot: 0, garden: 0, pen: 0 }, dog: false, fence: false, crow: false, hint: '' },
+  herisson: { ic: '🦔', n: 'hérissons', un: 'Un hérisson', dmg: 0, bites: 0, eat: 0, near: 1.5, run: 1.2, flee: 1.6, w: { plot: 0, garden: 0, pen: 0 }, dog: false, fence: false, crow: false, hint: '' },
   aigle:    { ic: '🦅', n: 'aigles', un: 'Un aigle', dmg: 2, bites: 1, eat: 0, near: 5, run: 11, flee: 12, w: { plot: 1, garden: 1, pen: 4 }, dog: false, fence: false, crow: true, hint: 'Il plonge du ciel : sois près de ce qu\'il vise. Un épouvantail le détourne.' }
 };
 const W_TARGET = { plot: 'le champ de blé', garden: 'le potager', hen: 'le poulailler', cow: 'l\'étable', sheep: 'la bergerie' };
@@ -3522,6 +3619,7 @@ function fauneBoot() {
   ['cerf', 'biche', 'faon'].forEach((k, i) => place(add('cerf', makeDeer(k), W_ZONES.cerf[i === 2 ? 1 : i], { raider: k !== 'faon' })));
   const sows = W_ZONES.sanglier.map((z) => { const a = add('sanglier', makeWildBoar(), z); place(a); return a; });
   [0, 1].forEach((k) => { const a = add('marcassin', makePiglet(), W_ZONES.sanglier[0], { mom: sows[0], k, wait: [sows[0].g.position.x, sows[0].g.position.z] }); a.g.position.copy(sows[0].g.position); });
+  [[-84, -46], [-70, -54]].forEach((z) => place(add('renard', makeFox(), z, { raider: false }))); [[-80, -52], [-74, -46]].forEach((z) => place(add('herisson', makeHedgehog(), z, { raider: false })));
   W_ZONES.aigle.forEach((z, i) => { const a = add('aigle', makeEagle(), z, { st: 'soar', ang: i * 3 }); a.g.position.set(z[0] + 15, 17, z[1]); });
   for (let k = 0; k < 6; k++) { const l = label(WILD[0].g, 1.4); l.busy = false; setLabel(l, '', ''); WLAB.push(l); }
   if (window.__pf) window.__pf.faune = { WILD, WSPEC, WR, raid: (sp) => startWildRaid(reserveOn(), sp), targets: wildTargets, reserveOn };
@@ -3610,13 +3708,53 @@ movable('parking', { n: 'Parking', ic: '🅿️', pivot: [-13, 6.4], rot: false,
 movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 1500, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'Une grande fontaine de pierre à vasques, au milieu de la place du village. Les habitants la réclament au-delà de 400 habitants. +30 beauté.' });
 movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
 movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 15000, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Le café de Gégé : il rapporte des écus d’or toute la journée et achète son pain à ta boulangerie. Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
-movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], rot: false, objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand coin de nature clos : cerfs, sangliers, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Sans garde forestier, il arrive qu\'un animal s\'échappe. +35 beauté.' });
+movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], rot: false, objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand domaine de nature clos : cerfs, sangliers, renards, hérissons, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Les visiteurs paient la visite guidée : la caisse se remplit toute seule. Avec Gaspard, le garde forestier, plus aucun animal ne s\'échappe et les visites rapportent 40 % de plus. +35 beauté.' });
+/* la chapelle, l'église, la cathédrale (Eugénie, 22/11/2026) : une chapelle romane dès 10 habitants, l'église gothique à 300, une cathédrale à 2 000 */
+const CHAPELP = [24, -12], CATHP = [52, -36];
+const chapelG = group(CHAPELP[0], CHAPELP[1], 0, 'chapelle', 'chapelle');
+{ const g = chapelG, ST = '#E6DCC6', ST2 = '#D8CDB6', TUILE = '#B5543C';
+  box(4.2, 0.3, 7.0, ST2, 0, 0, -0.4, g); box(3.8, 3.4, 6.2, ST, 0, 0.3, -0.4, g); roof(6.4, 3.8, 1.9, TUILE, 0, 3.7, -0.4, g).rotation.y = Math.PI / 2;
+  cyl(1.6, 1.6, 3.0, ST, 0, 0.3, -3.5, g, 16); cone(1.85, 1.3, TUILE, 0, 3.3, -3.5, g, 16);
+  [-1, 1].forEach((s) => { [0.8, -1.4].forEach((z) => { box(0.1, 1.0, 0.36, '#4E6E8C', s * 1.92, 1.6, z, g); cyl(0.18, 0.18, 0.1, '#4E6E8C', s * 1.92, 2.6, z, g, 10).rotation.z = Math.PI / 2; }); [2.2, 0.2, -2.0].forEach((z) => box(0.4, 2.6, 0.5, ST2, s * 2.0, 0.3, z, g)); });
+  box(2.6, 2.4, 0.6, ST, 0, 3.7, 2.45, g); box(0.9, 1.1, 0.7, '#3B3340', 0, 4.4, 2.45, g); cyl(0.45, 0.45, 0.7, '#3B3340', 0, 5.15, 2.45, g, 12).rotation.x = Math.PI / 2;
+  mesh(new THREE.SphereGeometry(0.3, 10, 8), '#B5893A', 0, 4.7, 2.45, g).scale.y = 1.2; cone(1.5, 0.7, ST2, 0, 6.1, 2.45, g, 4).rotation.y = Math.PI / 4;
+  box(0.08, 0.9, 0.08, '#2B2535', 0, 6.7, 2.45, g); box(0.5, 0.08, 0.08, '#2B2535', 0, 7.2, 2.45, g);
+  box(1.1, 1.8, 0.1, '#6B4A2E', 0, 0.3, 2.76, g); cyl(0.55, 0.55, 0.1, '#6B4A2E', 0, 2.1, 2.76, g, 12).rotation.x = Math.PI / 2; box(1.5, 0.12, 0.3, ST2, 0, 2.15, 2.8, g);
+  cyl(0.38, 0.38, 0.06, '#8C6BB4', 0, 2.95, 2.78, g, 12).rotation.x = Math.PI / 2; box(2.4, 0.15, 1.2, ST2, 0, 0, 3.4, g); }
+const chapelRect = [CHAPELP[0], CHAPELP[1] - 0.4, 2.2, 3.8]; rects.push(chapelRect);
+const cathG = group(CATHP[0], CATHP[1], 0, 'cathedrale', 'cathedrale');
+{ const g = cathG, ST = '#E2D8C2', ST2 = '#CFC3A8', SL = '#5B6676'; slot('eglise', g, 4, null, 1.75);
+  [-1, 1].forEach((s) => { const t = new THREE.Group(); t.position.set(s * 4.6, 0, 10.6); g.add(t); box(3.2, 16, 3.2, ST, 0, 0, 0, t);
+    for (let k = 0; k < 3; k++) { box(3.4, 0.25, 3.4, ST2, 0, 4.5 + k * 4.5, 0, t); [-0.6, 0.6].forEach((x) => box(0.45, 2.2, 0.1, '#3B3340', x, 6.2 + k * 3.6, 1.62, t)); }
+    [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]].forEach((q) => { box(0.5, 16.6, 0.5, ST2, q[0], 0, q[1], t); cone(0.32, 1.4, ST2, q[0], 16.6, q[1], t, 4); });
+    cone(1.9, 6.5, SL, 0, 16, 0, t, 8); mesh(new THREE.SphereGeometry(0.22, 8, 6), '#E3A73C', 0, 22.6, 0, t); });
+  box(5.8, 9.5, 0.8, ST, 0, 0, 10.8, g); { const r = cyl(1.7, 1.7, 0.2, '#6E4C8C', 0, 0, 0, g, 24); r.rotation.x = Math.PI / 2; r.position.set(0, 7.2, 11.25); for (let k = 0; k < 12; k++) { const sp = box(0.08, 1.6, 0.05, ST2, 0, 0, 0, g); sp.position.set(0, 7.2, 11.38); sp.rotation.z = k * Math.PI / 12; sp.geometry.translate(0, -0.8, 0); } }
+  for (let k = 0; k < 3; k++) { box(1.4, 3.2, 0.3, '#5A3F2E', (k - 1) * 1.9, 0, 11.25, g); cone(0.95, 1.6, ST2, (k - 1) * 1.9, 3.3, 11.3, g, 4).rotation.y = Math.PI / 4; }
+  box(5.8, 0.4, 0.9, ST2, 0, 9.5, 10.8, g); for (let k = 0; k < 8; k++) box(0.42, 0.9, 0.3, ST2, -2.5 + k * 0.72, 4.4, 11.3, g);
+  box(13, 0.15, 5, '#DCCFB2', 0, 0, 14.2, g); }
+const cathRect = [CATHP[0], CATHP[1] + 2, 7, 13.5]; rects.push(cathRect);
+movable('chapelle', { n: 'Chapelle romane', ic: '⛪', pivot: [CHAPELP[0], CHAPELP[1]], objs: [chapelG], fp: [6, 10], pts: [ptA(CHAPELP)], cols: [chapelRect], c: 400, need: () => ((S.pop || 0) < 10 ? '10 habitants' : ''), desc: 'Une petite chapelle romane en pierre blonde, son clocher-mur et sa cloche. Le premier lieu de prière du village. +12 beauté.' });
+movable('cathedrale', { n: 'Cathédrale', ic: '🏰', pivot: [CATHP[0], CATHP[1]], objs: [cathG], fp: [14, 30], pts: [ptA(CATHP)], cols: [cathRect], c: 60000, need: () => ((S.pop || 0) < 2000 ? '2 000 habitants' : ''), desc: 'Deux tours de façade, une grande rosace, trois portails sculptés et la nef gothique de l’église en plus grand : le joyau du village, que l’on vient voir de loin. +120 beauté.' });
+/* ma maison (Eugénie, 22/11/2026) : la maison du boulanger à vélo, la seule à soi. Les décors posés tout autour (8 m) comptent double en beauté : on la soigne. */
+const MAISONP = [-20, 9];
+const maisonG = group(MAISONP[0], MAISONP[1], 0, 'chezmoi', 'chezmoi');
+{ const g = maisonG, fb = slot('maison_colombages', g, 3);
+  box(5, 3.2, 4.6, '#F4E9D3', 0, 0, 0, fb); roof(5, 4.6, 2.2, '#B5543C', 0, 3.2, 0, fb);
+  // la boîte aux lettres, le vélo garé et le portillon
+  box(0.06, 1.0, 0.06, '#5A3B26', 2.2, 0, 3.4, g); box(0.36, 0.3, 0.26, '#E3C34A', 2.2, 1.0, 3.4, g);
+  for (let k = 0; k < 9; k++) if (k !== 4) box(0.08, 0.7, 0.08, '#FFFDF8', -2.4 + k * 0.6, 0, 3.8, g); box(4.9, 0.06, 0.06, '#FFFDF8', 0, 0.55, 3.8, g);
+  [-1, 1].forEach((s) => { const w = cyl(0.33, 0.33, 0.05, '#2B2535', s * 0.52 - 1.8, 0.33, 3.0, g, 14); w.rotation.x = Math.PI / 2; w.rotation.z = Math.PI / 2; w.position.set(-1.8, 0.33, 3.0 + s * 0.52); }); box(0.05, 0.05, 1.1, '#2F6B8C', -1.8, 0.55, 3.0, g); box(0.4, 0.3, 0.3, '#B98A4E', -1.8, 0.75, 3.5, g); }
+const maisonRect = [MAISONP[0], MAISONP[1], 2.6, 2.4]; rects.push(maisonRect);
+movable('chezmoi', { n: 'Ma maison', ic: '🏡', pivot: [MAISONP[0], MAISONP[1]], objs: [maisonG], fp: [6, 8], pts: [ptA(MAISONP)], cols: [maisonRect], c: 500, need: () => '', desc: 'Ta maison à toi, celle du boulanger à vélo. Les décors posés tout autour (8 m) comptent double en beauté : un jardin soigné, des fleurs, un banc… à toi de la rendre jolie.' });
+const maisonLab = label(maisonG, 5.4, 'name');
 /* la ferme et le hangar du tracteur se déplacent eux aussi (Eugénie, 22/11/2026) ; ils restent gratuits et toujours posés */
 movable('ferme', { n: 'Corps de ferme', ic: '🏡', pivot: [FERMEP[0], FERMEP[1]], objs: [FERME_G], fp: [14, 8], pts: [ptA(FERMEP)], cols: [findRect(FERMEP[0], FERMEP[1])], desc: 'La ferme de Léo.' }).free = true;
 movable('hangar', { n: 'Hangar du tracteur', ic: '🚜', pivot: [HANGAR[0], HANGAR[1]], objs: [HANGAR_G], fp: [10, 8], pts: [ptA(HANGAR)], cols: [findRect(HANGAR[0], HANGAR[1]), ...[0, 1, 2, 3].map((k) => findSolid(HANGAR[0] + 3.6, HANGAR[1] - 2 + k * 1.3))], desc: 'Le hangar de Marcel et de son tracteur.' }).free = true;
 const PROD_KEYS = Object.keys(MOV);
+// l'ordre du menu Bâtiments : ma maison d'abord, la chapelle juste avant l'église, la cathédrale juste après
+function batOrder() { const L = PROD_KEYS.filter((k) => k !== 'chezmoi' && k !== 'chapelle' && k !== 'cathedrale'), i = L.indexOf('church'); L.splice(i, 0, 'chapelle'); L.splice(i + 2, 0, 'cathedrale'); return ['chezmoi'].concat(L); }
 const START_LAYOUT = { shop: [3, -10.2, 0], oven: [10, -9.5, 0], mill: [-12, -10, 0], champ: [6, 12.3, 0] }; // tout le départ tient dans quatre terrains du Bourg
-const SERV_BEAUTY = { fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve: 35 };
+const SERV_BEAUTY = { chezmoi: 10, fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve: 35, chapelle: 12, cathedrale: 120 };
 // population ceilings: without this service, the village cannot grow past n
 const SERV = [[60, 'market', 'un marché'], [150, 'mairie', 'une mairie'], [400, 'fontaine', 'la grande fontaine'], [600, 'church', 'une église'], [1000, 'bistrot', 'un bistrot'], [1600, 'cake', 'une pâtisserie'], [2200, 'bq', 'une boutique de vêtements'], [2800, 'chateau', 'le château (étape 3)']];
 
@@ -3771,7 +3909,7 @@ function houseLinked(it) { const [w, d] = itemFp(it); if (!roadNet) roadNet = ro
 function computeLinks() { roadNet = roadNetwork(); links = S.city.items.map((it) => it.t === 'h'); } /* 18/11/2026 : plus besoin de rue pour habiter une maison (Romain : le panneau « travaux » donnait l'impression qu'elle n'était jamais finie) ; les rues embellissent */
 /* un beau décor cher rapporte plus de beauté qu'un petit massif (jusqu'à +25 %) */
 const decoB = (d) => d.b * (1 + 0.25 * Math.min(1, Math.max(0, (d.c - 40) / 360)));
-function beauty() { let b = 0; S.city.items.forEach((it) => { if (it.free) return; if (it.t === 'd' && DECOS[it.k]) b += it.mon ? DECOS[it.k].b * 1.5 : decoB(DECOS[it.k]); else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
+function beauty() { let b = 0; const home = MOV.chezmoi && MOV.chezmoi.placed ? MOV.chezmoi : null; S.city.items.forEach((it) => { if (it.free) return; if (it.t === 'd' && DECOS[it.k]) b += (it.mon ? DECOS[it.k].b * 1.5 : decoB(DECOS[it.k])) * (home && Math.hypot(it.x - home.x, it.z - home.z) < 8 ? 2 : 1); else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
   PROD_KEYS.forEach((k) => { if (MOV[k].placed && SERV_BEAUTY[k]) b += SERV_BEAUTY[k]; }); b += Math.min(60, Object.keys(S.city.roads).length * 0.1); return (S.feteB || 0) > now() ? b * 1.05 : b; } /* une fête embellit le village pendant une heure */
 const rentMult = () => 1 + Math.min(1.5, beauty() / 150);
 function capOf(it) { if (it.t !== 'h') return 0; const l = it.end > 0 ? (it.l || 1) - 1 : it.l || 1; return HOUSE_T[it.m].cap * [0, 1, 1.3, 1.6][l]; } // pendant qu'on l'embellit, elle garde les habitants de son niveau précédent
@@ -3882,7 +4020,7 @@ function renderBuild() {
     row('🧽', 'Gomme', 'Retire des cases de rue (remboursées à moitié)', 'Gommer', true, '', () => { $('build').hidden = true; openSheet('Êtes-vous sûr ?', 'La gomme efface les cases de rue que tu touches ou glisses. Chaque case est remboursée à moitié, on ne peut pas revenir en arrière.', [
       { t: '🧽 Oui, gommer des rues', s: 'Touche ou glisse sur une rue pour l’effacer.', btn: 'Gommer', ok: true, run: () => { closeSheet(); startRoad(-1); } },
       { t: 'Non, annuler', s: 'Ne rien effacer.', btn: 'Annuler', ok: true, run: closeSheet } ]); }); }
-  else if (BTAB === 'batiments') PROD_KEYS.forEach((k) => { if (k === 'reserve' && !MOV.reserve.placed) return; const M = MOV[k], need = M.placed ? '' : M.need(); row(M.ic, M.n, M.placed ? 'Déjà construit · en mode construction, touche-le pour le déplacer' : M.desc, M.placed ? 'Déplacer' : M.c + ' ' + C, M.placed || S.coins >= M.c, need ? 'il faut ' + need : '', () => M.placed ? startMoveProd(k) : startPlace({ t: 'p', k })); });
+  else if (BTAB === 'batiments') batOrder().forEach((k) => { const M = MOV[k], need = M.placed ? '' : M.need(); row(M.ic, M.n, M.placed ? 'Déjà construit · en mode construction, touche-le pour le déplacer' : M.desc, M.placed ? 'Déplacer' : M.c + ' ' + C, M.placed || S.coins >= M.c, need ? 'il faut ' + need : '', () => M.placed ? startMoveProd(k) : startPlace({ t: 'p', k })); });
   else { let teasers = 0; Object.values(DECOS).filter((d) => d.cat === BTAB && !d.hide).sort((a, b) => a.lvl - b.lvl || a.c - b.c).forEach((d) => { if (lv < (d.lvl || 1) && ++teasers > 2) return; const cnt = S.city.items.filter((it) => it.k === d.id).length, c = decoPrice(d.id); row(d.ic, d.n, '+' + Math.round(decoB(d)) + ' beauté' + (cnt ? ' · ' + cnt + ' posé' + (cnt > 1 ? 's' : '') : ''), c + ' ' + C, S.coins >= c, lv < (d.lvl || 1) ? 'niveau ' + d.lvl : '', () => startPlace({ t: 'd', k: d.id })); }); }
 }
 /* mode Aménager : reprendre la main sur tout ce qui est posé, sans passer par le catalogue (Romain, 19/11/2026) */
@@ -3891,7 +4029,7 @@ function enterBuild() { BUILD = true; $('build').hidden = true; $('buildbar').hi
 function exitBuild() { cancelPlace(); CELLS.count = 0; GRID.visible = false; BUILD = false; SEL = null; selRing.visible = false; ROADM = null; $('buildbar').hidden = true; $('selbar').hidden = true; $('placebar').hidden = true; document.body.classList.remove('building'); ghostBox.visible = false; }
 
 // ---- placing something new (house, deco, production building) or moving an existing one ----
-function startPlace(spec) { enterBuild(); const a = player.rotation.y; spec.x = GOD ? target.x : player.position.x + Math.sin(a) * 6; spec.z = GOD ? target.z : player.position.z + Math.cos(a) * 6; /* en vue du dessus, on pose là où l'on regarde */ if (Math.abs(spec.z) < 6) spec.z = spec.z < 0 ? -8 : 8; spec.r = spec.r || 0; PLC = spec; showPlace(); }
+function startPlace(spec) { if (PLC) cancelPlace(); /* un autre choix pendant une pose : l'aperçu précédent disparaît */ enterBuild(); const a = player.rotation.y; spec.x = GOD ? target.x : player.position.x + Math.sin(a) * 6; spec.z = GOD ? target.z : player.position.z + Math.cos(a) * 6; /* en vue du dessus, on pose là où l'on regarde */ if (Math.abs(spec.z) < 6) spec.z = spec.z < 0 ? -8 : 8; spec.r = spec.r || 0; PLC = spec; showPlace(); }
 function plSize(r) { const s = PLC; if (s.t === 'h') return itemFp({ t: 'h', m: s.m }, r); if (s.t === 'd') return itemFp({ t: 'd', k: s.k }, r); if (s.t === 'p' || s.t === 'mp') return mfp(MOV[s.k], r); if (s.t === 'mi') return itemFp(S.city.items[s.i], r); return [2, 2]; }
 function plCost() { const s = PLC; if (s.t === 'h') return housePrice(s.m); if (s.t === 'd') { if (s.mon) return s.cost || 0; return decoPrice(s.k); } if (s.t === 'p') return MOV[s.k].c; return 0; }
 function plFree() { const [w, d] = plSize(PLC.r), s = PLC; let saved = null;
@@ -3899,7 +4037,7 @@ function plFree() { const [w, d] = plSize(PLC.r), s = PLC; let saved = null;
   if (s.t === 'mi' && s.col) s.col[0] += 5000;
   const ok = areaFree(PLC.x, PLC.z, w, d, true) && !(s.k === 'parking' && Math.abs(PLC.z) > 7.5) && !offQuai(s); /* le parking touche la grand-rue, la guinguette les quais */
   if (saved) MOV[s.k].cols.forEach((e, i) => { e.c[0] = saved[i][0]; }); if (s.t === 'mi' && s.col) s.col[0] -= 5000; return ok; }
-function offQuai(s) { const k = s.t === 'd' ? s.k : s.t === 'mi' && S.city.items[s.i] ? S.city.items[s.i].k : null, B2 = k && BIZ[k]; return !!(B2 && B2.quai && (quartierAt(s.x, s.z) || {}).id !== 'quais'); }
+function offQuai(s) { const k = s.t === 'd' ? s.k : s.t === 'mi' && S.city.items[s.i] ? S.city.items[s.i].k : null, B2 = k && BIZ[k]; return !!(B2 && B2.quai && (quartierAt(s.x, s.z) || {}).id !== 'quais' && !nearPond(s.x, s.z)); }
 function showPlace() {
   const s = PLC, [w, d] = plSize(s.r); s.x = snapC(s.x, w); s.z = snapC(s.z, d); if (s.k === 'parking' && (s.t === 'p' || s.t === 'mp')) s.z = s.z < 0 ? -7 : 7; /* le parking se colle toujours à la grand-rue */
   if (s.t === 'h' || s.t === 'd') { const gk = s.t + (s.m || s.k) + s.r; if (s.g && s.gk === gk) { s.g.position.set(s.x, groundY(s.x, s.z), s.z); } else { if (s.g) dropGhost(s.g); s.g = s.t === 'h' ? houseGroup({ t: 'h', m: s.m, x: s.x, z: s.z, r: s.r }, -1) : decoGroup({ t: 'd', k: s.k, x: s.x, z: s.z, r: s.r }, -1); s.g.userData.kind = 'ghost'; s.gk = gk; loadNear(); } }
@@ -3908,7 +4046,7 @@ function showPlace() {
   const ok = plFree(), cost = plCost(); ghostBox.visible = false;
   $('placebar').hidden = false; $('selbar').hidden = true;
   const nm = s.t === 'h' ? HOUSE_T[s.m].n : s.t === 'd' ? DECOS[s.k].n : s.t === 'mi' ? (S.city.items[s.i].t === 'h' ? HOUSE_T[S.city.items[s.i].m].n : DECOS[S.city.items[s.i].k].n) : MOV[s.k].n;
-  $('pl-t').textContent = nm + (ok ? ' · touche le sol pour déplacer' : s.k === 'parking' && Math.abs(s.z) > 7.5 ? ' · à poser le long de la grand-rue' : offQuai(s) ? ' · à poser sur les quais, au bord de l’eau' : !landOwned(s.x, s.z) ? ' · terrain pas encore acheté, touche ailleurs' : ' · place occupée, touche ailleurs'); $('pl-ok').disabled = !ok || S.coins < cost; rich($('pl-ok'), cost ? 'Poser · ' + cost + ' ' + C : 'Poser ici'); $('pl-rot').disabled = (s.t === 'p' || s.t === 'mp') && !MOV[s.k].rot;
+  $('pl-t').textContent = nm + (ok ? ' · touche le sol pour déplacer' : s.k === 'parking' && Math.abs(s.z) > 7.5 ? ' · à poser le long de la grand-rue' : offQuai(s) ? ' · à poser sur les quais ou au bord d’un étang' : !landOwned(s.x, s.z) ? ' · terrain pas encore acheté, touche ailleurs' : ' · place occupée, touche ailleurs'); $('pl-ok').disabled = !ok || S.coins < cost; rich($('pl-ok'), cost ? 'Poser · ' + cost + ' ' + C : 'Poser ici'); $('pl-rot').disabled = (s.t === 'p' || s.t === 'mp') && !MOV[s.k].rot;
 }
 function cancelPlace() { const s = PLC; if (!s) return; if (s.g && (s.t === 'h' || s.t === 'd')) dropGhost(s.g);
   if (s.t === 'p') { MOV[s.k].placed = false; moveTo(MOV[s.k], MOV[s.k].x, MOV[s.k].z, 0); }
@@ -3939,7 +4077,7 @@ function paintRoad(x, z) { const ix = tileOf(x), iz = tileOf(z), k = tileKey(ix,
   led('🧱 Rues', -ROAD_T[ROADM.t].c); S.coins -= ROAD_T[ROADM.t].c; R[k] = ROADM.t; dirty = true; links = null; drawRoads(); }
 
 // ---- selection of an existing thing in build mode ----
-const KIND2MOV = { shop: 'shop', oven: 'oven', mill: 'mill', plot: 'champ', market: 'market', garden: 'potager', cake: 'cake', bq: 'bq', mairie: 'mairie', parking: 'parking', church: 'church', bistrot: 'bistrot', fontaine: 'fontaine', ferme: 'ferme', hangar: 'hangar' };
+const KIND2MOV = { shop: 'shop', oven: 'oven', mill: 'mill', plot: 'champ', market: 'market', garden: 'potager', cake: 'cake', bq: 'bq', mairie: 'mairie', parking: 'parking', church: 'church', bistrot: 'bistrot', fontaine: 'fontaine', ferme: 'ferme', hangar: 'hangar', chapelle: 'chapelle', cathedrale: 'cathedrale', chezmoi: 'chezmoi' };
 function buildTap(sx, sy) {
   const gp = groundHit(sx, sy);
   if (ROADM) { if (gp) paintRoad(gp[0], gp[1]); return true; }
@@ -4025,7 +4163,7 @@ function tickDirs() {
 /* ================= step by step: what the player can see grows with the level and the current objective ================= */
 const UP_LVL = [[/vélo/, 2], [/Nouvelle parcelle/, 2], [/Léo/, 3], [/Jules/, 4], [/Inès/, 5], [/Margot/, 6], [/Semences/, 5], [/Équipe ·/, 6], [/^Moulin/, 3], [/^Four/, 3], [/^Boulangerie/, 4], [/Barrière/, 4], [/maçons/, 5], [/Médor/, 7]];
 function upVisible(u) { const q = Q[Math.min(S.q, Q.length - 1)], qt = q ? q.t : ''; for (const [re, lv] of UP_LVL) if (re.test(u.t)) { const key = (u.t.match(/vélo|parcelle|Léo|Jules|Inès|Margot|barrière/i) || [''])[0]; return level() >= lv || (key && qt.toLowerCase().indexOf(key.toLowerCase()) >= 0); } return true; }
-const TAB_LVL = { logements: 1, rues: 1, batiments: 2, nature: 2, jardins: 3, mobilier: 4, lumieres: 5, clotures: 6, sols: 2, quais: 3, fontaines: 8, terrasses: 10, fete: 12, vehicules: 14, monuments: 16 };
+const TAB_LVL = { logements: 1, rues: 1, batiments: 2, nature: 2, jardins: 3, mobilier: 4, lumieres: 5, clotures: 6, sols: 2, quais: 3, parc: 3, fontaines: 8, terrasses: 10, fete: 12, vehicules: 14, monuments: 16 };
 Object.values(DECOS).forEach((d) => { if (d.lvl > 2) d.lvl = Math.round(d.lvl * 1.7); }); // le catalogue s'ouvre sur toute la partie
 const buildUnlocked = () => S.q >= 6 || (S.city && S.city.items.length > 2) || level() >= 2;
 
@@ -4102,7 +4240,7 @@ function tableau() { if (!S.started || VISIT.on) return; ledB(); const el = docu
   const L = ledSum(TDB_SPAN), tot = (o) => Object.values(o).reduce((a, v) => a + v, 0), R = tot(L.r), D = tot(L.d);
   const lines = (o) => { const k = Object.keys(o).sort((a, b) => o[b] - o[a]); return k.length ? k.map((n) => '<div class="ln"><span>' + tdbEsc(n) + '</span><b>' + fmt(Math.round(o[n])) + '</b></div>').join('') : '<div class="ln none"><span>Rien pour l’instant</span></div>'; };
   const rents = Math.floor(S.city.items.reduce((a, it) => a + (it.t === 'h' ? it.rent || 0 : 0), 0));
-  const wait = [['🏠 Loyers dans les maisons', rents, S.dog ? 'Médor les ramène toutes les 3 minutes.' : 'Touche une maison, ou le bouton 🪙 loyers en haut.'], ['🥖 Caisse de la boulangerie', Math.floor(S.shop || 0), S.hired.margot ? 'Margot la ramasse toute seule.' : 'Touche la boulangerie pour la ramasser.'], ['🥕 Caisse du marché', Math.floor(S.mtill || 0), 'Touche l’étal.'], ['👕 Caisse de la boutique', Math.floor(S.btill || 0), 'Touche la boutique.'], ['🏰 Entrées du château', Math.floor(S.gate || 0), 'Touche la grille du château.'], ['🚜 Coopérative agricole', Math.floor((S.farm && S.farm.till) || 0), 'Passe au hangar du tracteur, derrière la ferme.'], ['☕ Caisse du bistrot', Math.floor(S.bitill || 0), 'Touche le bistrot.']].concat(bizOpen().map((i) => [BIZ[S.city.items[i].k].ic + ' Caisse de ' + BIZ[S.city.items[i].k].n.toLowerCase(), Math.floor(S.city.items[i].till || 0), 'Touche-la, ou « Gérer » plus bas.'])).filter((w) => w[1] > 0);
+  const wait = [['🏠 Loyers dans les maisons', rents, S.dog ? 'Médor les ramène toutes les 3 minutes.' : 'Touche une maison, ou le bouton 🪙 loyers en haut.'], ['🥖 Caisse de la boulangerie', Math.floor(S.shop || 0), S.hired.margot ? 'Margot la ramasse toute seule.' : 'Touche la boulangerie pour la ramasser.'], ['🥕 Caisse du marché', Math.floor(S.mtill || 0), 'Touche l’étal.'], ['👕 Caisse de la boutique', Math.floor(S.btill || 0), 'Touche la boutique.'], ['🏰 Entrées du château', Math.floor(S.gate || 0), 'Touche la grille du château.'], ['🚜 Coopérative agricole', Math.floor((S.farm && S.farm.till) || 0), 'Passe au hangar du tracteur, derrière la ferme.'], ['☕ Caisse du bistrot', Math.floor(S.bitill || 0), 'Touche le bistrot.'], ['🦌 Caisse de la réserve', Math.floor(S.rtill || 0), 'Touche la réserve.']].concat(bizOpen().map((i) => [BIZ[S.city.items[i].k].ic + ' Caisse de ' + BIZ[S.city.items[i].k].n.toLowerCase(), Math.floor(S.city.items[i].till || 0), 'Touche-la, ou « Gérer » plus bas.'])).filter((w) => w[1] > 0);
   const team = [['🌾 Le champ de blé', 'leo', 'Léo sème et récolte tout seul.', 'Personne : tu sèmes et tu récoltes toi-même. Embauche Léo.'],
     ['⚙️ Le moulin', 'jules', 'Jules fait la farine tout seul.', 'Personne : touche le moulin pour moudre le blé. Embauche Jules.'],
     ['🔥 Le four', 'ines', 'Inès enfourne et pose le pain en vitrine.', 'Personne : touche le four pour cuire. Embauche Inès.'],
@@ -4124,7 +4262,7 @@ function tableau() { if (!S.started || VISIT.on) return; ledB(); const el = docu
     + '<h4>À ramasser</h4>' + (wait.length ? wait.map((w) => '<div class="ln"><span>' + w[0] + '<small>' + w[2] + '</small></span><b>' + fmt(w[1]) + '</b></div>').join('') : '<div class="ln none"><span>Tout est ramassé.</span></div>')
     + '<h4>Qui s’occupe de quoi</h4>' + teamH + '<h4>Tes commerces</h4>';
   el.querySelectorAll('.span button').forEach((b) => b.addEventListener('click', () => { TDB_SPAN = +b.dataset.s; tableau(); }));
-  const shops = [['shop', '🥖 La boulangerie'], ['oven', '🔥 Le four'], ['mill', '⚙️ Le moulin'], ['market', '🥕 Le marché'], ['bq', '👕 La boutique de vêtements'], ['cake', '🧁 La pâtisserie'], ['bistrot', '☕ Le bistrot'], ['mairie', '🏛️ La mairie']].filter(([k]) => MOV[k] && MOV[k].placed && STN[k]);
+  const shops = [['shop', '🥖 La boulangerie'], ['oven', '🔥 Le four'], ['mill', '⚙️ Le moulin'], ['market', '🥕 Le marché'], ['bq', '👕 La boutique de vêtements'], ['cake', '🧁 La pâtisserie'], ['bistrot', '☕ Le bistrot'], ['reserve', '🦌 La réserve naturelle'], ['mairie', '🏛️ La mairie']].filter(([k]) => MOV[k] && MOV[k].placed && STN[k]);
   const opts = [{ t: '🔨 Embaucher et améliorer', s: 'Employés, ateliers, réserves, maisons à embellir.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } }]
     .concat(shops.map(([k, n]) => GERE[k] && (!GERE[k].on || GERE[k].on()) ? { t: n, s: 'Caisse ' + fmt(GERE[k].till()) + ' ' + C + ' · prix ' + PRIX[prixI(k)].n.toLowerCase() + ' · ' + GERE[k].unit(), btn: 'Gérer', ok: true, run: () => gerer(k) } : { t: n, s: 'Y aller et voir ce qu’on peut y faire.', btn: 'Y aller', ok: true, run: () => { closeSheet(); stationGo(k); } }))
     .concat(bizOpen().map((i) => { const it = S.city.items[i], B2 = BIZ[it.k]; return { t: B2.ic + ' ' + B2.n, s: 'Caisse ' + fmt(Math.floor(it.till || 0)) + ' ' + C + ' · environ ' + fmt(Math.round(bizRate(it))) + ' ' + C + '/h · prix ' + PRIX[prixI(it.k)].n.toLowerCase(), btn: 'Gérer', ok: true, run: () => gerer(undefined, i) }; }));
@@ -4138,24 +4276,45 @@ const PRIX = [{ n: 'Doux', ic: '🙂', m: 0.8, f: 1, s: '−20 % par vente, la f
 function prixI(k) { const p = S.prix && S.prix[k]; return p === 0 || p === 2 ? p : 1; }
 function prixM(k) { return PRIX[prixI(k)].m; }
 /* les commerces qu'on pose soi-même, comme un décor, et qui rapportent : la guinguette du quai pour commencer */
-const BIZ = { guinguette_quai: { n: 'La guinguette du quai', ic: '🍽️', sells: 'Friture, limonade et vin du coin, en terrasse au bord de l’eau.', base: 30, perPop: 0.5, cap: 3, quai: true } };
-const nearWater = (x) => Math.min(Math.abs(x - RIVER.x0), Math.abs(x - RIVER.x1)) < 5;
-function bizRate(it) { const B2 = BIZ[it.k]; if (!B2) return 0; return (B2.base + B2.perPop * (S.pop || 0)) * prixM(it.k) * (nearWater(it.x) ? 1.25 : 1); } /* écus d'or par heure */
+const BIZ = { guinguette_quai: { n: 'La guinguette du quai', ic: '🍽️', sells: 'Friture, limonade et vin du coin, en terrasse au bord de l’eau.', base: 30, perPop: 0.5, cap: 3, quai: true },
+  /* l'étang et le parc (Eugénie, 22/11/2026) */
+  etang_barques: { n: 'La location de barques', ic: '🛶', sells: 'Une demi-heure de barque sur l’étang, pour les amoureux et les familles.', base: 50, perPop: 0.6, cap: 3 },
+  guignol: { n: 'Le théâtre de Guignol', ic: '🎭', sells: 'Guignol, Gnafron et le gendarme : deux séances par après-midi pour les enfants.', base: 25, perPop: 0.4, cap: 3 },
+  cafe_parc: { n: 'Le café du parc', ic: '☕', sells: 'Glaces, limonade et café en terrasse, sous les arbres.', base: 40, perPop: 0.5, cap: 3 },
+  grande_roue: { n: 'La grande roue', ic: '🎡', sells: 'Un tour de grande roue pour voir tout le village d’en haut.', base: 150, perPop: 1.0, cap: 4 } };
+const PONDS = ['etang', 'etang_barques'], BIZLAB = [];
+const nearPond = (x, z) => !!(S.city && S.city.items.some((it) => it.t === 'd' && PONDS.indexOf(it.k) >= 0 && Math.hypot(it.x - x, it.z - z) > 0.1 && Math.hypot(it.x - x, it.z - z) < 10));
+const nearWater = (x, z) => Math.min(Math.abs(x - RIVER.x0), Math.abs(x - RIVER.x1)) < 5 || (z !== undefined && nearPond(x, z));
+/* ce qui tourne tout seul : grande roue, barques, tourniquet (les pièces oubliées par une démolition sont retirées de temps en temps) */
+let spinPrune = 0;
+function tickSpin(dt) { for (const o of SPIN) o.rotation[o.userData.ax] += o.userData.spin * dt;
+  if ((spinPrune += dt) > 6) { spinPrune = 0; for (let i = SPIN.length - 1; i >= 0; i--) { let o = SPIN[i]; while (o.parent) o = o.parent; if (o !== scene) SPIN.splice(i, 1); } } }
+function bizRate(it) { const B2 = BIZ[it.k]; if (!B2) return 0; return (B2.base + B2.perPop * (S.pop || 0)) * prixM(it.k) * (nearWater(it.x, it.z) ? 1.25 : 1); } /* écus d'or par heure */
 /* le bistrot de Gégé (Romain, 22/11/2026) : café, pastis, jambon-beurre. Il a enfin une caisse : elle se remplit selon les habitants et le prix choisi,
    et s'il y a du pain en vitrine à la boulangerie, il en achète une baguette toutes les 3 minutes pour ses jambon-beurre (+30 % de ventes). */
 const BISTRO_CAP = 4; let bistroBread = 0;
 function bistroRate() { if (!MOV.bistrot || !MOV.bistrot.placed) return 0; return (600 + 1.6 * (S.pop || 0)) * prixM('bistrot') * ((S.pain || 0) > 0 ? 1.3 : 1); } /* écus d'or par heure */
 function collectBistro() { const v = Math.floor(S.bitill || 0); if (v < 1) return 0; S.bitill -= v; led('☕ Bistrot', v); S.coins += v; dirty = true; SFX.coin(); floatAt(bistrot, '+' + v + ' ' + C); burst(BISTROTP[0], 3, BISTROTP[1] + 3, ['#E3A73C', '#F3CF7A'], 12, 4); return v; }
+/* la réserve naturelle et ses visites guidées (Romain, 22/11/2026) : une caisse qui se remplit selon les habitants, +40 % avec le garde forestier */
+const RES_CAP = 4;
+function reserveRate() { if (!MOV.reserve || !MOV.reserve.placed) return 0; return (300 + 1.2 * (S.pop || 0)) * prixM('reserve') * (S.garde ? 1.4 : 1); }
+function collectReserve() { const v = Math.floor(S.rtill || 0); if (v < 1) return 0; S.rtill -= v; led('🦌 Réserve', v); S.coins += v; dirty = true; SFX.coin(); floatAt(reserveG, '+' + v + ' ' + C); burst(MOV.reserve.x, 2, MOV.reserve.z, ['#E3A73C', '#F3CF7A'], 12, 4); return v; }
+const reserveLab = label(reserveG, 3.2); reserveLab.act = () => { if (!MOV.reserve.placed) return openBuildAt('reserve'); if (!collectReserve()) gerer('reserve'); };
 function bizOpen() { const L = []; if (S.city) S.city.items.forEach((it, i) => { if (it.t === 'd' && BIZ[it.k]) L.push(i); }); return L; }
-function tickPrix(dt) { if (!S.started || !S.city) return; const n = now();
+function tickPrix(dt) { tickSpin(dt); if (!S.started || !S.city) return; const n = now(); setLabel(maisonLab, MOV.chezmoi.placed ? '🏡 Chez moi' : '', 'name');
   if (MOV.bistrot && MOV.bistrot.placed) { const r = bistroRate(); if (!S.bitt) S.bitt = n; S.bitill = Math.min(r * BISTRO_CAP, (S.bitill || 0) + r * (n - S.bitt) / 3600000); S.bitt = n;
     if ((bistroBread += dt) > 180) { bistroBread = 0; if ((S.pain || 0) > 0) { S.pain--; S.shop = (S.shop || 0) + breadPrice(); dirty = true; } } } else S.bitt = n;
-  bizOpen().forEach((i) => { const it = S.city.items[i], r = bizRate(it); if (!it.tt) it.tt = n; it.till = Math.min(r * BIZ[it.k].cap, (it.till || 0) + r * (n - it.tt) / 3600000); it.tt = n; });
-  let f = PRIX[prixI('shop')].f + (S.lv.mk > 0 ? PRIX[prixI('market')].f : 0) + (S.lv.bq > 0 ? PRIX[prixI('bq')].f : 0) + (MOV.bistrot && MOV.bistrot.placed ? PRIX[prixI('bistrot')].f : 0); bizOpen().forEach((i) => { f += PRIX[prixI(S.city.items[i].k)].f; });
+  if (MOV.reserve && MOV.reserve.placed) { const r = reserveRate(); if (!S.rtt) S.rtt = n; S.rtill = Math.min(r * RES_CAP, (S.rtill || 0) + r * (n - S.rtt) / 3600000); S.rtt = n; const t = Math.floor(S.rtill || 0); setLabel(reserveLab, t >= 1 ? '🪙 +' + t + ' · réserve' : '🦌 La réserve', t >= 1 ? 'coin' : ''); } else { S.rtt = n; setLabel(reserveLab, '', ''); }
+  const bo = bizOpen(); bo.forEach((i) => { const it = S.city.items[i], r = bizRate(it); if (!it.tt) it.tt = n; it.till = Math.min(r * BIZ[it.k].cap, (it.till || 0) + r * (n - it.tt) / 3600000); it.tt = n; });
+  /* la caisse de chaque commerce posé (guinguette, barques, guignol, café, grande roue) se voit sur la carte (22/11/2026) */
+  bo.forEach((i, j) => { let l = BIZLAB[j]; if (!l) { l = BIZLAB[j] = label(scene, 3.2); } const o = cityObjs[i], t = Math.floor(S.city.items[i].till || 0); if (!o) return; l.obj = o; l.dy = S.city.items[i].k === 'grande_roue' ? 8.2 : 3.4; l.act = () => { if (!collectBiz(i)) gerer(undefined, i); }; setLabel(l, t >= 1 ? '🪙 +' + t + ' · ' + BIZ[S.city.items[i].k].ic : '', 'coin'); });
+  for (let j = bo.length; j < BIZLAB.length; j++) setLabel(BIZLAB[j], '', '');
+  let f = PRIX[prixI('shop')].f + (S.lv.mk > 0 ? PRIX[prixI('market')].f : 0) + (S.lv.bq > 0 ? PRIX[prixI('bq')].f : 0) + (MOV.bistrot && MOV.bistrot.placed ? PRIX[prixI('bistrot')].f : 0) + (MOV.reserve && MOV.reserve.placed ? PRIX[prixI('reserve')].f : 0); bizOpen().forEach((i) => { f += PRIX[prixI(S.city.items[i].k)].f; });
   if (f) { const v = S.freq + f * dt / 300; S.freq = f > 0 ? Math.min(100, v) : Math.max(Math.min(S.freq, 30), v); } }
 function collectBiz(i) { const it = S.city.items[i]; if (!it) return 0; const v = Math.floor(it.till || 0); if (v < 1) return 0; it.till -= v; led(BIZ[it.k].ic + ' ' + BIZ[it.k].n.replace(/^La |^Le /, ''), v); S.coins += v; dirty = true; SFX.coin(); if (cityObjs[i]) floatAt(cityObjs[i], '+' + v + ' ' + C); return v; }
 function collectShopTill() { if (!(S.shop > 0)) return 0; const v = S.shop; led('🥖 Pain vendu', v); S.coins += v; S.encaisse += v; S.shop = 0; dirty = true; SFX.coin(); return v; }
 const GERE = {
+  reserve: { n: '🦌 La réserve naturelle', sells: 'Des visites guidées du domaine : cerfs, sangliers, renards, hérissons et aigles, vus depuis l’affût.', unit: () => 'environ ' + fmt(Math.round(reserveRate())) + ' ' + C + ' par heure' + (S.garde ? ' (dont +40 % grâce au garde forestier)' : ' · avec un garde forestier, +40 %'), till: () => Math.floor(S.rtill || 0), collect: () => (collectReserve() ? 1 : 0), cat: '🦌 Réserve', who: 'garde', ok: () => !!S.garde, whoY: 'Gaspard, le garde forestier, fait sa ronde et guide les visiteurs.', whoN: 'Pas de garde forestier : embauche Gaspard dans « Améliorer » (+40 % et plus aucun animal échappé).', on: () => MOV.reserve.placed },
   shop: { n: '🥖 La boulangerie', sells: 'Le pain du four, vendu au comptoir.', unit: () => breadPrice() + ' ' + C + ' la baguette', till: () => Math.floor(S.shop || 0), collect: collectShopTill, cat: '🥖 Pain vendu', who: 'margot', whoY: 'Margot sert et ramasse la caisse.', whoN: 'Personne à la caisse : embauche Margot pour vendre plus vite.', lv: () => S.lv.shop },
   market: { n: '🥕 Le marché', sells: 'Les cagettes du potager, sur l’étal.', unit: () => Math.max(1, Math.round(PROD[Math.max(0, Math.min(3, S.lv.mk - 1))].p * prixM('market'))) + ' ' + C + ' la cagette', till: () => Math.floor(S.mtill || 0), collect: () => (collectMarket() ? 1 : 0), cat: '🥕 Marché', who: 'paul', whoY: 'Paul cultive et garnit l’étal.', whoN: 'Personne au potager : embauche Paul pour garnir l’étal tout seul.', lv: () => S.lv.mk, on: () => S.lv.mk > 0 },
   bq: { n: '👕 La boutique de vêtements', sells: 'Des pulls tricotés avec la laine des moutons.', unit: () => Math.round(BQPR[Math.max(1, S.lv.bq)] * prixM('bq')) + ' ' + C + ' le pull', till: () => Math.floor(S.btill || 0), collect: () => (collectBq() ? 1 : 0), cat: '👕 Boutique de vêtements', who: 'lucie', whoY: 'Lucie apporte la laine.', whoN: 'Personne pour la laine : embauche Lucie.', lv: () => S.lv.bq, on: () => S.lv.bq > 0 },
@@ -4164,15 +4323,15 @@ function gerer(k, idx) { if (!S.started) return; const el = document.createEleme
   const biz = idx !== undefined ? S.city.items[idx] : null, G = biz ? null : GERE[k]; if (!biz && !G) return; if (biz) k = biz.k; const B2 = biz ? BIZ[k] : null;
   const title = biz ? B2.ic + ' ' + B2.n : G.n, till = biz ? Math.floor(biz.till || 0) : G.till(), cat = biz ? B2.ic + ' ' + B2.n.replace(/^La |^Le /, '') : G.cat;
   const sold = Math.round(ledSum(3600000).r[cat] || 0), pi = prixI(k);
-  const info = biz ? 'Environ <b>' + fmt(Math.round(bizRate(biz))) + ' ' + C + ' par heure</b>' + (nearWater(biz.x) ? ' (dont +25 % pour la vue sur l’eau)' : ' · posée au bord de l’eau, elle rapporterait 25 % de plus') + '. Plus le village a d’habitants, plus elle a de clients. La caisse se remplit sur ' + B2.cap + ' heures au plus.' : 'Prix actuel : <b>' + G.unit() + '</b>' + (G.lv ? ' · niveau ' + G.lv() : '') + '.';
+  const info = biz ? 'Environ <b>' + fmt(Math.round(bizRate(biz))) + ' ' + C + ' par heure</b>' + (nearWater(biz.x, biz.z) ? ' (dont +25 % pour la vue sur l’eau)' : ' · posé au bord de l’eau ou d’un étang, il rapporterait 25 % de plus') + '. Plus le village a d’habitants, plus elle a de clients. La caisse se remplit sur ' + B2.cap + ' heures au plus.' : 'Prix actuel : <b>' + G.unit() + '</b>' + (G.lv ? ' · niveau ' + G.lv() : '') + '.';
   el.innerHTML = '<div class="who"><b>' + tdbEsc(title) + '</b>' + tdbEsc(biz ? B2.sells : G.sells) + '</div>'
     + '<div class="kpi" style="grid-template-columns:repeat(2,1fr)"><div><small>Dans la caisse</small><b>' + fmt(till) + '</b></div><div><small>Vendu (1 h)</small><b>' + fmt(sold) + '</b></div></div>'
     + '<p class="ex">' + info + '</p><h4>Les prix</h4><div class="span prix">' + PRIX.map((p, i) => '<button type="button" data-p="' + i + '" class="' + (i === pi ? 'on' : '') + '">' + p.ic + ' ' + p.n + '</button>').join('') + '</div>'
     + '<p class="ex">' + PRIX[pi].ic + ' <b>' + PRIX[pi].n + '</b> : ' + PRIX[pi].s + '.</p>'
-    + (G ? '<h4>Qui y travaille</h4><div class="tm ' + (S.hired[G.who] || G.auto ? 'ok' : 'no') + '"><i>' + (S.hired[G.who] || G.auto ? '✅' : '✋') + '</i><div><span>' + (S.hired[G.who] || G.auto ? G.whoY : G.whoN) + '</span></div></div>' : '');
+    + (G ? '<h4>Qui y travaille</h4><div class="tm ' + (S.hired[G.who] || G.auto || (G.ok && G.ok()) ? 'ok' : 'no') + '"><i>' + (S.hired[G.who] || G.auto || (G.ok && G.ok()) ? '✅' : '✋') + '</i><div><span>' + (S.hired[G.who] || G.auto || (G.ok && G.ok()) ? G.whoY : G.whoN) + '</span></div></div>' : '');
   el.querySelectorAll('.prix button').forEach((b) => b.addEventListener('click', () => { if (!S.prix) S.prix = {}; S.prix[k] = +b.dataset.p; dirty = true; gerer(biz ? undefined : k, idx); }));
   const opts = []; if (till >= 1) opts.push({ t: '🪙 Encaisser ' + fmt(till) + ' ' + C, s: 'Ramasser la caisse maintenant.', btn: 'Encaisser', ok: true, run: () => { if (biz) collectBiz(idx); else G.collect(); gerer(biz ? undefined : k, idx); } });
-  if (G) opts.push({ t: '🔨 Améliorer et embaucher', s: 'Un niveau de plus, c’est un meilleur prix de vente.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } }, { t: '🚲 Y aller', s: 'Tu t’y rends à vélo.', btn: 'Y aller', ok: true, run: () => { closeSheet(); stationGo(k); } });
+  if (G) opts.push({ t: '🔨 Améliorer et embaucher', s: 'Un niveau de plus, c’est un meilleur prix de vente.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } }, { t: '🚲 Y aller', s: 'Tu t’y rends à vélo.', btn: 'Y aller', ok: true, run: () => { closeSheet(); if (k === 'reserve') goTo(MOV.reserve.x, MOV.reserve.z + RES_HD + 1.5, 1.5, null); else stationGo(k); } });
   else opts.push({ t: '✋ Déplacer', s: 'La déplacer, la tourner ou la démolir.', btn: 'Déplacer', ok: true, run: () => { closeSheet(); amenager(idx); } });
   openSheet('Gérer', 'Un réglage simple : le prix.', opts, null, el); }
 /* ================= les quartiers et les îlots : une carte bornée, quadrillée, qu'on ouvre dans un ordre lisible ================= */
