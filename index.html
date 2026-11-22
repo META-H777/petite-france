@@ -169,6 +169,8 @@
   #fp-end { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:#FFFDF8; border:3px solid var(--ink); border-radius:22px; padding:18px 20px; width:min(380px,88vw); box-sizing:border-box; text-align:center; box-shadow:0 6px 0 rgba(43,37,53,.3); }
   #fp-r { display:block; font:900 21px Fraunces,Georgia,serif; } #fp-rs { font:700 14px/1.4 Nunito,sans-serif; margin:8px 0 12px; }
   body.fpgame #visitbar { display:none !important; }
+  .sonbox .btn.wide { width:100%; margin:4px 0 12px; } .sonlab { display:flex; justify-content:space-between; font:800 14px Nunito,sans-serif; } #son-r { width:100%; margin:8px 0; accent-color:#E3A73C; height:28px; } .sonmodes { display:flex; flex-direction:column; gap:6px; margin:6px 0; } .sonmodes .btn { width:100%; text-align:left; }
+  .sonp { font:700 12.5px/1.35 Nunito,sans-serif; color:var(--mute); margin:6px 0 0; }
   .hint { font-size:13.5px; font-weight:800; color:var(--mute); margin:10px 0 0; }
   .pill.bump { animation:bump .25s ease-out; } @keyframes bump { 40% { transform:scale(1.14); } }
   #b-snd { position:fixed; left:calc(env(safe-area-inset-left,0px) + 10px); bottom:calc(env(safe-area-inset-bottom,0px) + 104px); width:42px; height:42px; border-radius:50%; border:2.5px solid var(--ink); background:var(--white); box-shadow:0 3px 0 var(--ink); font-size:18px; padding:0; }
@@ -4293,6 +4295,7 @@ $('b-menu').addEventListener('click', () => { if (!S.started || VISIT.on) return
   { t: '📋 Commandes' + (nd ? ' · ' + nd + ' prête' + (nd > 1 ? 's' : '') : ''), s: 'Ce que le village te commande.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-od').click(); } },
   { t: '📖 Carnet du village', s: 'Les histoires des habitants, le secret des Rocheval, les clins d’œil trouvés.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); carnetSheet(); } },
   { t: '🎲 Jeux du village', s: 'Pétanque, pêche, champignons, chamboule-tout : des écus et des cadeaux.', btn: 'Jouer', ok: true, run: () => { closeSheet(); jeuxSheet(); } },
+  { t: '🎵 Son et musique' + (SND.mute ? ' · coupée' : ''), s: 'Couper la musique, régler son volume, choisir : selon le quartier, selon l’heure, ou toujours la même.', btn: 'Régler', ok: true, run: () => { closeSheet(); sonSheet(); } },
   { t: '💾 Sauvegarde', s: 'Ta partie s’enregistre toute seule. Copie un code pour la reprendre sur un autre appareil.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); saveSheet(); } },
   { t: '🛡️ Mon village', s: 'Le nom, le blason et la devise de ton village.', btn: 'Modifier', ok: true, run: () => { closeSheet(); villageSheet(); } },
   { t: '🚶 Visiter le village', s: 'La caméra descend dans les rues et se promène de maison en maison, comme un habitant.', btn: 'Visiter', ok: true, run: () => { closeSheet(); startVisit(); } },
@@ -5521,7 +5524,7 @@ function step() {
     if (!camFree && !GOD) { vtmp.set(player.position.x + wx * 1.6, player.position.y * 0.7, player.position.z + wz * 1.6); target.lerp(vtmp, 1 - Math.exp(-dt * 4.5)); } placeCam();
     vtmp.set(Math.round(target.x / 2) * 2, 0, Math.round(target.z / 2) * 2); sun.position.copy(vtmp).add(SUN); sun.target.position.copy(vtmp); sun.target.updateMatrixWorld(); { const hs = Math.max(18, Math.min(48, zoom * 0.9)), sc = sun.shadow.camera; if (Math.abs(sc.right - hs) > 1.5) { sc.left = sc.bottom = -hs; sc.right = sc.top = hs; sc.updateProjectionMatrix(); } } /* ombres plus fines quand on zoome */
     // quarters: name on arrival, models load around you
-    { const z = zoneOf(player.position.x, player.position.z); if (z.id !== zoneId) { const first = zoneId !== ''; zoneId = z.id; if (S.started) musicTo(z.id); if (first || S.started) { const el = $('zone'); el.textContent = z.ic + ' ' + z.name; el.hidden = false; el.style.opacity = '1'; zoneT = 2.6; } } if (zoneT > 0) { zoneT -= dt; if (zoneT <= 0) $('zone').style.opacity = '0'; } }
+    { const z = zoneOf(player.position.x, player.position.z); if (z.id !== zoneId) { const first = zoneId !== ''; zoneId = z.id; if (first || S.started) { const el = $('zone'); el.textContent = z.ic + ' ' + z.name; el.hidden = false; el.style.opacity = '1'; zoneT = 2.6; } } if (zoneT > 0) { zoneT -= dt; if (zoneT <= 0) $('zone').style.opacity = '0'; } }
     if ((loadT += dt) > 1.5) { loadT = 0; loadNear(); }
     // walking close is enough: harvest, sow, mill, bake, cash in
     if (S.started && !P.work) {
@@ -5689,7 +5692,7 @@ function step() {
   questTick();
   tickVisit(dt);
   if (!window.__nodraw) renderer.render(scene, VISIT.on ? VISIT.cam : FPV.on ? FPV.cam : cam); if (!VISIT.on && !FPV.on) placeLabels();
-  tickSave(dt); tickCodeReminder(dt);
+  tickSave(dt); tickCodeReminder(dt); tickMusic(dt);
   saveT += dt; if (saveT > 3 && dirty) { saveT = 0; try { save(); } catch (e) { showErr('sauvegarde', e); } }
 }
 
@@ -5777,38 +5780,65 @@ function tickCodeReminder(dt) { if (!S.started || (S.pop || 0) < 50) return; if 
   if (now() - (S.codeAt || 0) > 2 * 3600000 && now() - (S.codeRem || 0) > 2 * 3600000) { S.codeRem = now(); dirty = true; toast('💾 Pense à ton code de sauvegarde', 'Menu → Sauvegarde → Copier mon code. Pour reprendre ta partie partout.'); } }
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ S: JSON.parse(JSON.stringify(Object.assign({}, S, { px: player.position.x, pz: player.position.z, lastSeen: now() }))), playing: !!S.started, fast, t: now() })); } catch (e) {}
 
-/* ---------------- background music: original loops composed for the game (beta13/musique_src/compose.py), one per quarter, cross-faded ---------------- */
-// Web Audio plays the loops sample-exact (an <audio> mp3 loop leaves a small gap). len = exact loop length in seconds.
-const MUSIC = { campagne: { url: './musique/campagne.mp3?v=2', len: 32 * 3 * 60 / 66 }, centre: { url: './musique/centre.mp3?v=2', len: 32 * 3 * 60 / 80 }, chateau: { url: './musique/chateau.mp3?v=2', len: 32 * 3 * 60 / 54 } };
-const MUSIC_ON = false; // coupée à la demande de Romain (16/11)
-const MZONE = { campagne: 'campagne', entree: 'centre', centre: 'centre', bistrot: 'centre', chateau: 'chateau' }, MVOL = 0.32;
-const tracks = {}; let mCur = null, mBus = null;
+/* ---------------- la musique : une boucle par quartier (Romain, 22/11/2026), toutes sur le thème du village ----------------
+   Composée et synthétisée ici (beta13/musique_src/quartiers.py), sans échantillon ni droit tiers. On entend le quartier que l'on regarde ;
+   en passant d'un quartier à l'autre, les deux boucles se croisent en fondu pendant 3 secondes. Web Audio les joue au sample près (pas de trou à la reprise).
+   Seules les boucles en train de jouer sont gardées en mémoire (une boucle décodée pèse ~30 Mo : important sur iPad). */
+const QMUS = { bief:  72.0, bois:  99.310345, bourg:  57.6, butte:  102.857143, campagne:  80.0, coteau:  62.608696, faubourg:  53.333333, hautbourg:  87.272727, hauts:  87.272727, parvis:  96.0, plateau:  96.0, pres:  75.789474, quais:  68.571429, rives:  75.789474, val:  87.272727, vergers:  73.846154, vignes:  65.454545 }; // durée exacte de chaque boucle, en secondes
+const MUSIC_ON = true, MVOL = 0.42, MFADE = 6, MDWELL = 20; // fondu de 6 s ; on change de musique après 20 s dans un nouveau quartier (Eugénie : « pas de bazar quand on traverse la carte »)
+const SND = { mute: false, vol: 0.6, mode: 'quartier' }; // mode : quartier (par défaut, choix de Romain), heure (la vraie heure : matin, après-midi, soir), une (toujours la même) try { Object.assign(SND, JSON.parse(localStorage.getItem('pf-son') || '{}')); } catch (e) {}
+muted = !!SND.mute;
+function sndSave() { try { localStorage.setItem('pf-son', JSON.stringify(SND)); } catch (e) {} }
+const tracks = {}; let mCur = null, mBus = null, mQT = 0, mCand = null, mCandT = 0;
+const musicQ = () => { const x = GOD ? target.x : player.position.x, z = GOD ? target.z : player.position.z, Q = typeof quartierAt === 'function' ? quartierAt(x, z) : null; return Q && QMUS[Q.id] ? Q.id : 'bourg'; };
+function musicFade() { if (!AC) return; const t = AC.currentTime;
+  Object.keys(tracks).forEach((n) => { const tr = tracks[n], g = tr.gain.gain, on = n === mCur && !!tr.src; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(on ? 1 : 0, t + MFADE);
+    clearTimeout(tr.kill); if (n !== mCur) tr.kill = setTimeout(() => { if (mCur === n) return; try { if (tr.src) tr.src.stop(); } catch (e) {} try { tr.gain.disconnect(); } catch (e) {} delete tracks[n]; }, (MFADE + 1) * 1000); }); }
 function musicTrack(k) {
   if (tracks[k]) return tracks[k];
-  const tr = tracks[k] = { gain: AC.createGain(), src: null, buf: null };
+  const tr = tracks[k] = { gain: AC.createGain(), src: null };
   tr.gain.gain.value = 0; tr.gain.connect(mBus);
-  fetch(MUSIC[k].url).then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => AC.decodeAudioData(ab, res, rej))).then((buf) => {
-    tr.buf = buf; const s = AC.createBufferSource(); s.buffer = buf; s.loop = true; s.loopStart = 0; s.loopEnd = Math.min(buf.duration, MUSIC[k].len);
-    s.connect(tr.gain); s.start(); tr.src = s; musicTo(zoneId); }).catch(() => {});
+  fetch('./musique/q_' + k + '.mp3?v=1').then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => AC.decodeAudioData(ab, res, rej))).then((buf) => {
+    if (tracks[k] !== tr) return; const s = AC.createBufferSource(); s.buffer = buf; s.loop = true; s.loopStart = 0; s.loopEnd = Math.min(buf.duration, QMUS[k]);
+    s.connect(tr.gain); s.start(); tr.src = s; musicFade(); }).catch(() => { if (tracks[k] === tr) delete tracks[k]; });
   return tr;
 }
-function musicTo(zid) {
+function musicVol() { if (!AC || !mBus) return; mBus.gain.setTargetAtTime(SND.mute ? 0 : SND.vol * MVOL, AC.currentTime, 0.15); }
+function musicTo(k) {
   if (!MUSIC_ON || !AC) return;
-  if (!mBus) { mBus = AC.createGain(); mBus.gain.value = MVOL; mBus.connect(AC.destination); }
-  const k = muted ? null : MZONE[zid] || 'centre'; mCur = k; if (k) musicTrack(k);
-  const t = AC.currentTime;
-  Object.keys(tracks).forEach((n) => { const g = tracks[n].gain.gain; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(n === mCur && tracks[n].src ? 1 : 0, t + 2.5); });
+  if (!mBus) { mBus = AC.createGain(); mBus.gain.value = 0; mBus.connect(AC.destination); }
+  musicVol(); const want = SND.mute ? null : k;
+  if (want === mCur && (!want || tracks[want])) return;
+  mCur = want; if (want) musicTrack(want); musicFade();
 }
+const MODES = { quartier: '🗺️ Selon le quartier', heure: '🕰️ Selon l’heure de la journée', une: '🎼 Toujours la même musique' };
+// selon la vraie heure : le matin la campagne (flûte et harpe), l'après-midi le bourg (valse musette), le soir et la nuit les hauteurs (célesta, étoiles)
+const musicHour = () => { const h = new Date().getHours(); return h >= 6 && h < 12 ? 'campagne' : h >= 12 && h < 18 ? 'bourg' : 'hauts'; };
+const musicWant = () => (SND.mode === 'heure' ? musicHour() : SND.mode === 'une' ? 'campagne' : musicQ());
+function tickMusic(dt) { if (!S.started || !AC || SND.mute) return; if ((mQT += dt) < 1) return; const step = mQT; mQT = 0; const k = musicWant();
+  if (k === mCur) { mCand = null; return; }
+  if (!mCur || SND.mode !== 'quartier') return musicTo(k); // premier départ ou autre mode : tout de suite
+  if (k !== mCand) { mCand = k; mCandT = 0; return; } if ((mCandT += step) >= MDWELL) { mCand = null; musicTo(k); } }
 document.addEventListener('visibilitychange', () => { if (!AC || !MUSIC_ON) return; if (document.hidden) AC.suspend().catch(() => {}); else if (S.started) AC.resume().catch(() => {}); });
-$('b-snd').addEventListener('click', () => { muted = !muted; $('b-snd').textContent = muted ? '🔇' : '🔊'; musicTo(zoneId); });
+if (location.hash === '#debug') window.__mus = { get tracks() { return tracks; }, get cur() { return mCur; }, SND, musicQ, musicWant, get AC() { return AC; } };
+// la fenêtre « Son et musique » (Menu) : couper, régler le volume
+function sonSheet() { const box = document.createElement('div'); box.className = 'sonbox';
+  box.innerHTML = '<button type="button" class="btn wide" id="son-mute"></button><label class="sonlab">Volume de la musique <b id="son-v"></b></label><input type="range" id="son-r" min="0" max="100" step="5"><div class="sonlab" style="margin-top:10px">Quelle musique ?</div><div class="sonmodes"></div><p class="sonp" id="son-p"></p>';
+  const mb = box.querySelector('#son-mute'), r = box.querySelector('#son-r'), v = box.querySelector('#son-v'), md = box.querySelector('.sonmodes'), mp = box.querySelector('#son-p');
+  const HELP = { quartier: 'Chaque quartier a sa musique, sur le thème du village. Elle change en douceur quand tu restes un moment dans un autre quartier.', heure: 'Le matin la campagne, l’après-midi la valse du bourg, le soir la musique des étoiles, selon l’heure qu’il est vraiment.', une: 'La musique de la campagne, tout le temps, quel que soit l’endroit.' };
+  Object.keys(MODES).forEach((k) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.dataset.m = k; b.textContent = MODES[k]; b.addEventListener('click', () => { SND.mode = k; sndSave(); mCand = null; if (!SND.mute) musicTo(musicWant()); show(); }); md.appendChild(b); });
+  const show = () => { mb.textContent = SND.mute ? '🔇 Musique coupée · toucher pour la remettre' : '🔊 Musique en marche · toucher pour la couper'; mb.classList.toggle('gold', !SND.mute); r.value = Math.round(SND.vol * 100); v.textContent = Math.round(SND.vol * 100) + ' %'; r.disabled = SND.mute; md.querySelectorAll('button').forEach((b) => b.classList.toggle('gold', b.dataset.m === SND.mode)); mp.textContent = HELP[SND.mode] || ''; };
+  mb.addEventListener('click', () => { SND.mute = !SND.mute; muted = SND.mute; sndSave(); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} musicTo(musicWant()); show(); });
+  r.addEventListener('input', () => { SND.vol = r.value / 100; sndSave(); musicVol(); show(); });
+  show(); openSheet('🎵 Son et musique', 'Règle la musique du village.', [], null, box); }
 function startPlay(mode) {
   try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {}
-  musicTo(zoneOf(player.position.x, player.position.z).id);
   $('sheet').style.zIndex = ''; closeSheet();
   SFX.done(); fast = $('fast').checked; S.fast = fast; if (mode) S.mode = mode; $('start').hidden = true; S.started = true; ensureDay(); showOffline();
   if (S.over && S.mode === 'comp') { S.over = false; gameOver(); } else S.over = false;
   try { window.focus(); canvas.focus(); } catch (e) {} dirty = true; loadNear();
   if (GOD && MOV.shop) { target.set(MOV.shop.x, 0, MOV.shop.z + 4); placeCam(); }
+  musicTo(musicWant()); // après avoir placé la caméra : on entend tout de suite le quartier de la boulangerie
   if (!S.introSeen) showIntro();
 }
 // home screen: continue, or a brand-new game in one of the two modes
