@@ -23,6 +23,7 @@
   @keyframes rentpulse { 50% { transform:scale(1.06); } }
   #ambfx { position:fixed; inset:0; pointer-events:none; transition:background 2s linear; }
   #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+  body.placing #labels * { pointer-events:none !important; }
   .cn { display:inline-block; width:1em; height:1em; border-radius:50%; background:radial-gradient(circle at 35% 32%, #FCE7A6 0 18%, #EDB84A 45%, #B9802A 100%); border:.11em solid var(--ink); vertical-align:-.16em; font-style:normal; }
   .lb { position:absolute; left:0; top:0; transform:translate(-50%,-100%); white-space:nowrap; font-weight:900; font-size:12px; line-height:1; padding:5px 9px; border-radius:999px; background:var(--white); border:2px solid var(--ink); box-shadow:0 2px 0 var(--ink); pointer-events:auto; cursor:pointer; touch-action:manipulation; }
   .lb.name { background:none; border:0; box-shadow:none; padding:0; font-size:11px; font-weight:800; color:var(--ink); text-shadow:0 0 3px #fff, 0 0 3px #fff; }
@@ -193,6 +194,9 @@
   .quest .av { width:26px; height:26px; font-size:12px; } .quest b { display:none; } .quest p { font-size:12px; margin:0; } .quest:not(.open) p { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; } .quest.open { border-radius:16px; } .quest .btn { padding:5px 9px; font-size:11px; white-space:nowrap; }
   .toast { top:calc(env(safe-area-inset-top,0px) + 56px); width:auto; max-width:min(330px, 88vw); padding:6px 14px; border-radius:999px; box-shadow:0 2px 0 var(--ink); } .toast b { font-size:12.5px; } .toast span { display:none; }
   .camctl { bottom:calc(env(safe-area-inset-bottom,0px) + 86px); }
+  /* une petite étiquette dit à quoi sert chaque bouton de caméra (Eugénie, 22/11/2026) */
+  .camctl button { position:relative; } .camctl button::after { content:attr(data-cap); position:absolute; left:48px; top:50%; transform:translateY(-50%); white-space:nowrap; font:800 11px Nunito, sans-serif; color:var(--ink); background:rgba(255,253,248,.92); border:2px solid var(--ink); border-radius:10px; padding:2px 7px; pointer-events:none; }
+  body.lefty .camctl button::after { left:auto; right:48px; }
   #b-snd, .nosave { display:none !important; }
   .lb.qn { font-family:Fraunces, Georgia, serif; font-weight:700; color:var(--blue); background:rgba(255,253,248,.88); border-color:var(--blue); box-shadow:none; } .lb.qn.ok { background:var(--gold); color:var(--ink); border-color:var(--ink); box-shadow:0 2px 0 var(--ink); }
   .lb.land { background:rgba(255,253,248,.9); box-shadow:none; opacity:.8; } .lb.land.ok { background:var(--gold); opacity:1; box-shadow:0 2px 0 var(--ink); }
@@ -214,7 +218,7 @@
 <div id="fade"></div>
 <button id="b-snd" type="button" aria-label="Couper ou remettre le son">🔊</button>
 <div id="dirs"></div>
-<div class="camctl"><button type="button" id="b-view" aria-label="Vue d'ensemble">🔭</button><button type="button" id="b-center" aria-label="Revenir au boulanger" hidden>🎯</button></div>
+<div class="camctl"><button type="button" id="b-view" aria-label="Vue d'ensemble" data-cap="Vue du village">🔭</button><button type="button" id="b-center" aria-label="Revenir au boulanger" data-cap="Retour au boulanger" hidden>🎯</button></div>
 
 <div class="hud">
   <button class="pill lvl" id="lvl-pill" type="button" title="Niveau"><i id="lvl">1</i><span class="lvc"><small>Niveau</small><span class="bar"><b id="xpbar"></b></span></span></button>
@@ -438,9 +442,8 @@ const BX0 = -104, BX1 = 68, BZ0 = -98, BZ1 = 70; // where you can walk (carte do
 const HILL = { x: 26, z: -39, top: 6.5, r0: 14, r1: 22 };
 /* ---- le relief : des paliers (plats, tenus par des murs de pierre, reliés par des rampes) et des pentes douces. On garde toujours le plus haut. ---- */
 const RELIEF = [
-  { t: 'palier', n: 'Le Haut-Bourg', x0: -32.5, /* mur reculé de 1,5 m : il n'empiète plus sur les quais (Eugénie, 21/11/2026) */ x1: -2, z0: -58, z1: -22, h: 2.6, edge: 1.4, soft: { e: 7, n: 8 } },
-  /* la grande rampe dallée du Haut-Bourg est retirée (Eugénie, 19/11/2026) : de l'herbe à la place, plus de place pour bâtir ; on monte par l'escalier */
-  { t: 'rampe', stairs: true, x0: -10.5, x1: -7.5, z0: -22, z1: -16.8, h: 2.6, side: 0.7 },
+  /* le palier du Haut-Bourg, son mur et son escalier sont retirés (Eugénie, 22/11/2026) : la rive est des quais est plate, on y bâtit des maisons des deux côtés de l'eau.
+     Le relief reste là où il ne gêne pas : la butte du château, le coteau des vignes, les buttes des Bois. */
   { t: 'versant', n: 'Le Coteau', x0: -26, x1: 76, z0: 19, z1: 28, h: 2.2, soft: 8 },
   /* les bas-quais creusés et leurs murs sont retirés (Eugénie, 21/11/2026) : les quais restent à plat, on bâtit jusqu'au bord de l'eau */
   { t: 'coteau', n: 'Les Bois', x: -92, z: -51, r0: 2, r1: 9, h: 2.2 }, { t: 'coteau', x: -72, z: -50, r0: 2, r1: 10, h: 2.6 }, { t: 'coteau', x: -57, z: -47, r0: 2, r1: 8, h: 1.8 }
@@ -653,7 +656,7 @@ function bench(x, z, ry) { const g = new THREE.Group(); g.position.set(x, 0, z);
 function signpost(x, z, txt, ry) { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry || 0; scene.add(g); cyl(0.06, 0.06, 2.2, '#8A5A30', 0, 0, 0, g, 5); const s = sign(txt, 2.4, 0.5, '#2F4B7C', '#FFFDF8', 52); s.position.set(0.9, 1.9, 0.05); g.add(s); const b = s.clone(); b.rotation.y = Math.PI; b.position.z = -0.05; g.add(b); solid(x, z, 0.3); return g; }
 function stoneWall(x1, z1, x2, z2) { const len = Math.hypot(x2 - x1, z2 - z1), m = box(len, 0.7, 0.5, '#CFC3A8', (x1 + x2) / 2, 0, (z1 + z2) / 2); m.rotation.y = -Math.atan2(z2 - z1, x2 - x1); const n = Math.round(len / 0.9); for (let k = 0; k < n; k++) { const u = (k + 0.5) / n; const s = box(0.7, 0.18, 0.56, k % 2 ? '#BDB196' : '#D8CDB2', x1 + (x2 - x1) * u, 0.62, z1 + (z2 - z1) * u); s.rotation.y = m.rotation.y; } }
 function hedge(x1, z1, x2, z2) { const len = Math.hypot(x2 - x1, z2 - z1), m = box(len, 1.0, 0.9, '#5E8F3E', (x1 + x2) / 2, 0, (z1 + z2) / 2); m.rotation.y = -Math.atan2(z2 - z1, x2 - x1); }
-function hay(x, z, r) { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = r; scene.add(g); const c = cyl(0.62, 0.62, 1.0, '#E3C063', 0, 0, 0, g, 12); c.rotation.z = Math.PI / 2; c.position.y = 0.62; const e = cyl(0.3, 0.3, 1.02, '#CFA94A', 0, 0, 0, g, 10); e.rotation.z = Math.PI / 2; e.position.y = 0.62; solid(x, z, 0.65); }
+function hay(x, z, r) { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = r; scene.add(g); const c = cyl(0.62, 0.62, 1.0, '#E3C063', 0, 0, 0, g, 12); c.rotation.z = Math.PI / 2; c.position.y = 0.62; const e = cyl(0.3, 0.3, 1.02, '#CFA94A', 0, 0, 0, g, 10); e.rotation.z = Math.PI / 2; e.position.y = 0.62; solid(x, z, 0.65); return g; }
 
 /* ---- ground, road, river, hill ---- */
 // the ground comes in two parts, so the river can run low between its stone quays
@@ -841,7 +844,8 @@ const sacks = []; for (let k = 0; k < 3; k++) { const s = box(0.45, 0.4, 0.35, '
 solid(MILLP[0], MILLP[1], 2.0);
 
 // the farmhouse, the orchard, the kitchen garden and the pens
-{ const g = group(-88, -9.5, 0); const fb = slot('ferme', g, 2);
+const FERMEP = [-88, -9.5]; let FERME_G;
+{ const g = group(-88, -9.5, 0, 'ferme', 'ferme'); FERME_G = g; const fb = slot('ferme', g, 2);
   box(6, 3.2, 4.5, '#E6DCC6', -1.2, 0, 0, fb); roof(6, 4.5, 2, '#B9634A', -1.2, 3.2, 0, fb); box(3.4, 3.6, 5, '#B98A5E', 3.4, 0, 0, fb); roof(3.4, 5, 1.8, '#8F4A35', 3.4, 3.6, 0, fb); box(1.8, 2.4, 0.1, '#7A5232', 3.4, 0, 2.52, fb); win(fb, -2.6, 1.1, 2.27, '#6F9FC0', '#D9483B'); win(fb, 0.2, 1.1, 2.27, '#6F9FC0', '#D9483B');
   solidRect(-88, -9.5, 12.6, 6.6); }
 const PROD = [{ n: 'carottes', c: '#F08A3C', p: 9, e: '🥕' }, { n: 'tomates', c: '#D9483B', p: 14, e: '🍅' }, { n: 'fraises', c: '#E0405A', p: 21, e: '🍓' }, { n: 'pommes', c: '#A9C93F', p: 30, e: '🍏' }, { n: 'lait', c: '#F6F3EA', p: 12, e: '🥛' }];
@@ -888,10 +892,10 @@ GC_Z.forEach((z, j) => GC_X.forEach((x, i) => { const F = wheatField(x, z, 10, 8
 flat(40, 2, '#CDB58C', -80, -30.5); flat(2, 20, '#CDB58C', -87, -30.5); flat(2, 20, '#CDB58C', -75, -30.5); flat(2, 20, '#CDB58C', -99, -30.5); flat(2, 20, '#CDB58C', -63, -30.5);
 flat(38, 1.4, '#CDB58C', -81, -20.3); flat(38, 1.4, '#CDB58C', -81, -40.7);
 const HANGAR = [-57.5, -30.5], FARM_COST = 6000, FARM_POP = 250, FARM_BONUS = 80, FARM_GROW = 480000; // l'agriculteur : prix, habitants requis, habitants apportés, pousse (8 min)
-{ const g = new THREE.Group(); g.position.set(HANGAR[0], groundY(HANGAR[0], HANGAR[1]), HANGAR[1]); g.rotation.y = -Math.PI / 2; scene.add(g);
+{ const g = new THREE.Group(); g.position.set(HANGAR[0], groundY(HANGAR[0], HANGAR[1]), HANGAR[1]); g.rotation.y = -Math.PI / 2; g.userData = { kind: 'hangar', id: 'hangar' }; scene.add(g);
   box(6.2, 0.15, 5.0, '#B9AE96', 0, 0, 0, g); [[-2.9, -2.3], [2.9, -2.3], [-2.9, 2.3], [2.9, 2.3], [0, 2.3], [0, -2.3]].forEach((q) => box(0.25, 3.0, 0.25, '#7A5234', q[0], 0, q[1], g));
   box(6.2, 3.0, 0.15, '#9A7048', 0, 0, -2.4, g); box(0.15, 3.0, 4.8, '#9A7048', -3.0, 0, 0, g); box(0.15, 3.0, 4.8, '#9A7048', 3.0, 0, 0, g);
-  roof(6.6, 5.0, 1.5, '#A94F36', 0, 3.0, 0, g); for (let k = 0; k < 4; k++) hay(HANGAR[0] + 3.6, HANGAR[1] - 2 + k * 1.3, Math.PI / 2);
+  roof(6.6, 5.0, 1.5, '#A94F36', 0, 3.0, 0, g); for (let k = 0; k < 4; k++) { const h = hay(HANGAR[0] + 3.6, HANGAR[1] - 2 + k * 1.3, Math.PI / 2); if (h) { g.updateMatrixWorld(true); g.attach(h); } } /* les bottes suivent le hangar quand on le déplace */
   rects.push([HANGAR[0], HANGAR[1], 2.6, 3.2]); window.HANGAR_G = g; }
 /* les peupliers du bord de la route sont devenus des décors qu'on peut déplacer (Eugénie, 21/11/2026) : ils sont posés dans la partie au démarrage, voir cityBoot */
 const PEUPLIERS = []; for (let x = -100; x < -44; x += 5) { if ((x > -78 && x < -60) || (x > -97 && x < -80)) continue; PEUPLIERS.push([x, -5]); } // pas devant la façade de la ferme
@@ -969,8 +973,10 @@ solidRect(MAIRIEP[0], MAIRIEP[1], 9.6, 6.2);
 // the village square, its fountain, its plane trees
 const PLACE = [26, 10.5];
 const fountain = group(PLACE[0], PLACE[1], 0);
-cyl(1.6, 1.7, 0.55, '#D3C9B3', 0, 0, 0, fountain, 16); cyl(1.68, 1.68, 0.1, '#BFB49C', 0, 0.55, 0, fountain, 16);
-{ const w = new THREE.Mesh(new THREE.CylinderGeometry(1.42, 1.42, 0.05, 20), new THREE.MeshBasicMaterial({ color: '#8FD0E6' })); w.position.y = 0.6; fountain.add(w); }
+cyl(1.6, 1.7, 0.55, '#D3C9B3', 0, 0, 0, fountain, 16);
+/* la margelle est un anneau (avant : un disque plein qui cachait l'eau) et l'eau bleue est bien visible (Eugénie, 22/11/2026) */
+{ const rim = new THREE.Mesh(new THREE.TorusGeometry(1.56, 0.13, 6, 24), new THREE.MeshLambertMaterial({ color: '#BFB49C' })); rim.rotation.x = Math.PI / 2; rim.position.y = 0.6; rim.castShadow = true; fountain.add(rim);
+  const w = new THREE.Mesh(new THREE.CylinderGeometry(1.46, 1.46, 0.05, 24), new THREE.MeshLambertMaterial({ color: '#5FAED0', emissive: '#2E6E86', emissiveIntensity: 0.35 })); w.position.y = 0.57; fountain.add(w); }
 cyl(0.22, 0.28, 1.5, '#D3C9B3', 0, 0.55, 0, fountain, 8); cyl(0.7, 0.3, 0.25, '#D3C9B3', 0, 2.05, 0, fountain, 10); mesh(new THREE.SphereGeometry(0.18, 8, 6), '#E3A73C', 0, 2.42, 0, fountain);
 const drops = []; for (let i = 0; i < 14; i++) { const d = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: '#DFF4FB' })); fountain.add(d); drops.push(d); }
 solid(PLACE[0], PLACE[1], 1.9);
@@ -1628,6 +1634,8 @@ function placeLabels() {
     l.el.style.transform = 'translate(' + l.sx.toFixed(1) + 'px,' + l.sy.toFixed(1) + 'px) translate(-50%,-100%)';
   }
   unclutterLabels();
+  // pendant un tracé de rue ou une pose, les étiquettes (Lili, pièces…) ne captent plus le toucher (Eugénie, 22/11/2026)
+  { const pl = !!(typeof ROADM !== 'undefined' && ROADM) || !!(typeof PLC !== 'undefined' && PLC); if (pl !== document.body.classList.contains('placing')) { document.body.classList.toggle('placing', pl); if (pl && $('talk')) $('talk').hidden = true; } }
 }
 /* une étiquette importante (argent à ramasser, action prête, alerte, minuteur) n'est jamais cachée par un nom de quartier, un panneau de terrain ou une étiquette ordinaire :
    celle de moindre rang passe derrière et s'efface tant qu'elles se chevauchent (Romain, 21/11/2026) */
@@ -1981,7 +1989,10 @@ const vPool = [], queue = []; let lastServe = 0; const PATIENCE = 30;
    ordK / habitants = secondes entre deux commandes (ordMin au plus vite) ; ordPay = ce que paie une commande, en part du prix de vente. */
 const ECO = { cli0: 3.2, cliStart: 5, cliPop: 110, carPop: 12000, ordK: 120000, ordMin: 28, ordPay: 0.96, prix0: 150, prixK: 60, prixMax: 12 };
 /* L'indice du village : logements, décors et terrains coûtent plus cher à mesure que le village grandit (au-delà de prix0 habitants, +100 % tous les prixK habitants, jusqu'à prixMax). */
-const villageMul = () => Math.min(ECO.prixMax, 1 + Math.max(0, (S.popMax || S.pop || 0) - ECO.prix0) / ECO.prixK);
+// prix fixes par palier (Eugénie, 22/11/2026) : un prix affiché ne bouge plus quand on achète ; il ne monte qu'au passage d'un palier d'habitants, annoncé à l'avance
+const PALIERS = [[0, 1], [150, 1.5], [250, 3], [400, 5], [600, 8], [900, 12]];
+const palierI = () => { const p = S.popMax || S.pop || 0; let i = 0; PALIERS.forEach((q, k) => { if (p >= q[0]) i = k; }); return i; };
+const villageMul = () => PALIERS[palierI()][1];
 /* au départ 5 clients par minute (la première heure ne traîne plus), puis le village prend le relais ; en Coup de feu, 40 % de clients en plus */
 const clientsPerMin = () => { const p = S.pop || 0; return Math.max(ECO.cli0, p / ECO.cliPop, ECO.cliStart - Math.max(0, p - 60) * 0.018) * (S.mode === 'comp' ? 1.4 : 1) * (S.city && S.city.prods && S.city.prods.parking && S.city.prods.parking[3] ? 1.15 : 1); };
 function demand(n) {
@@ -2256,7 +2267,7 @@ const CATALOGUE = (() => {
   function wheelX(p, r, w, c, x, y, z, s) { const m = mesh(gk('w' + r + ',' + w + ',' + (s || 12), () => new THREE.CylinderGeometry(r, r, w, s || 12).rotateZ(PI / 2)), c, x, y, z, p); return m; }
   function ringX(p, r, t, c, x, y, z) { const m = TO(r, t, PI * 2, c, x, y, z, p, 14); m.rotation.y = PI / 2; return m; }
   // materials that are not plain colours
-  const WATER = new THREE.MeshLambertMaterial({ color: '#6FB3C8', emissive: '#2E6E86', emissiveIntensity: 0.25 });
+  const WATER = new THREE.MeshLambertMaterial({ color: '#4FA6D0', emissive: '#2E6E86', emissiveIntensity: 0.4 }); // un bleu franc (Eugénie, 22/11/2026)
   const SPRAY = new THREE.MeshBasicMaterial({ color: '#EAF7FB', transparent: true, opacity: 0.6, depthWrite: false });
   const GLASS = new THREE.MeshLambertMaterial({ color: '#A9D3E0', transparent: true, opacity: 0.55, depthWrite: false });
   const GLOBE = new THREE.MeshBasicMaterial({ color: '#FFF4D6' }), ORANGE_LIT = new THREE.MeshBasicMaterial({ color: '#F6A548' });
@@ -3510,6 +3521,9 @@ movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1
 movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
 movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 15000, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Le café de Gégé : il rapporte des écus d’or toute la journée et achète son pain à ta boulangerie. Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
 movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], rot: false, objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand coin de nature clos : cerfs, sangliers, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Sans garde forestier, il arrive qu\'un animal s\'échappe. +35 beauté.' });
+/* la ferme et le hangar du tracteur se déplacent eux aussi (Eugénie, 22/11/2026) ; ils restent gratuits et toujours posés */
+movable('ferme', { n: 'Corps de ferme', ic: '🏡', pivot: [FERMEP[0], FERMEP[1]], objs: [FERME_G], fp: [14, 8], pts: [ptA(FERMEP)], cols: [findRect(FERMEP[0], FERMEP[1])], desc: 'La ferme de Léo.' }).free = true;
+movable('hangar', { n: 'Hangar du tracteur', ic: '🚜', pivot: [HANGAR[0], HANGAR[1]], objs: [HANGAR_G], fp: [10, 8], pts: [ptA(HANGAR)], cols: [findRect(HANGAR[0], HANGAR[1]), ...[0, 1, 2, 3].map((k) => findSolid(HANGAR[0] + 3.6, HANGAR[1] - 2 + k * 1.3))], desc: 'Le hangar de Marcel et de son tracteur.' }).free = true;
 const PROD_KEYS = Object.keys(MOV);
 const START_LAYOUT = { shop: [3, -10.2, 0], oven: [10, -9.5, 0], mill: [-12, -10, 0], champ: [6, 12.3, 0] }; // tout le départ tient dans quatre terrains du Bourg
 const SERV_BEAUTY = { fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve: 35 };
@@ -3531,8 +3545,8 @@ const HOUSE_T = { // logements de village uniquement. Plus un logement est grand
 };
 // chaque exemplaire d'un même modèle coûte 16 % de plus que le précédent : varier les logements devient le bon calcul
 const HOUSE_GROW = 1.10;
-function housePrice(m) { const n = S.city ? S.city.items.filter((it) => it.t === 'h' && it.m === m).length : 0; const vm = villageMul(); return Math.round(HOUSE_T[m].c * Math.pow(HOUSE_GROW, n) * (m === 'maisonnette' ? 1 + (vm - 1) * 0.5 : vm)); } /* les petites maisons du début restent abordables */
-function decoPrice(k) { const cnt = S.city ? S.city.items.filter((it) => it.k === k).length : 0; return Math.round(DECOS[k].c * Math.pow(1.06, cnt) * villageMul()); }
+function housePrice(m) { const vm = villageMul(); return Math.round(HOUSE_T[m].c * (m === 'maisonnette' ? 1 + (vm - 1) * 0.5 : vm)); } /* les petites maisons du début restent abordables */
+function decoPrice(k) { return Math.round(DECOS[k].c * villageMul()); } // même prix pour le 1er et le 10e (Eugénie, 22/11/2026)
 const HLV = ['', 'Habitée', 'Fleurie', 'Maison de maître'];
 const MASONCOST = [0, 500, 2500, 12000, 50000];
 let GLB_OK = {};
@@ -3606,11 +3620,11 @@ function hideGrass() { grassChanged(); }
 function ensureCity() {
   if (S.city && S.city.v === 1) return;
   const homes = []; /* plus de maisons de départ devant la boulangerie (Romain, 18/11/2026) : les dix anciens du village logent dans le vieux bourg */
-  const prods = {}; PROD_KEYS.forEach((k) => { const L0 = START_LAYOUT[k]; prods[k] = L0 ? [L0[0], L0[1], L0[2], 1] : [MOV[k].x, MOV[k].z, 0, 0]; });
+  const prods = {}; PROD_KEYS.forEach((k) => { const L0 = START_LAYOUT[k]; prods[k] = L0 ? [L0[0], L0[1], L0[2], 1] : [MOV[k].x, MOV[k].z, 0, MOV[k].free ? 1 : 0]; });
   S.city = { v: 1, prods, items: homes, roads: {} }; S.pop = 10; S.masons = S.masons || 1; dirty = true;
 }
 const cityObjs = [];
-function applyProds() { PROD_KEYS.forEach((k) => { const p = S.city.prods[k] || [MOV[k].x, MOV[k].z, 0, 0], M = MOV[k]; M.placed = !!p[3]; moveTo(M, p[0], p[1], p[2]); }); }
+function applyProds() { PROD_KEYS.forEach((k) => { const p = S.city.prods[k] || [MOV[k].x, MOV[k].z, 0, MOV[k].free ? 1 : 0], M = MOV[k]; M.placed = !!p[3]; moveTo(M, p[0], p[1], p[2]); }); }
 function cityLinked() { if (!S.city) return 0; if (!links) computeLinks(); return links.filter(Boolean).length; }
 function cityHouses() { return ((S.city && S.city.items) || []).filter((it) => it.t === 'h').length; }
 
@@ -3752,7 +3766,8 @@ function areaFree(x, z, w, d, paint) { let ok = true, n = 0;
 // a light 2 m grid on the ground while building
 const gridTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d'); g.strokeStyle = 'rgba(255,253,248,0.55)'; g.lineWidth = 2; g.strokeRect(1, 1, 62, 62); const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(40, 40); return t; })();
 const GRID = new THREE.Mesh(new THREE.PlaneGeometry(80, 80).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: gridTex, transparent: true, depthWrite: false })); GRID.visible = false; GRID.renderOrder = 2; GRID.userData.dyn = true; scene.add(GRID);
-const snapC = (v, size) => (Math.round(size / 2) % 2 ? Math.floor(v / TILE) * TILE + TILE / 2 : Math.round(v / TILE) * TILE);
+// pas de 1 m (et non plus 2) : une maison peut se coller à la route, aux pavés et à sa voisine (Eugénie, 22/11/2026)
+const snapC = (v, size) => (Math.round(size) % 2 ? Math.floor(v) + 0.5 : Math.round(v));
 
 function openBuild() { if (!S.started) return; renderBuild(); $('build').hidden = false; }
 // ouvre Construire directement sur le bâtiment demandé par une mission, la ligne mise en évidence (Romain, 21/11/2026)
@@ -3771,7 +3786,7 @@ function renderBuild() {
   const el = $('bd-list'); el.innerHTML = ''; const lv = level();
   const row = (ic, n, s, price, ok, why, fn) => { const it = document.createElement('div'); it.className = 'item' + (ok ? ' best' : ''); it.innerHTML = '<div class="ic"></div><div class="t"><b></b><span></span></div><button class="btn" type="button"></button>';
     it.querySelector('.ic').textContent = ic; it.querySelector('b').textContent = n; rich(it.querySelector('span'), s); const bt = it.querySelector('button'); if (why) { bt.textContent = '🔒'; bt.disabled = true; rich(it.querySelector('span'), s + ' · ' + why); } else { rich(bt, price); bt.classList.toggle('gold', ok); bt.disabled = !ok; bt.addEventListener('click', fn); } el.appendChild(it); };
-  { const vm = villageMul(); if (vm > 1.05 && BTAB !== 'rues' && BTAB !== 'batiments') { const d = document.createElement('div'); d.style.cssText = 'font-size:12px;font-weight:800;opacity:.75;margin:0 2px 8px;line-height:1.3'; d.textContent = '📈 Prix du village × ' + vm.toFixed(1).replace('.', ',') + '. Plus le village est grand, plus bâtir et décorer coûte cher.'; el.appendChild(d); } }
+  { const vm = villageMul(), nx = PALIERS[palierI() + 1]; if (BTAB !== 'rues' && BTAB !== 'batiments') { const d = document.createElement('div'); d.style.cssText = 'font-size:12px;font-weight:800;opacity:.75;margin:0 2px 8px;line-height:1.3'; d.textContent = '📌 Prix fixes : acheter ne fait pas monter le suivant.' + (vm > 1 ? ' Palier du village × ' + String(vm).replace('.', ',') + '.' : '') + (nx ? ' Au prochain palier (' + nx[0] + ' habitants), les prix passeront à × ' + String(nx[1]).replace('.', ',') + '.' : ''); el.appendChild(d); } }
   if (BTAB === 'logements') { let teaser = false; Object.keys(HOUSE_T).sort((a, b) => HOUSE_T[a].lvl - HOUSE_T[b].lvl).forEach((k) => { const T = HOUSE_T[k]; if (T.glb && !GLB_OK[k]) return; if (lv < T.lvl) { if (teaser) return; teaser = true; } const c = housePrice(k); row(T.ic, T.n, T.cap + ' habitants · chantier ' + longT(dur(T.t * 60000 * timeMul())), c + ' ' + C, S.coins >= c, lv < T.lvl ? 'niveau ' + T.lvl : '', () => startPlace({ t: 'h', m: k })); }); }
   else if (BTAB === 'rues') { ROAD_T.map((T, i) => i).sort((a, b) => ROAD_T[a].o - ROAD_T[b].o).forEach((i) => { const T = ROAD_T[i]; row(T.ic, T.n, T.g + ' · ' + T.d + ' · ' + T.c + ' ' + C + ' la case de 2 m', T.c + ' ' + C, S.coins >= T.c, lv < (T.lvl || 1) ? 'niveau ' + T.lvl : '', () => startRoad(i)); });
     row('🧽', 'Gomme', 'Retire des cases de rue (remboursées à moitié)', 'Gommer', true, '', () => { $('build').hidden = true; openSheet('Êtes-vous sûr ?', 'La gomme efface les cases de rue que tu touches ou glisses. Chaque case est remboursée à moitié, on ne peut pas revenir en arrière.', [
@@ -3834,7 +3849,7 @@ function paintRoad(x, z) { const ix = tileOf(x), iz = tileOf(z), k = tileKey(ix,
   led('🧱 Rues', -ROAD_T[ROADM.t].c); S.coins -= ROAD_T[ROADM.t].c; R[k] = ROADM.t; dirty = true; links = null; drawRoads(); }
 
 // ---- selection of an existing thing in build mode ----
-const KIND2MOV = { shop: 'shop', oven: 'oven', mill: 'mill', plot: 'champ', market: 'market', garden: 'potager', cake: 'cake', bq: 'bq', mairie: 'mairie', parking: 'parking', church: 'church', bistrot: 'bistrot', fontaine: 'fontaine' };
+const KIND2MOV = { shop: 'shop', oven: 'oven', mill: 'mill', plot: 'champ', market: 'market', garden: 'potager', cake: 'cake', bq: 'bq', mairie: 'mairie', parking: 'parking', church: 'church', bistrot: 'bistrot', fontaine: 'fontaine', ferme: 'ferme', hangar: 'hangar' };
 function buildTap(sx, sy) {
   const gp = groundHit(sx, sy);
   if (ROADM) { if (gp) paintRoad(gp[0], gp[1]); return true; }
@@ -4104,7 +4119,7 @@ function ilotAt(x, z) { const Q = quartierAt(x, z); if (!Q) return null; let i =
 const landS = () => S.land || (S.land = { open: { bourg: 1 }, own: {}, names: {} });
 function landOwned(x, z) { const I = ilotAt(x, z); return !I || !!landS().own[I.key]; }
 const qOpen = (Q) => !!landS().open[Q.id], qName = (Q) => landS().names[Q.id] || Q.n, qOwned = (Q) => Q.ilots.filter((I) => landS().own[I.key]).length;
-const ilotPrice = (I) => Math.round(ILOT_BASE[I.q.tier] * (1 + 0.35 * qOwned(I.q)) * villageMul() / 10) * 10;
+const ilotPrice = (I) => Math.round(ILOT_BASE[I.q.tier] * 1.6 * villageMul() / 10) * 10;
 // what still stands between the player and a quarter ('' = it can be opened)
 function qLock(Q) { const pop = Math.floor(S.pop || 0); if (pop < TIER_POP[Q.tier]) return TIER_POP[Q.tier] + ' habitants';
   const sib = QUARTIERS.some((o) => o.tier === Q.tier && o !== Q && qOpen(o)); if (sib && pop < (TIER_POP[Q.tier + 1] || 1e9)) return TIER_POP[Q.tier + 1] + ' habitants'; return ''; }
