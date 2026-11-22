@@ -168,6 +168,13 @@
   #fp-aim::after { content:''; position:absolute; left:50%; top:50%; width:8px; height:8px; margin:-4px; background:#D9283B; border-radius:50%; }
   #fp-end { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:#FFFDF8; border:3px solid var(--ink); border-radius:22px; padding:18px 20px; width:min(380px,88vw); box-sizing:border-box; text-align:center; box-shadow:0 6px 0 rgba(43,37,53,.3); }
   #fp-r { display:block; font:900 21px Fraunces,Georgia,serif; } #fp-rs { font:700 14px/1.4 Nunito,sans-serif; margin:8px 0 12px; }
+  #fp-gauge { position:absolute; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 84px); transform:translateX(-50%); width:min(420px,84vw); height:26px; border:3px solid var(--ink); border-radius:999px; overflow:hidden; pointer-events:none; box-shadow:0 3px 0 rgba(43,37,53,.3);
+    background:linear-gradient(90deg,#D9483B 0 14%,#F2C14E 14% 36%,#6BAF4E 36% 64%,#F2C14E 64% 86%,#D9483B 86% 100%); }
+  #fp-gauge::before, #fp-gauge::after { position:absolute; top:3px; font:900 11px Nunito,sans-serif; color:#FFFDF8; text-shadow:0 1px 0 rgba(0,0,0,.4); }
+  #fp-gauge::before { content:'trop court'; left:8px; } #fp-gauge::after { content:'trop long'; right:8px; }
+  #fp-gauge i { position:absolute; top:-3px; bottom:-3px; width:6px; margin-left:-3px; background:#FFFDF8; border:2px solid var(--ink); border-radius:4px; left:50%; }
+  #fp-mode { position:absolute; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 84px); transform:translateX(-50%); display:flex; gap:8px; }
+  #fp-mode .btn { padding:8px 14px; font-size:15px; } #fp-mode .btn.on { background:var(--gold,#E3A73C); }
   body.fpgame #visitbar { display:none !important; }
   .sonbox .btn.wide { width:100%; margin:4px 0 12px; } .sonlab { display:flex; justify-content:space-between; font:800 14px Nunito,sans-serif; } #son-r { width:100%; margin:8px 0; accent-color:#E3A73C; height:28px; } .sonmodes { display:flex; flex-direction:column; gap:6px; margin:6px 0; } .sonmodes .btn { width:100%; text-align:left; }
   .sonp { font:700 12.5px/1.35 Nunito,sans-serif; color:var(--mute); margin:6px 0 0; }
@@ -176,11 +183,18 @@
   #gd[hidden] { display:none; }
   .gd-card { position:relative; width:min(460px, 100%); max-height:calc(100% - 8px); overflow:auto; background:var(--white); border:3px solid var(--ink); border-radius:24px; box-shadow:0 6px 0 rgba(43,37,53,.35); display:flex; flex-direction:column; }
   .gd-card .x { position:absolute; right:10px; top:10px; z-index:2; }
-  .gd-pic { position:relative; margin:12px 12px 0; aspect-ratio:16/10; border-radius:16px; border:2.5px solid var(--ink); overflow:hidden; background:linear-gradient(160deg,#F4DDB4,#CFE3B0); flex:none; }
-  .gd-pic img { width:100%; height:100%; object-fit:cover; display:block; transition:opacity .35s; }
+  .gd-pic { position:relative; margin:12px 12px 0; aspect-ratio:16/10; border-radius:18px; border:2.5px solid var(--ink); overflow:hidden; background:linear-gradient(180deg,#BFE0EE 0%,#DCEEF2 46%,#F6E8C8 100%); flex:none; }
+  .gd-pic img { position:relative; width:100%; height:100%; object-fit:contain; display:block; transition:opacity .35s, transform .5s; filter:drop-shadow(0 10px 8px rgba(70,60,40,.18)); }
+  .gd-cl { position:absolute; background:#FFFDF8; border-radius:999px; opacity:.85; } .gd-cl::before, .gd-cl::after { content:''; position:absolute; background:#FFFDF8; border-radius:50%; }
+  .gd-cl.a { width:90px; height:22px; left:8%; top:12%; } .gd-cl.a::before { width:38px; height:38px; left:16px; top:-18px; } .gd-cl.a::after { width:28px; height:28px; left:46px; top:-11px; }
+  .gd-cl.b { width:70px; height:18px; right:9%; top:22%; opacity:.7; } .gd-cl.b::before { width:30px; height:30px; left:12px; top:-14px; } .gd-cl.b::after { width:22px; height:22px; left:36px; top:-8px; }
   .gd-pic span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:64px; }
   .gd-body { padding:12px 18px 4px; } .gd-body h2 { font:900 21px/1.15 Fraunces,Georgia,serif; margin:4px 0 8px; color:var(--ink); }
   .gd-body p { font:700 14.5px/1.45 Nunito,sans-serif; margin:0 0 8px; color:var(--ink); } .gd-body b { color:#8A4A1E; }
+  .gd-lead { font:800 16px/1.35 Nunito,sans-serif !important; }
+  .gd-pts { list-style:none; padding:0; margin:4px 0 8px; display:flex; flex-direction:column; gap:7px; }
+  .gd-pts li { display:flex; gap:10px; align-items:center; background:#FBF3E2; border:2px solid #EADBC0; border-radius:14px; padding:7px 10px; font:700 13.5px/1.35 Nunito,sans-serif; color:var(--ink); }
+  .gd-pts li i { font-style:normal; flex:none; width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:#FFFDF8; border:2px solid var(--ink); border-radius:50%; font-size:16px; }
   .gd-dots { display:flex; gap:7px; justify-content:center; margin:4px 0 10px; } .gd-dots button { width:9px; height:9px; padding:0; border-radius:50%; border:2px solid var(--ink); background:var(--white); cursor:pointer; } .gd-dots button.on { background:var(--gold); width:22px; border-radius:6px; }
   .gd-nav { display:flex; gap:10px; padding:0 14px 14px; } .gd-nav .btn { flex:1; }
   .gd-help { display:block; margin:10px auto 0; border:2px dashed var(--ink); background:rgba(243,207,122,.35); border-radius:999px; padding:6px 14px; font:800 13px Nunito,sans-serif; color:var(--ink); cursor:pointer; }
@@ -530,7 +544,7 @@ function roof(w, d, h, c, x, y, z, p) {
 }
 function sign(text, w, h, bg, fg, px) {
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = Math.max(32, Math.round(512 * h / w)); const g = cv.getContext('2d');
-  g.fillStyle = bg; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = fg; g.font = '700 ' + (px || 60) + 'px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, cv.height / 2 + 3);
+  g.fillStyle = bg; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = fg; let fpx = px || 60; g.font = '700 ' + fpx + 'px Georgia, serif'; const tw = g.measureText(text).width; if (tw > cv.width * 0.92) { fpx = Math.floor(fpx * cv.width * 0.92 / tw); g.font = '700 ' + fpx + 'px Georgia, serif'; } /* un texte trop long rétrécit au lieu d'être coupé (« hamboule-tou », Romain 22/11/2026) */ g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, cv.height / 2 + 3);
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
 }
@@ -787,7 +801,10 @@ function roadTex(kind) {
 function paved(geo, x, y, z, rx, ry) { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: paveTex(rx, ry) })); m.position.set(x, y, z); m.receiveShadow = true; m.userData.dyn = true; scene.add(m); return m; }
 { const xw = BX0 - 15, xb = RIVER.x0 - 0.9, xe = BX1 + 15; flat(xb - xw, 4.6, '#E3D6BC', (xw + xb) / 2, 0, 0.03);
   paved(new THREE.PlaneGeometry(xe - xb, 4.6).rotateX(-Math.PI / 2), (xb + xe) / 2, 0.06, 0, (xe - xb) / 2, 2.3);
-  const xc = RIVER.x1 + 1.0; [-1, 1].forEach((s) => mesh(new THREE.BoxGeometry(xe - xc, 0.1, 0.16), '#BDB4A3', (xc + xe) / 2, 0.05, s * 2.38, scene, { noShadow: true }).castShadow = false); }
+  const xc = RIVER.x1 + 1.0; [-1, 1].forEach((s) => mesh(new THREE.BoxGeometry(xe - xc, 0.1, 0.16), '#BDB4A3', (xc + xe) / 2, 0.05, s * 2.38, scene, { noShadow: true }).castShadow = false);
+  /* les trottoirs : les piétons y marchent, les voitures restent sur la chaussée (Romain, 22/11/2026) */
+  [-1, 1].forEach((s) => { const t = mesh(new THREE.BoxGeometry(xe - xc, 0.03, 0.56), '#E4DAC6', (xc + xe) / 2, 0.072, s * 2.04, scene, { noShadow: true }); t.castShadow = false; t.receiveShadow = true;
+    const b = mesh(new THREE.BoxGeometry(xe - xc, 0.06, 0.1), '#C7BCA6', (xc + xe) / 2, 0.08, s * 1.74, scene, { noShadow: true }); b.castShadow = false; }); }
 for (let i = BX0 - 10; i < RIVER.x0 - 1; i += 1.15) flat(0.55, 0.35, '#D2C3A4', i, -1.7 + (Math.abs(i * 7) % 3) * 1.6, 0.045);
 // the river and its bridge
 // the river runs low between Paris-style stone quays
@@ -1626,7 +1643,7 @@ function stockCake(n) { if (!n) return; S.cake += n; dirty = true; floatAt(shop,
 /* ---------------- the clothes shop ---------------- */
 let bqT = 6;
 const BQDOOR = [15.2, 12.5];
-function spawnBq() { const g = newPerson(), fromLeft = Math.random() < 0.5; g.position.set(fromLeft ? -6 : 30, 0, 1.6 + Math.random() * 0.8); g.userData.v = { phase: 'in', market: true, bq: true, exitX: fromLeft ? -8 : 32, door: new THREE.Vector3(BQDOOR[0] + Math.random() * 1.2, 0, BQDOOR[1] - 1.6 + Math.random() * 3.2), wait: 0, walk: 0 }; villagers.push(g); }
+function spawnBq() { const g = newPerson(), fromLeft = Math.random() < 0.5; g.position.set(fromLeft ? -6 : 30, 0, 1.92 + Math.random() * 0.25); g.userData.v = { phase: 'in', market: true, bq: true, exitX: fromLeft ? -8 : 32, door: new THREE.Vector3(BQDOOR[0] + Math.random() * 1.2, 0, BQDOOR[1] - 1.6 + Math.random() * 3.2), wait: 0, walk: 0 }; villagers.push(g); }
 function collectBq() { if (!(S.btill > 0)) return false; led('👕 Boutique de vêtements', S.btill); S.coins += S.btill; floatAt(bqG, '+' + S.btill + ' ' + C); S.btill = 0; dirty = true; SFX.coin(); burst(BQDOOR[0], 1.4, BQDOOR[1], ['#E3A73C', '#F3CF7A'], 12, 5); buzz(20); return true; }
 function tapBq() { if (S.lv.bq < 1) return openUp(); if (!collectBq()) toast('La boutique de vêtements', S.pull ? S.pull + ' pull' + (S.pull > 1 ? 's' : '') + ' en rayon. Les passants entrent.' : '2 pelotes de laine font 1 pull. Tu as ' + S.wool + ' laine.'); }
 
@@ -2062,11 +2079,11 @@ function spawnVillager(car) {
   const g = newPerson(), fromLeft = Math.random() < 0.5;
   const pt = S.mode === 'comp' ? 0.7 : 1, d = { phase: 'in', exitX: fromLeft ? -14 : 30, wait: 0, walk: 0, want: 1 + (Math.random() < 0.2 + 0.1 * S.lv.shop ? 1 : 0), got: 0, car: car || null, pat: (car ? PATIENCE + 6 : PATIENCE) * pt, angry: false }; /* en Coup de feu, les clients attendent 30 % moins */
   if (car) { g.position.set(car.g.position.x + 0.9, 0, car.g.position.z - 0.6); d.want = 2 + Math.floor(Math.random() * 4); }
-  else g.position.set(fromLeft ? -14 : 30, 0, 1.2 + Math.random() * 0.8);
+  else g.position.set(fromLeft ? -14 : 30, 0, 1.92 + Math.random() * 0.25);
   g.userData.v = d; villagers.push(g); queue.push(g); return g;
 }
 function spawnMarket() {
-  const g = newPerson(), fromLeft = Math.random() < 0.5; g.position.set(fromLeft ? GATEX + 1 : -6, 0, 1.6 + Math.random() * 0.8);
+  const g = newPerson(), fromLeft = Math.random() < 0.5; g.position.set(fromLeft ? GATEX + 1 : -6, 0, 1.92 + Math.random() * 0.25);
   g.userData.v = { phase: 'in', market: true, exitX: fromLeft ? GATEX + 1 : -6, door: (() => { const r = MOV.market ? MOV.market.r || 0 : 0, dx = STALLX[Math.floor(Math.random() * 4)] + (Math.random() - 0.5), dz = -0.3 + Math.random() * 0.5, c = Math.cos(r), s = Math.sin(r); return new THREE.Vector3(STN.market[0] + dx * c + dz * s, 0, STN.market[1] - dx * s + dz * c); })(), wait: 0, walk: 0 };
   villagers.push(g); return g;
 }
@@ -2160,7 +2177,7 @@ function nearFree(i, j) { if (!grid[j * GW + i]) return [i, j]; for (let r = 1; 
 function clearLine(x0, z0, x1, z1) { const d = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(d / 0.25); for (let k = 0; k <= n; k++) { const u = n ? k / n : 0; if (blocked(x0 + (x1 - x0) * u, z0 + (z1 - z0) * u, 0.3)) return false; } return true; }
 // roads, lanes and paths: people keep to them (a step off the road costs seven on it), so nobody cuts across the fields or the river
 let roadG = null;
-function isRoad(x, z) { if (Math.abs(z) < 2.5) return true; if (roadAt(x, z)) return true;
+function isRoad(x, z) { if (Math.abs(z) < 2.5) return x < RIVER.x0 - 1 || Math.abs(z) > 1.7; /* à l'est de la rivière, la chaussée est aux voitures : on marche sur les trottoirs */ if (roadAt(x, z)) return true;
   if (typeof MOV !== 'undefined' && MOV.market && MOV.market.placed && Math.abs(x - MOV.market.x) < (oddR(MOV.market.r) ? 3 : 8) && Math.abs(z - MOV.market.z) < (oddR(MOV.market.r) ? 8 : 3)) return true;
   for (const c of GCOVER) { if (!c[5]) continue; const dx = x - c[0], dz = z - c[1]; if (Math.abs(dx) + Math.abs(dz) > c[2] + c[3] + 1) continue; const cs = Math.cos(c[4]), sn = Math.sin(c[4]); if (Math.abs(dx * cs - dz * sn) < c[2] + 0.4 && Math.abs(dx * sn + dz * cs) < c[3] + 0.4) return true; }
   return false; }
@@ -3100,6 +3117,25 @@ const CATALOGUE = (() => {
     // nénuphars
     [[-0.3, 0.3], [0.1, -0.4], [-0.55, -0.05], [0.3, 0.45], [0.55, -0.3]].forEach((q, k) => { CY(0.26, 0.26, 0.02, '#5E8F3E', x0 + q[0] * rx, 0.06, q[1] * rz, g, 9).castShadow = false; if (k % 2 === 0) SP(0.07, '#F0A6B8', x0 + q[0] * rx + 0.05, 0.1, q[1] * rz, g, 0); });
   }
+  /* la petite plage de rivière (Romain, 22/11/2026) : du sable qui descend jusque dans l'eau, côté +z ; elle se colle toujours à une rive (voir showPlace) */
+  function plage(g) { const geo = new THREE.PlaneGeometry(6.4, 5.6, 16, 32).rotateX(-PI / 2); geo.translate(0, 0, 0.6); const P = geo.attributes.position, col = [], cA = new THREE.Color('#EED9A4'), cB = new THREE.Color('#E2C98E'), cW = new THREE.Color('#CBB37E'), cc = new THREE.Color();
+    for (let i = 0; i < P.count; i++) { const x = P.getX(i), z = P.getZ(i), side = Math.max(0, Math.abs(x) - 2.7) / 0.5, u = Math.max(0, Math.min(1, (z - 2.65) / 0.75)), up = Math.max(0, Math.min(1, (z - 1.8) / 0.25)), y = 0.05 + 0.12 * up - 1.1 * u * u * (3 - 2 * u) - side * 0.04 + Math.sin(x * 3.1 + z * 2.3) * 0.012; /* le sable recouvre le parapet du quai puis descend dans l'eau */
+      P.setY(i, y); cc.copy(cA).lerp(cB, (Math.sin(x * 5.3) * Math.cos(z * 4.1) + 1) * 0.3).lerp(cW, u * 0.8); col.push(cc.r, cc.g, cc.b); }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true })); m.receiveShadow = true; g.add(m);
+    [[-2.2, -1.5], [1.6, -1.7], [2.5, 0.9], [-2.6, 1.1], [0.4, 2.0]].forEach((q, k) => { const d = mesh(gk('pgal' + (k % 3), () => new THREE.DodecahedronGeometry(0.12 + (k % 3) * 0.06, 0)), ['#BFB49C', '#A89C84', '#D6CCB8'][k % 3], q[0], 0.06, q[1], g); d.scale.y = 0.55; });
+    [[-2.4, -1.8], [-1.9, -1.9], [2.3, -1.85]].forEach((q) => { for (let k = 0; k < 5; k++) CY(0.012, 0.018, 0.4 + (k % 3) * 0.12, '#9DAF5C', q[0] + (k % 3 - 1) * 0.08, 0.04, q[1] + (k > 2 ? 0.08 : 0), g, 3); });
+    const bois = CY(0.09, 0.11, 1.5, '#9C8466', 1.0, 0.1, -0.9, g, 6); bois.rotation.z = PI / 2; bois.rotation.y = 0.4; }
+  function transat(g) { const c = '#2F4B7C';
+    [[-0.28, 0], [0.28, 0]].forEach((q) => { RD([q[0], 0, -0.55], [q[0], 0.75, -0.75], 0.035, WOOD, g); RD([q[0], 0, 0.55], [q[0], 0.35, -0.2], 0.035, WOOD, g); RD([q[0], 0.35, -0.2], [q[0], 0.3, 0.6], 0.035, WOOD, g); });
+    for (let k = 0; k < 5; k++) { const s2 = B(0.52, 0.02, 0.2, k % 2 ? WHITE : c, 0, 0.36 + k * 0.085, -0.25 - k * 0.1, g); s2.rotation.x = -0.75; }
+    for (let k = 0; k < 4; k++) B(0.52, 0.02, 0.2, k % 2 ? WHITE : c, 0, 0.33, 0.05 + k * 0.17, g); }
+  function parasolPlage(g) { CY(0.025, 0.03, 2.1, '#E8E2D4', 0, 0, 0, g, 6); stripes(g, 1.05, 0.38, 12, '#E3A73C', WHITE, 1.95); mesh(LG.knob, '#E8E2D4', 0, 2.36, 0, g);
+    const t = B(1.2, 0.02, 0.7, '#7FB5C9', 0.4, 0.02, 0.55, g); t.rotation.y = 0.3; B(0.5, 0.02, 0.7, WHITE, -0.1, 0.03, 0.4, g).rotation.y = 0.3; }
+  function cabinePlage(g) { const c = '#2F4B7C'; for (let k = 0; k < 6; k++) B(0.2, 1.7, 1.2, k % 2 ? WHITE : c, -0.5 + k * 0.2, 0.1, 0, g); B(1.25, 0.1, 1.25, WOOD, 0, 0, 0, g);
+    const r = new THREE.Mesh(gk('cabR', () => new THREE.ConeGeometry(0.95, 0.55, 4, 1)), new THREE.MeshLambertMaterial({ color: '#C9573F' })); r.position.set(0, 2.08, 0); r.rotation.y = PI / 4; r.castShadow = true; g.add(r); B(0.5, 1.2, 0.03, '#E8DCC0', 0, 0.3, 0.61, g); SP(0.04, GOLD, 0.18, 0.95, 0.63, g, 0); }
+  function chateauSable(g) { const S1 = '#E6CF97', S2 = '#D9BE80'; CY(0.55, 0.65, 0.12, S2, 0, 0, 0, g, 14); B(0.6, 0.35, 0.6, S1, 0, 0.12, 0, g);
+    [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]].forEach((q) => { CY(0.12, 0.14, 0.5, S1, q[0], 0.12, q[1], g, 8); CY(0.13, 0.13, 0.06, S2, q[0], 0.62, q[1], g, 8); }); CY(0.16, 0.18, 0.55, S1, 0, 0.47, 0, g, 8); CY(0.005, 0.005, 0.3, '#5A3B26', 0, 1.02, 0, g, 3); B(0.16, 0.1, 0.01, '#C9573F', 0.08, 1.24, 0, g);
+    CY(0.12, 0.09, 0.16, '#E3A73C', 0.62, 0, 0.3, g, 8); RD([0.55, 0.05, -0.4], [0.75, 0.25, -0.55], 0.03, '#D9283B', g); }
   function ponton(g, x, z, len) { for (let k = 0; k < Math.round(len / 0.28); k++) B(0.9, 0.06, 0.24, k % 2 ? LWOOD : WOOD, x, 0.16, z - k * 0.28, g); [[-0.42, 0], [0.42, 0], [-0.42, -len + 0.2], [0.42, -len + 0.2]].forEach((q) => CY(0.05, 0.05, 0.3, '#5A3B26', x + q[0], -0.05, z + q[1], g, 6)); }
   function etang(g) { etangCore(g, 0, 5.0, 3.2); ponton(g, 1.6, 3.6, 1.6); }
   function rowboat(p, c) { const h = SP(0.5, c, 0, 0.12, 0, p, 1); h.scale.set(0.62, 0.32, 1.35); const h2 = SP(0.5, WHITE, 0, 0.1, 0, p, 1); h2.scale.set(0.64, 0.18, 1.37); B(0.56, 0.04, 0.16, LWOOD, 0, 0.2, 0.05, p);
@@ -3427,6 +3463,11 @@ const CATALOGUE = (() => {
     // l'étang et le parc (Eugénie, 22/11/2026)
     it('etang', 'quais', 'Étang aux nénuphars', '🪷', 1400, 30, [6, 4], 4, etang),
     it('etang_barques', 'quais', 'Étang et location de barques (rapporte des écus)', '🛶', 2600, 40, [6, 4], 7, etangBarques),
+    Object.assign(it('plage', 'quais', 'Petite plage de rivière (se colle à la rive)', '🏖️', 600, 25, [3, 2], 6, plage), { flat: true, solid: false }),
+    it('transat', 'quais', 'Transat rayé', '🪑', 80, 3, [1, 1], 6, transat),
+    it('parasol_plage', 'quais', 'Parasol de plage et serviette', '⛱️', 110, 4, [1, 1], 6, parasolPlage),
+    it('cabine_plage', 'quais', 'Cabine de bain rayée', '🛖', 260, 7, [1, 1], 7, cabinePlage),
+    it('chateau_sable', 'quais', 'Château de sable', '🏰', 60, 3, [1, 1], 6, chateauSable),
     it('sous_bois', 'parc', 'Coin aux champignons', '🍄', 320, 6, [2, 2], 5, sousBois),
     it('table_pique', 'parc', 'Table de pique-nique', '🧺', 120, 3, [1, 1], 2, tablePique),
     it('fontaine_boire', 'parc', 'Fontaine à boire', '🚰', 90, 2, [1, 1], 2, fontaineBoire),
@@ -3877,7 +3918,12 @@ const SERV = [[60, 'market', 'un marché'], [150, 'mairie', 'une mairie'], [400,
 const HOUSE_T = { // logements de village uniquement. Plus un logement est grand : plus cher par habitant, mais plus d'habitants par minute de maçon et par mètre carré.
   maisonnette: { n: 'Maisonnette', ic: '🛖', cap: 12, c: 60, fp: [4, 4], t: 2, lvl: 1, fb: ['s', 3.6, 3.6], glb: 1 },
   maison_a: { n: 'Maison de village', ic: '🏡', cap: 24, c: 150, fp: [6, 6], t: 3.6, lvl: 1, fb: ['a'] },
+  chaumiere: { n: 'Chaumière normande', ic: '🛖', cap: 20, c: 130, fp: [6, 6], t: 3.2, lvl: 3, fb: ['s', 5.6, 5.6], glb: 1 },
+  maison_bretonne: { n: 'Maison bretonne', ic: '⚓', cap: 26, c: 200, fp: [6, 6], t: 3.8, lvl: 4, fb: ['s', 5.6, 5.6], glb: 1 },
   maison_b: { n: 'Grande maison', ic: '🏠', cap: 30, c: 280, fp: [6, 6], t: 4.2, lvl: 6, fb: ['b'] },
+  maison_provencale: { n: 'Mas provençal', ic: '🌿', cap: 30, c: 300, fp: [6, 6], t: 4.3, lvl: 8, fb: ['s', 5.6, 5.6], glb: 1 },
+  maison_basque: { n: 'Maison basque', ic: '🌶️', cap: 32, c: 330, fp: [6, 6], t: 4.4, lvl: 12, fb: ['s', 5.6, 5.6], glb: 1 },
+  maison_alsacienne: { n: 'Maison alsacienne', ic: '🥨', cap: 34, c: 380, fp: [6, 6], t: 4.6, lvl: 16, fb: ['s', 5.6, 5.6], glb: 1 },
   maison_colombages: { n: 'Maison à colombages', ic: '🏚️', cap: 34, c: 360, fp: [6, 6], t: 4.5, lvl: 10, fb: ['s', 5.6, 5.6], glb: 1 },
   maison_ville: { n: 'Maison de bourg', ic: '🏘️', cap: 40, c: 480, fp: [6, 6], t: 5.1, lvl: 14, fb: ['s', 5.6, 5.6], glb: 1 },
   longere: { n: 'Longère', ic: '🏡', cap: 60, c: 800, fp: [12, 6], t: 7.4, lvl: 18, fb: ['s', 11.6, 5.6], glb: 1 },
@@ -4001,7 +4047,7 @@ function rebuildCity() {
   cityObjs.forEach((g) => { if (g) scene.remove(g); }); cityObjs.length = 0; HLABELS.forEach((l) => setLabel(l, '', ''));
   for (let k = GLB.length - 1; k >= 0; k--) if (!GLB[k].g.parent) GLB.splice(k, 1);
   for (let k = rects.length - 1; k >= 0; k--) if (rects[k].city) rects.splice(k, 1);
-  S.city.items.forEach((it, i) => { cityObjs[i] = it.t === 'h' ? houseGroup(it, i) : decoGroup(it, i); const T = it.t === 'h' ? null : DECOS[it.k]; if (it.t === 'h' || (T && (T.fp[0] > 1 || T.fp[1] > 1 || T.solid !== false))) rects.push(itemCol(it)); });
+  S.city.items.forEach((it, i) => { cityObjs[i] = it.t === 'h' ? houseGroup(it, i) : decoGroup(it, i); const T = it.t === 'h' ? null : DECOS[it.k]; if (it.t === 'h' || (T && !T.flat && (T.fp[0] > 1 || T.fp[1] > 1 || T.solid !== false))) rects.push(itemCol(it)); /* la plage se traverse et l'on y pose des choses */ });
   grid = null; drawRoads(); links = null; loadNear();
 }
 let cityReady = false;
@@ -4153,16 +4199,18 @@ function plFree() { const [w, d] = plSize(PLC.r), s = PLC; let saved = null;
   if (s.t === 'mi' && s.col) s.col[0] += 5000;
   const ok = areaFree(PLC.x, PLC.z, w, d, true) && !(s.k === 'parking' && Math.abs(PLC.z) > parkZ(s.r) + 0.5) && !offQuai(s); /* le parking touche la grand-rue, la guinguette les quais */
   if (saved) MOV[s.k].cols.forEach((e, i) => { e.c[0] = saved[i][0]; }); if (s.t === 'mi' && s.col) s.col[0] -= 5000; return ok; }
-function offQuai(s) { const k = s.t === 'd' ? s.k : s.t === 'mi' && S.city.items[s.i] ? S.city.items[s.i].k : null, B2 = k && BIZ[k]; return !!(B2 && B2.quai && (quartierAt(s.x, s.z) || {}).id !== 'quais' && !nearPond(s.x, s.z)); }
+function offQuai(s) { const k = s.t === 'd' ? s.k : s.t === 'mi' && S.city.items[s.i] ? S.city.items[s.i].k : null, B2 = k && BIZ[k]; if (k === 'pecheur') return !pecheWater(s.x, s.z); if (k === 'plage') return !!s.far || Math.abs(s.z) < 4 || PONTS.some((p) => Math.abs(s.z - p) < 4.5); return !!(B2 && B2.quai && (quartierAt(s.x, s.z) || {}).id !== 'quais' && !nearPond(s.x, s.z)); }
 function showPlace() {
-  const s = PLC, [w, d] = plSize(s.r); s.x = snapC(s.x, w); s.z = snapC(s.z, d); if (s.k === 'parking' && (s.t === 'p' || s.t === 'mp')) s.z = s.z < 0 ? -parkZ(s.r) : parkZ(s.r); /* le parking se colle toujours à la grand-rue, même tourné */
+  const s = PLC; { const bk = s.t === 'd' ? s.k : s.t === 'mi' && S.city.items[s.i] ? S.city.items[s.i].k : null; s.beach = bk === 'plage';
+    if (s.beach) { const west = s.x < RMID; s.r = west ? Math.PI / 2 : Math.PI * 1.5; const w2 = plSize(s.r)[0], nx = west ? RIVER.x0 - 0.45 - w2 / 2 : RIVER.x1 + 0.45 + w2 / 2; s.far = Math.abs(nx - s.x) > 8; s.x = nx; } } /* la plage se colle à la rive la plus proche, face à l'eau */
+  const [w, d] = plSize(s.r); if (!s.beach) s.x = snapC(s.x, w); s.z = snapC(s.z, d); if (s.k === 'parking' && (s.t === 'p' || s.t === 'mp')) s.z = s.z < 0 ? -parkZ(s.r) : parkZ(s.r); /* le parking se colle toujours à la grand-rue, même tourné */
   if (s.t === 'h' || s.t === 'd') { const gk = s.t + (s.m || s.k) + s.r; if (s.g && s.gk === gk) { s.g.position.set(s.x, groundY(s.x, s.z), s.z); } else { if (s.g) dropGhost(s.g); s.g = s.t === 'h' ? houseGroup({ t: 'h', m: s.m, x: s.x, z: s.z, r: s.r }, -1) : decoGroup({ t: 'd', k: s.k, x: s.x, z: s.z, r: s.r }, -1); s.g.userData.kind = 'ghost'; s.gk = gk; loadNear(); } }
   if (s.t === 'p' || s.t === 'mp') { const M = MOV[s.k]; M.placed = true; moveTo(M, s.x, s.z, s.r); }
   if (s.t === 'mi') { s.g.position.set(s.x, groundY(s.x, s.z), s.z); s.g.rotation.y = s.r; }
   const ok = plFree(), cost = plCost(); ghostBox.visible = false;
   $('placebar').hidden = false; $('selbar').hidden = true;
   const nm = s.t === 'h' ? HOUSE_T[s.m].n : s.t === 'd' ? DECOS[s.k].n : s.t === 'mi' ? (S.city.items[s.i].t === 'h' ? HOUSE_T[S.city.items[s.i].m].n : DECOS[S.city.items[s.i].k].n) : MOV[s.k].n;
-  $('pl-t').textContent = nm + (ok ? ' · touche le sol pour déplacer' : s.k === 'parking' && Math.abs(s.z) > parkZ(s.r) + 0.5 ? ' · à poser le long de la grand-rue' : offQuai(s) ? ' · à poser sur les quais ou au bord d’un étang' : !landOwned(s.x, s.z) ? ' · terrain pas encore acheté, touche ailleurs' : ' · place occupée, touche ailleurs'); $('pl-ok').disabled = !ok || S.coins < cost; rich($('pl-ok'), cost ? 'Poser · ' + cost + ' ' + C : 'Poser ici'); $('pl-rot').disabled = (s.t === 'p' || s.t === 'mp') && !MOV[s.k].rot;
+  $('pl-t').textContent = nm + (ok ? ' · touche le sol pour déplacer' : s.k === 'parking' && Math.abs(s.z) > parkZ(s.r) + 0.5 ? ' · à poser le long de la grand-rue' : offQuai(s) ? (s.beach ? ' · à poser contre la rivière, loin des ponts' : ' · à poser sur les quais ou au bord d’un étang') : !landOwned(s.x, s.z) ? ' · terrain pas encore acheté, touche ailleurs' : ' · place occupée, touche ailleurs'); $('pl-ok').disabled = !ok || S.coins < cost; rich($('pl-ok'), cost ? 'Poser · ' + cost + ' ' + C : 'Poser ici'); $('pl-rot').disabled = ((s.t === 'p' || s.t === 'mp') && !MOV[s.k].rot) || !!s.beach;
 }
 function cancelPlace() { const s = PLC; if (!s) return; if (s.g && (s.t === 'h' || s.t === 'd')) dropGhost(s.g);
   if (s.t === 'p') { MOV[s.k].placed = false; moveTo(MOV[s.k], MOV[s.k].x, MOV[s.k].z, 0); }
@@ -4312,14 +4360,29 @@ function tickPiles(t) { PILES.forEach((P, i) => { const v = Math.floor(P.f() || 
 
 /* ================= visiter le village : la caméra descend à hauteur d'homme et suit les rues, d'une maison à l'autre ================= */
 const VISIT = { on: false, cam: new THREE.PerspectiveCamera(60, 1, 0.15, 230), stops: [], k: 0, path: [], pos: new THREE.Vector3(), yaw: 0, pause: 0 };
-function visitStops() { const L = [[MOV.shop.x, MOV.shop.z]]; cityObjs.forEach((g) => { if (g && g.userData.kind === 'cityhouse') L.push([g.position.x, g.position.z]); }); PROD_KEYS.forEach((k) => { const M = MOV[k]; if (M.placed && k !== 'shop' && k !== 'champ') L.push([M.x, M.z]); });
-  const out = [L.shift()]; while (L.length) { const c = out[out.length - 1]; let bi = 0, bd = 1e9; L.forEach((q, i) => { const d = Math.hypot(q[0] - c[0], q[1] - c[1]); if (d < bd) { bd = d; bi = i; } }); out.push(L.splice(bi, 1)[0]); } if (out.length > 10) { const k = out.length / 10; return Array.from({ length: 10 }, (_, i) => out[Math.floor(i * k)]); } return out; } /* un tour d'une dizaine d'arrêts, puis retour à la vue du dessus */
-function visitLeg() { const V = VISIT, s = V.stops[V.k % V.stops.length]; let p = []; try { p = roadPath(V.pos.x, V.pos.z, s[0], s[1]) || []; } catch (e) { p = []; } if (p.length) p.pop(); V.path = p; if (!p.length) V.pause = 2.6; }
-function startVisit() { const V = VISIT; if (V.on || BUILD || !S.started) return; S.visited = (S.visited || 0) + 1; dirty = true; V.stops = visitStops(); V.k = 0; V.path = []; V.pos.set(STN.shop[0] + 3.2, 0, STN.shop[1] + 4.6); V.yaw = Math.atan2(MOV.shop.x - V.pos.x, MOV.shop.z - V.pos.z); V.pause = 2.6; V.on = true; P.goal = null; document.body.classList.add('visiting'); }
+// chaque arrêt : la maison à regarder (t) et, devant elle, un point de vue dégagé dans la rue (v) ; la visite va de point de vue en point de vue (Romain, 22/11/2026 : « éviter de rester planté devant un mur »)
+function visitSpot(x, z, h) { let best = null, bs = 1e9; const DEC = S.city.items.filter((it) => it.t === 'd' && Math.hypot(it.x - x, it.z - z) < h + 10); /* les arbres et décors posés gênent la vue aussi */
+  for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, sx = Math.sin(a), sz = Math.cos(a); for (const d of [h + 4, h + 6, h + 8.5]) { const px = x + sx * d, pz = z + sz * d;
+    if (px < BX0 + 1 || px > BX1 - 1 || pz < BZ0 + 1 || pz > BZ1 - 1 || blocked(px, pz, 0.6) || DEC.some((it) => Math.hypot(it.x - px, it.z - pz) < 1.2) || (px > RIVER.x0 - 1 && px < RIVER.x1 + 1)) continue;
+    let los = true; for (let t = 0.3; t < d - h - 0.2; t += 0.3) { const qx = px - sx * t, qz = pz - sz * t; if (blocked(qx, qz, 0.1) || DEC.some((it) => Math.hypot(it.x - qx, it.z - qz) < 0.9)) { los = false; break; } } if (!los) continue;
+    const sc = (isRoad(px, pz) ? 0 : 2.5) + Math.abs(d - h - 6) * 0.25; if (sc < bs) { bs = sc; best = [px, pz]; } } } return best; }
+function visitStops() { const L = [[MOV.shop.x, MOV.shop.z, 3.5]]; cityObjs.forEach((g, i) => { if (g && g.userData.kind === 'cityhouse' && S.city.items[i]) { const f = itemFp(S.city.items[i]); L.push([g.position.x, g.position.z, Math.max(f[0], f[1]) / 2]); } }); PROD_KEYS.forEach((k) => { const M = MOV[k]; if (M.placed && k !== 'shop' && k !== 'champ') L.push([M.x, M.z, 3.5]); });
+  const out = [L.shift()]; while (L.length) { const c = out[out.length - 1]; let bi = 0, bd = 1e9; L.forEach((q, i) => { const d = Math.hypot(q[0] - c[0], q[1] - c[1]); if (d < bd) { bd = d; bi = i; } }); out.push(L.splice(bi, 1)[0]); }
+  const pick = out.length > 14 ? Array.from({ length: 14 }, (_, i) => out[Math.floor(i * out.length / 14)]) : out;
+  return pick.map((q) => ({ t: [q[0], q[1]], v: visitSpot(q[0], q[1], q[2]) })).filter((s) => s.v).slice(0, 10); } /* un tour d'une dizaine d'arrêts, puis retour à la vue du dessus */
+function visitLeg() { const V = VISIT; for (let guard = 0; guard < 12 && V.k < V.stops.length; guard++) { const s = V.stops[V.k]; let p = []; try { p = roadPath(V.pos.x, V.pos.z, s.v[0], s.v[1]) || []; } catch (e) { p = []; }
+    if (p.length || Math.hypot(s.v[0] - V.pos.x, s.v[1] - V.pos.z) < 1) { V.path = p; V.chk = { t: 0, x: V.pos.x, z: V.pos.z }; V.stuck = 0; return true; } V.k++; } /* pas de chemin : on passe à l'arrêt suivant, sans attendre */
+  V.path = []; return false; }
+function startVisit() { const V = VISIT; if (V.on || BUILD || !S.started) return; S.visited = (S.visited || 0) + 1; dirty = true; V.stops = visitStops(); V.k = 0; V.path = []; V.pos.set(STN.shop[0] + 3.2, 0, STN.shop[1] + 4.6); { const q = pushOut(V.pos.x, V.pos.z); V.pos.x = q[0]; V.pos.z = q[1]; } V.yaw = Math.atan2(MOV.shop.x - V.pos.x, MOV.shop.z - V.pos.z); V.pause = 2.6; if (V.stops.length) V.stops[0].v = [V.pos.x, V.pos.z]; V.on = true; P.goal = null; document.body.classList.add('visiting'); }
 function endVisit(build) { const V = VISIT; if (!V.on) return; V.on = false; villagers.forEach((g) => { g.visible = true; }); document.body.classList.remove('visiting'); target.set(V.pos.x, 0, V.pos.z); placeCam(); if (build) openBuild(); }
-function tickVisit(dt) { const V = VISIT; if (!V.on) return; const s = V.stops[V.k % V.stops.length]; let want = V.yaw, stop = V.pause > 0;
-  if (stop) { V.pause -= dt; want = Math.atan2(s[0] - V.pos.x, s[1] - V.pos.z); if (V.pause <= 0) { V.k++; if (V.k >= V.stops.length) { toast('👀 Fin de la visite', 'Merci d\'être passé !'); return endVisit(false); } visitLeg(); } }
-  else { const w = V.path[0]; if (!w || Math.hypot(s[0] - V.pos.x, s[1] - V.pos.z) < 8.5) { V.pause = 2.8; V.path = []; } else { const dx = w[0] - V.pos.x, dz = w[1] - V.pos.z, d = Math.hypot(dx, dz); if (d < 0.4) V.path.shift(); else { const st = Math.min(d, 3.2 * dt); V.pos.x += dx / d * st; V.pos.z += dz / d * st; { const q = pushOut(V.pos.x, V.pos.z); V.pos.x = q[0]; V.pos.z = q[1]; } /* jamais dans un mur */ want = Math.atan2(dx, dz); } } }
+function tickVisit(dt) { const V = VISIT; if (!V.on) return; const fin = () => { toast('👀 Fin de la visite', 'Merci d\'être passé !'); endVisit(false); };
+  if (V.k >= V.stops.length) return fin(); const s = V.stops[V.k]; let want = V.yaw, stop = V.pause > 0;
+  if (stop) { V.pause -= dt; want = Math.atan2(s.t[0] - V.pos.x, s.t[1] - V.pos.z); if (V.pause <= 0) { V.k++; if (V.k >= V.stops.length || !visitLeg()) return fin(); } }
+  else { const w = V.path[0]; if (!w || Math.hypot(s.v[0] - V.pos.x, s.v[1] - V.pos.z) < 0.8) { V.pause = 2.4; V.path = []; }
+    else { const dx = w[0] - V.pos.x, dz = w[1] - V.pos.z, d = Math.hypot(dx, dz); if (d < 0.45) V.path.shift(); else { const st = Math.min(d, 3.2 * dt); V.pos.x += dx / d * st; V.pos.z += dz / d * st; { const q = pushOut(V.pos.x, V.pos.z); V.pos.x = q[0]; V.pos.z = q[1]; } /* jamais dans un mur */
+        const la = V.path[Math.min(2, V.path.length - 1)]; want = Math.atan2(la[0] - V.pos.x, la[1] - V.pos.z); } /* on regarde un peu plus loin sur le chemin : les virages se prennent en douceur */
+      const C = V.chk || (V.chk = { t: 0, x: V.pos.x, z: V.pos.z }); C.t += dt; if (C.t > 1.0) { const m = Math.hypot(V.pos.x - C.x, V.pos.z - C.z); C.t = 0; C.x = V.pos.x; C.z = V.pos.z;
+        if (m < 0.4) { V.stuck = (V.stuck || 0) + 1; if (V.stuck >= 2) { V.k++; if (V.k >= V.stops.length || !visitLeg()) return fin(); } else { const p = roadPath(V.pos.x, V.pos.z, s.v[0], s.v[1]) || []; V.path = p; } } else V.stuck = 0; } } } /* coincé ? on recalcule le chemin, puis on passe à l'arrêt suivant */
   let da = want - V.yaw; while (da > Math.PI) da -= 6.2832; while (da < -Math.PI) da += 6.2832; V.yaw += da * Math.min(1, dt * 1.7);
   const gy = groundY(V.pos.x, V.pos.z), c = V.cam; c.aspect = window.innerWidth / window.innerHeight; c.fov = c.aspect < 0.8 ? 74 : 58; c.updateProjectionMatrix();
   V.lookY = (V.lookY || 2) + ((stop ? 3.2 : 2.1) - (V.lookY || 2)) * Math.min(1, dt * 1.5);
@@ -4918,7 +4981,7 @@ if (location.hash === "#debug") window.__farm = { farmS, farmStart, collectFarm,
    et la première victoire offre un cadeau. */
 const MG = {
   petanque: { n: 'La pétanque', ic: '🎯', deco: 'petanque', dn: 'un terrain de pétanque', gift: 'trophee_petanque', k: 1,
-    how: 'Glisse le doigt vers le haut puis lâche : plus le geste est long, plus la boule va loin. Le rond blanc montre où elle tombe, elle roule encore un peu. Trois boules chacun.' },
+    how: 'Une vraie partie en 13 points, trois boules chacun. Touche le sol là où ta boule doit s’arrêter, puis arrête l’aiguille dans le vert. Le gagnant de la mène lance le cochonnet.' },
   chamboule: { n: 'Le chamboule-tout', ic: '🥫', deco: 'chamboule', dn: 'un chamboule-tout', gift: 'ours_peluche', k: 1.2,
     how: 'Pose le doigt pour viser : le viseur tremble un peu. Lâche quand il est sur les boîtes. Trois balles chacun : celui qui en fait tomber le plus gagne.' },
   peche: { n: 'La pêche', ic: '🎣', deco: 'pecheur', dn: 'un pêcheur à la ligne', gift: 'carpe_doree', k: 0.6,
@@ -4932,6 +4995,12 @@ const mgOwned = (id) => (S.city ? S.city.items.filter((it) => it.t === 'd' && it
 function mgFoe(it) { const Q = quartierAt(it.x, it.z); let id = Q && NPC[Q.id] ? Q.id : null;
   if (!id) { let bd = 1e9; Object.keys(NPC).forEach((k) => { const g = NPCG[k]; if (!g) return; const d = Math.hypot(g.position.x - it.x, g.position.z - it.z); if (d < bd) { bd = d; id = k; } }); }
   if (!id) id = 'bourg'; const N = NPC[id]; return { id, N, name: N.who.split(',')[0], qn: Q && typeof qName === 'function' ? qName(Q) : '' }; }
+// l'eau où pêcher près d'un point : la rivière (hors des ponts) ou un étang posé, à moins de 6 m
+function pecheWater(x, z) { let best = null; const dr = Math.abs(x - RMID) - RW / 2;
+  if (dr < 6 && dr > -0.6 && Math.abs(z) > 4.5 && !PONTS.some((p) => Math.abs(z - p) < 3)) best = { k: 'river', d0: Math.max(0.3, dr), th: (x > RMID ? -1 : 1) * Math.PI / 2, wy: WY, span: RW };
+  (S.city ? S.city.items : []).forEach((it) => { if (it.t !== 'd' || PONDS.indexOf(it.k) < 0) return; const x0 = it.k === 'etang' ? 0 : -0.8, rr = (it.k === 'etang' ? 3.2 : 2.9) * 0.85, r = it.r || 0, cx = it.x + x0 * Math.cos(r), cz = it.z - x0 * Math.sin(r), D = Math.hypot(cx - x, cz - z), d0 = D - rr;
+    if (d0 < 6 && (!best || d0 < best.d0)) best = { k: 'pond', d0: Math.max(0.3, d0), D: Math.max(D, rr + 0.3), r: rr, th: Math.atan2(cx - x, cz - z), wy: groundY(cx, cz) + 0.05 }; });
+  return best; }
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
 
 /* ---------------- la vue à la première personne, commune à tous les jeux ---------------- */
@@ -4939,7 +5008,7 @@ const FPFILL = new THREE.HemisphereLight('#FFF4DC', '#5E7F3A', 0.55); // une lum
 const FPV = { on: false, cam: new THREE.PerspectiveCamera(58, 1, 0.05, 260), grp: null, hid: null, intro: 1, from: null, to: null };
 let MGR = null;
 const fpEl = document.createElement('div'); fpEl.id = 'fpg'; fpEl.hidden = true;
-fpEl.innerHTML = '<div class="fp-top"><b id="fp-t"></b><span id="fp-sc"></span><button type="button" class="btn ghost" id="fp-x">Quitter</button></div><div id="fp-msg"></div><div id="fp-aim" hidden></div><div id="fp-h"></div>'
+fpEl.innerHTML = '<div class="fp-top"><b id="fp-t"></b><span id="fp-sc"></span><button type="button" class="btn ghost" id="fp-x">Quitter</button></div><div id="fp-msg"></div><div id="fp-aim" hidden></div><div id="fp-gauge" hidden><i></i></div><div id="fp-mode" hidden><button type="button" class="btn" data-m="p">🎯 Pointer</button><button type="button" class="btn" data-m="t">💥 Tirer</button></div><div id="fp-h"></div>'
   + '<div id="fp-end" hidden><b id="fp-r"></b><p id="fp-rs"></p><button type="button" class="btn gold" id="fp-ok">Revenir au village</button></div>';
 document.body.appendChild(fpEl);
 const fpRay = new THREE.Raycaster(), fpV2 = new THREE.Vector2();
@@ -4967,6 +5036,7 @@ window.addEventListener('pointermove', (e) => { if (!fpDown || !MGR) return; fpD
 window.addEventListener('pointerup', (e) => { if (!fpDown || !MGR) return; const d = fpDown; fpDown = null; if (MGR.up) MGR.up(e.clientX, e.clientY, d); });
 window.addEventListener('pointercancel', () => { fpDown = null; if (MGR && MGR.cancel) MGR.cancel(); });
 $('fp-x').addEventListener('click', () => fpClose());
+$('fp-mode').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && MGR && MGR.mode) MGR.mode(b.dataset.m); });
 $('fp-ok').addEventListener('click', () => fpClose());
 
 function mgBuy(id) { const G = MG[id], D = DECOS[G.deco]; if (!D) return; closeSheet();
@@ -4975,13 +5045,14 @@ function mgBuy(id) { const G = MG[id], D = DECOS[G.deco]; if (!D) return; closeS
 function mgOpen(id, it) { if (!S.started || FPV.on || VISIT.on || BUILD) return; closeSheet(); const G = MG[id]; if (!G) return;
   if (!it) { const own = mgOwned(id); if (!own.length) return mgBuy(id); const px = player.position.x, pz = player.position.z; it = own.reduce((b, o) => (!b || Math.hypot(o.x - px, o.z - pz) < Math.hypot(b.x - px, b.z - pz) ? o : b), null); }
   const left = mgLeft(id); if (left > 0) return toast(G.ic + ' ' + G.n, 'Encore ' + Math.ceil(left / 60000) + ' min avant la prochaine partie.');
+  const water = id === 'peche' ? pecheWater(it.x, it.z) : null; if (id === 'peche' && !water) return toast('🎣 Trop loin de l’eau', 'Ton pêcheur doit être au bord de la rivière ou d’un étang. Déplace-le dans Aménager, puis reviens pêcher.');
   const foe = mgFoe(it), grp = new THREE.Group(); grp.position.set(it.x, groundY(it.x, it.z), it.z); grp.rotation.y = it.r || 0; grp.userData.dyn = true; scene.add(grp); grp.updateMatrixWorld(true);
   FPV.grp = grp; FPV.on = true; FPV.hid = null; scene.add(FPV.cam); scene.add(FPFILL);
   // le vrai habitant, le boulanger et les passants trop proches s'effacent : c'est leur double qui joue
   FPV.off = []; const off = (o) => { if (o && o.visible) { o.visible = false; FPV.off.push(o); } }; off(player); Object.keys(NPCG).forEach((k) => { const g = NPCG[k]; if (k === foe.id || Math.hypot(g.position.x - it.x, g.position.z - it.z) < 12) off(g); });
   villagers.forEach((g) => { if (Math.hypot(g.position.x - it.x, g.position.z - it.z) < 9) off(g); });
   const L = foe.N.look, fig = person(L[0], L[1], L[2], L[3]); fig.scale.setScalar(1.05); grp.add(fig);
-  MGR = { id, it, foe, fig, grp, t: 0, me: 0, him: 0, score: 0, done: false, eye: [0, 1.55, 0], at: [0, 1, 4] };
+  MGR = { id, it, foe, fig, grp, water, t: 0, me: 0, him: 0, score: 0, done: false, eye: [0, 1.55, 0], at: [0, 1, 4] };
   document.body.classList.add('visiting', 'fpgame'); fpEl.hidden = false; $('fp-end').hidden = true; $('fp-aim').hidden = true; $('fp-h').hidden = false;
   $('fp-t').textContent = G.ic + ' ' + G.n; $('fp-h').textContent = G.how; fpMsg('');
   MG_START[id](MGR); fpScore();
@@ -4990,7 +5061,7 @@ function mgOpen(id, it) { if (!S.started || FPV.on || VISIT.on || BUILD) return;
   setTimeout(() => { if (MGR && MGR.hello) fpSay(MGR.hello, 3.5); }, 900); }
 function fpClose() { const R = MGR; if (R && R.cleanup) try { R.cleanup(); } catch (e) {}
   if (FPV.grp) scene.remove(FPV.grp); scene.remove(FPV.cam); scene.remove(FPFILL); if (FPV.hid) FPV.hid.visible = true; FPV.hid = null; (FPV.off || []).forEach((o) => { o.visible = true; }); FPV.off = []; FPV.grp = null; FPV.on = false; MGR = null; fpDown = null;
-  fpEl.hidden = true; document.body.classList.remove('visiting', 'fpgame'); fpMsg(''); dirty = true; }
+  $('fp-gauge').hidden = true; $('fp-mode').hidden = true; fpEl.hidden = true; document.body.classList.remove('visiting', 'fpgame'); fpMsg(''); dirty = true; }
 function mgFinish() { const R = MGR; if (!R || R.done) return; R.done = true; const G = MG[R.id], st = mgS(R.id), win = R.me > R.him, draw = R.me === R.him;
   st.last = Date.now(); st.n++; if (win) st.w++; const sc = Math.max(0, Math.round(R.score)), rec = sc > st.best; if (rec) st.best = sc;
   const v = Math.round(sc * G.k * (1 + (S.pop || 0) / 600) * (win ? 1.5 : 1)); if (v > 0) { led('🎲 Jeux du village', v); S.coins += v; SFX.coin(); } dirty = true;
@@ -4999,7 +5070,7 @@ function mgFinish() { const R = MGR; if (!R || R.done) return; R.done = true; co
   const lines = win ? ['Bien joué ! Vous m’avez eu.', 'Revanche dans cinq minutes, hein ?', 'Je vous laissais gagner. Si, si.'] : draw ? ['Égalité ! On remet ça ?', 'Personne ne perd, personne ne paie l’apéro.'] : ['Ha ! Je vous l’avais dit.', 'Pas mal, pas mal… mais pas assez !', 'Revenez quand vous voulez !'];
   $('fp-r').textContent = win ? '🏆 Tu as battu ' + R.foe.name + ' !' : draw ? '🤝 Égalité avec ' + R.foe.name : '😅 ' + R.foe.name + ' gagne cette fois';
   $('fp-rs').innerHTML = (R.endTxt ? R.endTxt() : 'Toi ' + R.me + ' · ' + R.foe.name + ' ' + R.him) + '<br>+' + fmt(v) + ' écus d’or' + (rec && st.n > 1 ? ' · record !' : '') + gift + '<br><i>« ' + lines[Math.floor(Math.random() * lines.length)] + ' »</i>';
-  $('fp-end').hidden = false; $('fp-h').hidden = true; $('fp-aim').hidden = true; fpMsg(''); }
+  $('fp-end').hidden = false; $('fp-h').hidden = true; $('fp-aim').hidden = true; $('fp-gauge').hidden = true; $('fp-mode').hidden = true; fpMsg(''); }
 function tickMG(dt) { const R = MGR; if (!R || !FPV.on) return; const c = FPV.cam;
   if (FPV.intro < 1) { FPV.intro = Math.min(1, FPV.intro + dt / 1.3); const e = FPV.intro < 0.5 ? 2 * FPV.intro * FPV.intro : 1 - Math.pow(-2 * FPV.intro + 2, 2) / 2; c.position.lerpVectors(FPV.from.p, FPV.to.p, e); c.quaternion.slerpQuaternions(FPV.from.q, FPV.to.q, e); return; }
   const asp = window.innerWidth / window.innerHeight; if (Math.abs(c.aspect - asp) > 0.01) { c.aspect = asp; c.fov = asp < 0.8 ? 72 : 56; c.updateProjectionMatrix(); }
@@ -5007,27 +5078,39 @@ function tickMG(dt) { const R = MGR; if (!R || !FPV.on) return; const c = FPV.ca
 
 /* ---------------- la pétanque ---------------- */
 const MG_START = {};
+/* une vraie partie (Romain, 22/11/2026) : en 13 points, mène après mène, trois boules chacun ; le gagnant de la mène lance le cochonnet.
+   Le lancer : on touche le sol là où la boule doit s'arrêter (ou la boule à chasser, en mode « Tirer »), puis on arrête l'aiguille dans le vert. */
+const PET_GOAL = 13;
 MG_START.petanque = function (R) {
-  const BR = 0.065, CR = 0.035, X0 = -2.72, X1 = 2.72, Z0 = -1.22, Z1 = 1.66, CIR = [-2.0, 0.4], MU = 1.7;
+  const BR = 0.065, CR = 0.035, X0 = -2.72, X1 = 2.72, Z0 = -1.22, Z1 = 1.66, CIR = [-2.0, 0.4], MU = 1.7, CZ = [0.2, 2.3];
   fpDeco(R, (p) => p.radius !== undefined && p.radius <= 0.061 && !p.tube);
   R.eye = [-3.45, 1.6, 0.35]; R.at = [1.0, 0, 0.35]; R.fig.position.set(-2.6, 0, -0.75); R.fig.rotation.y = Math.PI / 2;
-  R.hello = ['Une petite partie ? Je pointe comme un dieu.', 'Tu tires ou tu pointes ?', 'Le cochonnet, c’est moi qui le lance !'][Math.floor(Math.random() * 3)];
+  R.hello = ['Une partie en 13 ? Je lance le cochonnet !', 'Tu tires ou tu pointes ?', 'En 13 points, comme les vrais. Allez !'][Math.floor(Math.random() * 3)];
   const ball = (c, r) => { const m = mesh(new THREE.SphereGeometry(r, 18, 12), c, 0, -5, 0, R.grp); m.castShadow = true; return m; };
-  const co = { x: 0, z: 0.4, vx: 0, vz: 0, r: CR, m: 0.25, me: ball('#E3A73C', CR), co: true };
-  const bodies = [co], left = [3, 3]; let fly = null, phase = 'start', wait = 1.0, aim = null;
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.07, 0.11, 28), new THREE.MeshBasicMaterial({ color: '#FFFDF8', transparent: true, opacity: 0.9, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.visible = false; R.grp.add(ring);
-  const dist = (b) => Math.hypot(b.x - co.x, b.z - co.z);
+  const mk = (c, r) => { const m = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.035, 32), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.95, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.visible = false; R.grp.add(m); return m; };
+  const ring = mk('#F2C14E', 0.13), zone = new THREE.Mesh(new THREE.PlaneGeometry(CZ[1] - CZ[0], Z1 - Z0 - 0.3), new THREE.MeshBasicMaterial({ color: '#FFFDF8', transparent: true, opacity: 0.22, depthWrite: false }));
+  zone.rotation.x = -Math.PI / 2; zone.position.set((CZ[0] + CZ[1]) / 2, 0.03, (Z0 + Z1) / 2); zone.visible = false; R.grp.add(zone);
+  let co = null, bodies = [], left = [3, 3], fly = null, phase = 'start', wait = 1.0, mene = 1, starter = 1, tgt = null, mode = 'p', needle = 0, nt = 0;
+  const dist = (b) => (co ? Math.hypot(b.x - co.x, b.z - co.z) : 99);
   const best = (s) => bodies.filter((b) => b.s === s).reduce((m, b) => Math.min(m, dist(b)), 99);
   const leader = () => { const a = best(0), b = best(1); return a === 99 && b === 99 ? -1 : a < b ? 0 : 1; };
-  R.scoreTxt = () => '⚪ Toi ' + left[0] + ' · 🟤 ' + R.foe.name + ' ' + left[1] + (leader() < 0 ? '' : ' · le point : ' + (leader() === 0 ? 'toi' : R.foe.name));
-  function launch(b, from, to, roll) { b.x = from[0]; b.z = from[2]; b.vx = b.vz = 0; const d = Math.hypot(to[0] - from[0], to[1] - from[2]); fly = { b, from, to, roll, u: 0, T: 0.55 + d * 0.09, h: 0.5 + d * 0.16 }; }
-  function throwBall(s, land, roll) { const b = { x: 0, z: 0, vx: 0, vz: 0, r: BR, m: 1, s, me: ball(s ? '#8A6A4E' : '#B8C0C6', BR) }; bodies.push(b); left[s]--;
-    launch(b, s ? [R.fig.position.x + 0.25, 1.0, R.fig.position.z + 0.15] : [-2.7, 1.0, 0.65], land, roll); SFX.tap && SFX.tap(); }
-  function foeThrow() { const myB = best(0), hisB = best(1); let land, roll;
-    if (myB < 0.22 && myB < hisB && left[1] >= 2 && Math.random() < 0.55) { const tgt = bodies.filter((b) => b.s === 0).reduce((m, b) => (!m || dist(b) < dist(m) ? b : m), null); fpSay('Je tire !', 1.6);
-      const e = 0.11; land = [tgt.x - 0.15 + gauss() * e, tgt.z + gauss() * e]; roll = 1.6; }
-    else { const D = Math.hypot(co.x - CIR[0], co.z - CIR[1]), a = Math.atan2(co.z - CIR[1], co.x - CIR[0]), d = (D - 0.25) / 1.12, e = 0.2; land = [CIR[0] + Math.cos(a) * d + gauss() * e, CIR[1] + Math.sin(a) * d + gauss() * e]; roll = 0.25 + d * 0.12; }
-    land[0] = Math.max(X0 + 0.1, Math.min(X1 - 0.1, land[0])); land[1] = Math.max(Z0 + 0.1, Math.min(Z1 - 0.1, land[1])); throwBall(1, land, roll); }
+  R.scoreTxt = () => 'Toi ' + R.me + ' · ' + R.foe.name + ' ' + R.him + ' (en ' + PET_GOAL + ') · mène ' + mene + ' · ⚪' + left[0] + ' 🟤' + left[1] + (leader() < 0 ? '' : ' · point : ' + (leader() === 0 ? 'toi' : R.foe.name));
+  R.endTxt = () => 'Toi ' + R.me + ' · ' + R.foe.name + ' ' + R.him + ' en ' + (mene) + ' mène' + (mene > 1 ? 's' : '');
+  const hint = (t) => { $('fp-h').textContent = t; };
+  function launch(b, from, to, roll, T) { b.x = from[0]; b.z = from[2]; b.vx = b.vz = 0; const d = Math.hypot(to[0] - from[0], to[1] - from[2]); fly = { b, from, to, roll, u: 0, T: T || 0.55 + d * 0.09, h: T ? 0.35 + d * 0.06 : 0.5 + d * 0.16 }; }
+  const clampC = (p) => [Math.max(X0 + 0.1, Math.min(X1 - 0.1, p[0])), Math.max(Z0 + 0.1, Math.min(Z1 - 0.1, p[1]))];
+  const from = (s) => (s ? [R.fig.position.x + 0.25, 1.0, R.fig.position.z + 0.15] : [-2.7, 1.0, 0.65]);
+  // pointer : la boule touche le sol avant la cible et roule jusqu'à elle ; err = écart (m), lng = trop court (−) ou trop long (+)
+  function pointAt(s, t, err, lng) { const dx = t[0] - CIR[0], dz = t[1] - CIR[1], d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d, rd = 0.3 + 0.08 * d, e = lng * 0.55;
+    const stop = [t[0] + ux * e - uz * err * gauss(), t[1] + uz * e + ux * err * gauss()], land = clampC([stop[0] - ux * rd, stop[1] - uz * rd]);
+    const b = { x: 0, z: 0, vx: 0, vz: 0, r: BR, m: 1, s, me: ball(s ? '#8A6A4E' : '#B8C0C6', BR) }; bodies.push(b); left[s]--; launch(b, from(s), land, rd); SFX.tap && SFX.tap(); }
+  // tirer : la boule vole droit sur la cible et la chasse ; raté = elle tombe à côté
+  function shootAt(s, target, miss) { const a = Math.random() * Math.PI * 2, land = clampC([target.x - 0.06 + Math.cos(a) * miss, target.z + Math.sin(a) * miss]);
+    const b = { x: 0, z: 0, vx: 0, vz: 0, r: BR, m: 1, s, me: ball(s ? '#8A6A4E' : '#B8C0C6', BR) }; bodies.push(b); left[s]--; launch(b, from(s), land, 1.4, 0.5); SFX.tap && SFX.tap(); }
+  function throwCoch(s, t) { co = { x: 0, z: 0, vx: 0, vz: 0, r: CR, m: 0.25, co: true, me: ball('#E3A73C', CR) }; bodies.push(co); const p = clampC([Math.max(CZ[0], Math.min(CZ[1], t[0])), t[1]]); launch(co, from(s), p, 0.12); phase = 'coch-fly'; }
+  function foeThrow() { const myB = best(0), hisB = best(1);
+    if (myB < 0.25 && myB < hisB && left[1] >= 1 && (left[1] >= 2 || myB < 0.12) && Math.random() < 0.5) { const t = bodies.filter((b) => b.s === 0).reduce((m, b) => (!m || dist(b) < dist(m) ? b : m), null); fpSay('Je tire !', 1.6); shootAt(1, t, Math.random() < 0.38 ? 0 : 0.14 + Math.random() * 0.25); }
+    else pointAt(1, [co.x, co.z], 0.26, gauss() * 0.75); }
   function physics(dt) { let moving = false; for (let s = 0; s < 4; s++) { const h = dt / 4;
     bodies.forEach((b) => { const sp = Math.hypot(b.vx, b.vz); if (sp < 0.015) { b.vx = b.vz = 0; return; } moving = true; const ns = Math.max(0, sp - MU * h); b.vx *= ns / sp; b.vz *= ns / sp; b.x += b.vx * h; b.z += b.vz * h;
       if (b.x < X0 + b.r) { b.x = X0 + b.r; b.vx = -b.vx * 0.35; } if (b.x > X1 - b.r) { b.x = X1 - b.r; b.vx = -b.vx * 0.35; } if (b.z < Z0 + b.r) { b.z = Z0 + b.r; b.vz = -b.vz * 0.35; } if (b.z > Z1 - b.r) { b.z = Z1 - b.r; b.vz = -b.vz * 0.35; } });
@@ -5035,27 +5118,39 @@ MG_START.petanque = function (R) {
       const nx = dx / d, nz = dz / d, ov = md - d, ma = a.m, mb = b.m; a.x -= nx * ov * mb / (ma + mb); a.z -= nz * ov * mb / (ma + mb); b.x += nx * ov * ma / (ma + mb); b.z += nz * ov * ma / (ma + mb);
       const rv = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz; if (rv < 0) { const imp = -(1.85) * rv / (1 / ma + 1 / mb); a.vx -= imp / ma * nx; a.vz -= imp / ma * nz; b.vx += imp / mb * nx; b.vz += imp / mb * nz; if (Math.abs(rv) > 0.6) SFX.tap && SFX.tap(); } } }
     bodies.forEach((b) => { if (fly && fly.b === b) return; b.me.position.set(b.x, b.r + 0.02, b.z); b.me.rotation.x += b.vz * dt / b.r; b.me.rotation.z -= b.vx * dt / b.r; }); return moving; }
-  function next() { if (!left[0] && !left[1]) return finish(); let s = bodies.length === 1 ? 0 : best(0) < best(1) ? 1 : 0; if (!left[s]) s = 1 - s;
-    if (s === 0) { phase = 'me'; $('fp-h').textContent = left[0] === 3 ? MG.petanque.how : 'À toi ! ' + (best(1) < best(0) ? R.foe.name + ' tient le point.' : 'Encore une boule.'); }
-    else { phase = 'foe'; wait = 1.1; $('fp-h').textContent = R.foe.name + ' joue…'; } }
-  function finish() { phase = 'end'; ring.visible = false; aim = null; const all = bodies.filter((b) => !b.co).sort((a, b) => dist(a) - dist(b)); if (!all.length) return mgFinish(); const w = all[0].s, other = all.find((b) => b.s !== w), lim = other ? dist(other) : 99; const pts = all.filter((b) => b.s === w && dist(b) < lim).length;
-    if (w === 0) R.me = pts; else R.him = pts; R.score = w === 0 ? 70 + 40 * pts : 30; R.best = Math.round(dist(all.find((b) => b.s === 0) || { x: 9, z: 9 }) * 100);
-    fpMsg(w === 0 ? '🎉 Tu marques ' + pts + ' point' + (pts > 1 ? 's' : '') + ' !' : R.foe.name + ' marque ' + pts + ' point' + (pts > 1 ? 's' : ''), 0); setTimeout(mgFinish, 1600); }
-  R.endTxt = () => (R.me ? 'Tu marques ' + R.me + ' point' + (R.me > 1 ? 's' : '') : R.foe.name + ' marque ' + R.him + ' point' + (R.him > 1 ? 's' : '')) + ' · ta meilleure boule à ' + R.best + ' cm du cochonnet';
-  R.down = (x, y) => { if (phase !== 'me' || fly) return; aim = { x, y, p: 0, a: 0 }; };
-  R.move = (x, y) => { if (!aim) return; const H = window.innerHeight, W = window.innerWidth; aim.p = Math.max(0, Math.min(1, (aim.y - y) / (H * 0.45))); aim.a = Math.max(-1, Math.min(1, (x - aim.x) / (W * 0.4))) * 0.42;
-    const d = 0.7 + aim.p * 4.6; ring.visible = aim.p > 0.03; ring.position.set(CIR[0] + Math.cos(aim.a) * d, 0.04, CIR[1] + Math.sin(aim.a) * d); };
-  R.up = () => { if (!aim) return; const A = aim; aim = null; ring.visible = false; if (A.p < 0.05) return; const d = 0.7 + A.p * 4.6, e = 0.04 + d * 0.025;
-    throwBall(0, [CIR[0] + Math.cos(A.a) * d + gauss() * e, CIR[1] + Math.sin(A.a) * d + gauss() * e], 0.25 + d * 0.12); phase = 'fly'; $('fp-h').textContent = 'La boule roule…'; };
-  R.cancel = () => { aim = null; ring.visible = false; };
-  launch(co, [R.fig.position.x + 0.25, 1.0, R.fig.position.z + 0.15], [0.6 + Math.random() * 1.6, -0.3 + Math.random() * 1.4], 0.12);
-  R.tick = (dt) => { if (fly) { const F = fly; F.u = Math.min(1, F.u + dt / F.T); const u = F.u; F.b.me.position.set(F.from[0] + (F.to[0] - F.from[0]) * u, F.from[1] + (F.b.r + 0.02 - F.from[1]) * u + 4 * F.h * u * (1 - u), F.from[2] + (F.to[1] - F.from[2]) * u);
-      if (u >= 1) { const b = F.b, dx = F.to[0] - F.from[0], dz = F.to[1] - F.from[2], dd = Math.hypot(dx, dz) || 1, v0 = Math.sqrt(2 * MU * F.roll); b.x = F.to[0]; b.z = F.to[1]; b.vx = dx / dd * v0; b.vz = dz / dd * v0; fly = null; fpBurst(b.x, 0.05, b.z, ['#D9C79F', '#C9B282'], 6); if (phase === 'start') phase = 'roll0'; else if (phase !== 'end') phase = 'roll'; } }
+  function myTurn() { phase = 'me'; tgt = null; ring.visible = false; $('fp-mode').hidden = false; R.mode(mode, true); }
+  R.mode = (m, quiet) => { mode = m; [...$('fp-mode').children].forEach((b) => b.classList.toggle('on', b.dataset.m === m)); if (phase !== 'me') return;
+    hint(m === 'p' ? '🎯 Pointer : touche le sol là où ta boule doit s’arrêter.' : '💥 Tirer : touche la boule de ' + R.foe.name + ' à chasser.'); if (!quiet) buzz(8); };
+  function next() { if (!left[0] && !left[1]) return endMene(); let s = bodies.length === 1 ? starter : best(0) < best(1) ? 1 : 0; if (!left[s]) s = 1 - s;
+    if (s === 0) myTurn(); else { phase = 'foe'; wait = 1.1; $('fp-mode').hidden = true; hint(R.foe.name + ' joue…'); } }
+  function endMene() { phase = 'mene'; ring.visible = false; $('fp-mode').hidden = true; const all = bodies.filter((b) => !b.co).sort((a, b) => dist(a) - dist(b)); const w = all[0].s, other = all.find((b) => b.s !== w), lim = other ? dist(other) : 99, pts = all.filter((b) => b.s === w && dist(b) < lim).length;
+    if (w === 0) R.me += pts; else R.him += pts; starter = w; const over = R.me >= PET_GOAL || R.him >= PET_GOAL;
+    fpMsg((w === 0 ? '🎉 Tu marques ' : R.foe.name + ' marque ') + pts + ' point' + (pts > 1 ? 's' : '') + ' · ' + R.me + ' à ' + R.him, over ? 0 : 2.6);
+    if (over) { R.score = 20 + R.me * 6 + (R.me > R.him ? 60 : 0); setTimeout(mgFinish, 1800); return; }
+    wait = 2.8; phase = 'reset'; }
+  function newMene() { bodies.forEach((b) => R.grp.remove(b.me)); bodies = []; co = null; left = [3, 3]; mene++;
+    if (starter === 0) { phase = 'coch'; zone.visible = true; hint('Tu as gagné la mène : touche la zone claire pour lancer le cochonnet.'); } else { phase = 'start'; wait = 1.0; hint(R.foe.name + ' lance le cochonnet…'); } }
+  R.up = (x, y, d) => { if (d.mv > 18 || fly) return;
+    if (phase === 'coch') { const h = fpHitY(x, y, 0.04); if (!h) return; zone.visible = false; throwCoch(0, [h[0] + gauss() * 0.1, h[1] + gauss() * 0.1]); hint('Le cochonnet roule…'); return; }
+    if (phase === 'me') { const h = fpHitY(x, y, 0.04); if (!h) return;
+      if (mode === 't') { const t = bodies.filter((b) => b.s === 1).reduce((m, b) => (!m || Math.hypot(b.x - h[0], b.z - h[1]) < Math.hypot(m.x - h[0], m.z - h[1]) ? b : m), null); if (!t || Math.hypot(t.x - h[0], t.z - h[1]) > 0.45) return hint('Pas de boule ici : touche une boule de ' + R.foe.name + ', ou repasse en 🎯 Pointer.'); tgt = { t, x: t.x, z: t.z }; }
+      else tgt = { x: h[0], z: h[1] };
+      const c = clampC([tgt.x, tgt.z]); tgt.x = c[0]; tgt.z = c[1]; ring.position.set(tgt.x, 0.04, tgt.z); ring.visible = true; phase = 'gauge'; nt = 0; $('fp-mode').hidden = true; $('fp-gauge').hidden = false; hint('Touche quand l’aiguille est dans le vert !'); return; }
+    if (phase === 'gauge') { $('fp-gauge').hidden = true; ring.visible = false; const q = Math.abs(needle); phase = 'fly';
+      if (mode === 't' && tgt.t) shootAt(0, tgt.t, q < 0.28 ? 0 : 0.1 + q * 0.4); else pointAt(0, [tgt.x, tgt.z], 0.02 + q * 0.2, needle);
+      fpMsg(q < 0.28 ? 'Joli geste !' : q < 0.72 ? 'Pas mal…' : 'Oups !', 1.2); hint('La boule roule…'); } };
+  R.cancel = () => {};
+  R.tick = (dt) => { if (phase === 'gauge') { nt += dt; needle = Math.sin(nt * 3.4); $('fp-gauge').firstChild.style.left = (50 + needle * 47) + '%'; }
+    if (fly) { const F = fly; F.u = Math.min(1, F.u + dt / F.T); const u = F.u; F.b.me.position.set(F.from[0] + (F.to[0] - F.from[0]) * u, F.from[1] + (F.b.r + 0.02 - F.from[1]) * u + 4 * F.h * u * (1 - u), F.from[2] + (F.to[1] - F.from[2]) * u);
+      if (u >= 1) { const b = F.b, dx = F.to[0] - F.from[0], dz = F.to[1] - F.from[2], dd = Math.hypot(dx, dz) || 1, v0 = Math.sqrt(2 * MU * F.roll); b.x = F.to[0]; b.z = F.to[1]; b.vx = dx / dd * v0; b.vz = dz / dd * v0; fly = null; fpBurst(b.x, 0.05, b.z, ['#D9C79F', '#C9B282'], 6); if (phase === 'coch-fly') phase = 'roll0'; else if (phase !== 'mene' && phase !== 'reset') phase = 'roll'; } }
     const moving = physics(dt);
-    if (!fly && !moving) { if (phase === 'roll0') { phase = 'wait'; wait = 0.4; fpSay('Allez, à toi de commencer.', 2.5); }
+    if (!fly && !moving) { if (phase === 'roll0') { phase = 'wait'; wait = 0.4; if (starter === 1) fpSay('À toi de commencer… non, à moi !', 2); }
       else if (phase === 'roll') { phase = 'wait'; wait = 0.7; const last = bodies[bodies.length - 1]; if (!last.co) fpMsg((last.s ? R.foe.name + ' : ' : 'Ta boule : ') + Math.round(dist(last) * 100) + ' cm du cochonnet', 2); }
-      else if (phase === 'wait') { wait -= dt; if (wait <= 0) next(); }
+      else if (phase === 'wait') { wait -= dt; if (wait <= 0) { if (bodies.length === 1) { if (starter === 0) myTurn(); else { phase = 'foe'; wait = 0.9; hint(R.foe.name + ' joue…'); } } else next(); } }
+      else if (phase === 'reset') { wait -= dt; if (wait <= 0) newMene(); }
+      else if (phase === 'start') { wait -= dt; if (wait <= 0) throwCoch(1, [CZ[0] + 0.3 + Math.random() * (CZ[1] - CZ[0] - 0.6), Z0 + 0.4 + Math.random() * (Z1 - Z0 - 0.8)]); }
       else if (phase === 'foe') { wait -= dt; if (wait <= 0) { phase = 'fly'; foeThrow(); } } } };
+  hint(R.foe.name + ' lance le cochonnet…');
 };
 
 /* ---------------- le chamboule-tout ---------------- */
@@ -5094,26 +5189,31 @@ MG_START.chamboule = function (R) {
 /* ---------------- la pêche ---------------- */
 MG_START.peche = function (R) {
   fpDeco(R, () => true); // le pêcheur assis laisse la place : c'est l'habitant qui pêche à côté de toi
-  R.eye = [0.55, 1.5, -0.3]; R.at = [0.3, 0, 5]; R.fig.position.set(-1.7, 0, 1.1); R.fig.rotation.y = -0.25;
+  // on pêche dans la vraie eau : la rivière ou un étang tout proche (Romain, 22/11/2026 : plus de faux étang posé sur l'herbe)
+  const W = R.water; R.grp.rotation.y = W.th; R.grp.updateMatrixWorld(true);
+  const gy = (lx, lz) => { const p = fpWorld(lx, 0, lz); return groundY(p.x, p.z) - R.grp.position.y; };
+  const EZ = W.d0 - 1.1, Z1 = W.k === 'river' ? W.d0 + 0.35 : 0, Z2 = W.k === 'river' ? W.d0 + W.span - 0.35 : 0, ZC = W.k === 'river' ? (Z1 + Z2) / 2 : W.D;
+  const HB = W.k === 'river' ? [-1.1, ZC] : [-0.9, W.D + W.r * 0.35], FZ = W.k === 'river' ? W.d0 + W.span + 0.55 : W.D + W.r + 0.7, ey = gy(0.55, EZ), fy = gy(-1.2, FZ); /* l'habitant pêche en face, sur l'autre rive */
+  R.eye = [0.55, ey + 1.5, EZ]; R.at = [-0.35, W.wy - R.grp.position.y + 0.3, ZC + 2.5]; R.fig.position.set(-1.2, fy, FZ); R.fig.rotation.y = Math.PI + 0.2;
   R.hello = ['Le premier qui parle fait fuir les poissons. Bonne chance !', 'Ici, c’est mon coin. Mais je partage.', 'Une minute, et on compare les prises.'][Math.floor(Math.random() * 3)];
-  const WY = 0.03, water = mesh(new THREE.CircleGeometry(5.2, 40), '#4FA6D0', 0, WY, 5.6, R.grp); water.rotation.x = -Math.PI / 2; water.material = new THREE.MeshLambertMaterial({ color: '#4FA6D0', transparent: true, opacity: 0.92, polygonOffset: true, polygonOffsetFactor: -2 }); water.receiveShadow = false;
+  const WY = W.wy - R.grp.position.y + 0.02;
   const bob = () => { const g = new THREE.Group(); const lo = mesh(new THREE.SphereGeometry(0.09, 12, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), '#D9283B', 0, 0, 0, g); lo.castShadow = false; mesh(new THREE.SphereGeometry(0.09, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), '#FFFDF8', 0, 0, 0, g); mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.14, 5), '#2B2535', 0, 0.12, 0, g); R.grp.add(g); return g; };
-  const myBob = bob(), hisBob = bob(); myBob.visible = false; hisBob.position.set(-2.3, WY, 5.2);
-  rodBetween([-1.52, 1.0, 1.25], [-2.0, 2.2, 3.0], 0.025, '#6B4A2E', R.grp);
+  const myBob = bob(), hisBob = bob(); myBob.visible = false; hisBob.position.set(HB[0], WY, HB[1]);
+  const HT = [-1.1, fy + 2.0, FZ + (HB[1] - FZ) * 0.55]; rodBetween([-1.1, fy + 1.0, FZ - 0.15], HT, 0.025, '#6B4A2E', R.grp);
   // la canne du joueur, tenue devant la caméra
   const rod = new THREE.Group(); FPV.cam.add(rod); rodBetween([0.3, -0.42, -0.55], [0.05, 0.28, -2.1], 0.022, '#6B4A2E', rod); const tip = new THREE.Object3D(); tip.position.set(0.05, 0.28, -2.1); rod.add(tip);
   const lineG = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), line = new THREE.Line(lineG, new THREE.LineBasicMaterial({ color: '#2B2535' })); scene.add(line);
-  const line2G = new THREE.BufferGeometry().setFromPoints([fpWorld(-2.0, 2.2, 3.0), fpWorld(-2.3, WY + 0.1, 5.2)]), line2 = new THREE.Line(line2G, new THREE.LineBasicMaterial({ color: '#2B2535' })); scene.add(line2);
+  const line2G = new THREE.BufferGeometry().setFromPoints([fpWorld(HT[0], HT[1], HT[2]), fpWorld(HB[0], WY + 0.1, HB[1])]), line2 = new THREE.Line(line2G, new THREE.LineBasicMaterial({ color: '#2B2535' })); scene.add(line2);
   R.cleanup = () => { FPV.cam.remove(rod); scene.remove(line); scene.remove(line2); };
   const rings = []; function splash(x, z, big) { for (let k = 0; k < (big ? 3 : 1); k++) { const r = new THREE.Mesh(new THREE.RingGeometry(0.06, 0.09, 24), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.8, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.set(x, WY + 0.01, z); R.grp.add(r); rings.push({ r, t: -k * 0.18 }); } }
   const fishName = (cm) => (cm < 30 ? 'Un gardon' : cm < 45 ? 'Une perche' : cm < 65 ? 'Une carpe' : 'Un brochet');
-  const fishes = []; function jump(x, z, toMe, cm) { const f = new THREE.Group(); const b = mesh(new THREE.SphereGeometry(0.1, 10, 8), cm < 45 ? '#9AA9B4' : '#8E9A5A', 0, 0, 0, f); b.scale.set(0.6 + cm / 120, 0.7, 1.6 + cm / 60); mesh(new THREE.ConeGeometry(0.08, 0.12, 4), '#7E8A90', 0, 0, -0.2 - cm / 400, f).rotation.x = -Math.PI / 2; R.grp.add(f); f.position.set(x, WY, z); fishes.push({ f, x, z, tx: toMe ? 0.45 : -1.6, tz: toMe ? 0.3 : 1.4, u: 0 }); }
+  const fishes = []; function jump(x, z, toMe, cm) { const f = new THREE.Group(); const b = mesh(new THREE.SphereGeometry(0.1, 10, 8), cm < 45 ? '#9AA9B4' : '#8E9A5A', 0, 0, 0, f); b.scale.set(0.6 + cm / 120, 0.7, 1.6 + cm / 60); mesh(new THREE.ConeGeometry(0.08, 0.12, 4), '#7E8A90', 0, 0, -0.2 - cm / 400, f).rotation.x = -Math.PI / 2; R.grp.add(f); f.position.set(x, WY, z); fishes.push({ f, x, z, tx: toMe ? 0.6 : -1.2, tz: toMe ? EZ + 0.4 : FZ - 0.2, ty: toMe ? ey + 0.9 : fy + 0.9, u: 0 }); }
   let st = 'idle', w = 0, nib = [], biteT = 0, bx = 0, bz = 0, fly = null, timeLeft = 60, hisT = 5 + Math.random() * 4, hisDip = 0, nmy = 0, nhis = 0, endq = false;
   R.scoreTxt = () => '⏱ ' + Math.ceil(timeLeft) + ' s · toi ' + R.me + ' cm (' + nmy + ') · ' + R.foe.name + ' ' + R.him + ' cm (' + nhis + ')';
   R.endTxt = () => 'Toi ' + R.me + ' cm en ' + nmy + ' prise' + (nmy > 1 ? 's' : '') + ' · ' + R.foe.name + ' ' + R.him + ' cm en ' + nhis;
   function reel(msg) { st = 'idle'; myBob.visible = false; if (msg) fpMsg(msg, 1.8); }
   R.up = (x, y, d) => { if (d.mv > 18 || timeLeft <= 0) return;
-    if (st === 'idle') { const h = fpHitY(x, y, WY); if (!h) return; let [tx, tz] = h; const dc = Math.hypot(tx, tz - 5.6); if (dc > 4.6) { tx *= 4.6 / dc; tz = 5.6 + (tz - 5.6) * 4.6 / dc; } if (tz < 2.2) tz = 2.2;
+    if (st === 'idle') { const h = fpHitY(x, y, WY); if (!h) return; let [tx, tz] = h; if (W.k === 'river') { tx = Math.max(-4.5, Math.min(4.5, tx)); tz = Math.max(Z1, Math.min(Z2, tz)); } else { const rr = W.r - 0.35, dc = Math.hypot(tx, tz - W.D); if (dc > rr) { tx *= rr / dc; tz = W.D + (tz - W.D) * rr / dc; } }
       fly = { from: FPV.grp.worldToLocal(tip.getWorldPosition(new THREE.Vector3())), to: [tx, tz], u: 0 }; st = 'fly'; myBob.visible = true; return; }
     if (st === 'bite') { const rt = R.t - biteT, cm = Math.round(18 + Math.random() * 32 + Math.max(0, 0.85 - rt) * 45); R.me += cm; nmy++; jump(bx, bz, true, cm); splash(bx, bz, true); SFX.coin(); buzz(30); fpMsg('🐟 ' + fishName(cm) + ' de ' + cm + ' cm !', 2); reel(); return; }
     if (st === 'wait') { reel('Trop tôt ! Le poisson a filé.'); } };
@@ -5127,11 +5227,11 @@ MG_START.peche = function (R) {
       else { dip = 0.11 + Math.sin(tt * 34) * 0.02; if (tt - biteT > 0.85) { reel('Raté… il a filé.'); } }
       if (st !== 'idle') myBob.position.set(bx, WY + Math.sin(tt * 2.2) * 0.012 - dip, bz); }
     if (st === 'idle' || st === 'fly') myBob.userData.el = 0;
-    hisT -= dt; if (timeLeft > 0) { if (hisT < 0.9 && hisT > 0) hisDip = 0.1 + Math.sin(R.t * 30) * 0.02; else hisDip = 0; if (hisT <= 0) { const cm = Math.round(22 + Math.random() * 40); R.him += cm; nhis++; jump(-2.3, 5.2, false, cm); splash(-2.3, 5.2, true); fpMsg(R.foe.name + ' : ' + fishName(cm).toLowerCase() + ' de ' + cm + ' cm', 1.8); hisT = 5 + Math.random() * 4; } }
+    hisT -= dt; if (timeLeft > 0) { if (hisT < 0.9 && hisT > 0) hisDip = 0.1 + Math.sin(R.t * 30) * 0.02; else hisDip = 0; if (hisT <= 0) { const cm = Math.round(22 + Math.random() * 40); R.him += cm; nhis++; jump(HB[0], HB[1], false, cm); splash(HB[0], HB[1], true); fpMsg(R.foe.name + ' : ' + fishName(cm).toLowerCase() + ' de ' + cm + ' cm', 1.8); hisT = 5 + Math.random() * 4; } }
     hisBob.position.y = WY + Math.sin(R.t * 2) * 0.012 - hisDip;
     const tw = tip.getWorldPosition(new THREE.Vector3()), bw = myBob.visible ? myBob.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.1, 0)) : tw.clone().add(new THREE.Vector3(0, -0.6, 0)); const P = lineG.attributes.position; P.setXYZ(0, tw.x, tw.y, tw.z); P.setXYZ(1, bw.x, bw.y, bw.z); P.needsUpdate = true;
     for (let i = rings.length - 1; i >= 0; i--) { const q = rings[i]; q.t += dt; if (q.t < 0) continue; const s = 1 + q.t * 7; q.r.scale.set(s, s, s); q.r.material.opacity = Math.max(0, 0.8 - q.t * 0.9); if (q.t > 0.9) { R.grp.remove(q.r); rings.splice(i, 1); } }
-    for (let i = fishes.length - 1; i >= 0; i--) { const q = fishes[i]; q.u += dt / 0.9; const u = Math.min(1, q.u); q.f.position.set(q.x + (q.tx - q.x) * u, WY + 2.0 * u * (1 - u) * 1.4 + u * 0.9, q.z + (q.tz - q.z) * u); q.f.rotation.x = -1.2 + u * 2.4; q.f.rotation.z = Math.sin(R.t * 20) * 0.3; if (q.u > 1.2) { R.grp.remove(q.f); fishes.splice(i, 1); } } };
+    for (let i = fishes.length - 1; i >= 0; i--) { const q = fishes[i]; q.u += dt / 0.9; const u = Math.min(1, q.u); q.f.position.set(q.x + (q.tx - q.x) * u, WY + 2.0 * u * (1 - u) * 1.4 + u * (q.ty - WY), q.z + (q.tz - q.z) * u); q.f.rotation.x = -1.2 + u * 2.4; q.f.rotation.z = Math.sin(R.t * 20) * 0.3; if (q.u > 1.2) { R.grp.remove(q.f); fishes.splice(i, 1); } } };
 };
 
 /* ---------------- la cueillette aux champignons ---------------- */
@@ -5182,39 +5282,39 @@ if (location.hash === '#debug') window.__mg = { get R() { return MGR; }, FPV, mg
 /* ================= le guide du village (Romain, 22/11/2026 : « on complexifie le jeu de jour en jour, un petit guide serait le bienvenu ») =================
    Huit pages courtes, illustrées par de vraies images du jeu (guide/g1.webp … g8.webp, prises dans un village de 900 habitants).
    Menu → 📘 Guide du village. Il s'ouvre une fois tout seul (S.guideSeen), et les fenêtres Construire et Gérer ont un « ❓ » vers la bonne page. */
-const GUIDE = [
-  { ic: '🥖', t: 'Bienvenue à Petite France', img: 'g1',
-    p: ['Tu es <b>le boulanger du village</b>.', 'Au début, il n’y a qu’une boulangerie, un champ de blé et une dizaine d’habitants. À toi d’en faire un vrai village français, maison après maison, <b>jusqu’à 3 000 habitants</b>.'] },
-  { ic: '🎯', t: 'Le but : faire grandir le village', img: 'g2',
-    p: ['Des habitants viennent quand il y a <b>des maisons</b> pour eux, <b>reliées à une rue</b>, dans un village <b>agréable</b>.', 'À chaque palier (150, 250, 400… 3 000 habitants), le village s’agrandit : nouveaux quartiers, nouveaux bâtiments, nouveaux voisins. Les prix montent un peu à chaque palier, et c’est toujours annoncé à l’avance.'] },
-  { ic: '🌾', t: 'Le pain, le cœur du village', img: 'g3',
-    p: ['<b>Le blé</b> pousse au champ → <b>le moulin</b> en fait de la farine → <b>le four</b> cuit les baguettes → elles vont <b>en vitrine</b>, où les clients les achètent.', 'Embauche Léo, Jules, Inès et Margot (Menu → Améliorer) : tout tourne alors tout seul. Garde toujours du pain en vitrine, les restaurants du village en achètent aussi.'] },
-  { ic: '🪙', t: 'Gagner des écus d’or', img: 'g4',
-    p: ['L’argent vient de <b>la caisse de la boulangerie</b>, des <b>loyers</b> des maisons, et des <b>commerces</b> et attractions.', 'Quand une pastille 🪙 apparaît, touche-la : <b>le boulanger y va à pied</b> et encaisse en arrivant. Une caisse se remplit pendant quelques heures, puis s’arrête : reviens la vider de temps en temps.'] },
-  { ic: '🏗️', t: 'Construire et aménager', img: 'g5',
-    p: ['<b>Menu → Construire</b> : maisons, rues, bâtiments et décors. Une maison doit <b>toucher une rue</b> pour être habitée.', 'Plus le village est <b>beau</b> (fleurs, arbres, fontaines), plus les maisons se remplissent. <b>Menu → Aménager</b> : touche ce que tu as posé pour le déplacer, le tourner ↻ ou le démolir.'] },
-  { ic: '🍽️', t: 'Des commerces bien pensés', img: 'g6',
-    p: ['<b>Un de chaque vaut mieux que plusieurs pareils</b> : deux guinguettes se partagent les mêmes clients.', 'Les <b>restaurants</b> (guinguette, café du parc, bistrot) achètent leur pain à ta boulangerie : sans pain en vitrine, ils vendent peu. Les <b>attractions</b> (réserve, grande roue, barques, Guignol) ont des frais d’entretien. Touche un commerce pour voir ce qu’il rapporte et choisir son prix.'] },
-  { ic: '💬', t: 'Les habitants et leurs secrets', img: 'g7',
-    p: ['Chaque quartier a son habitant : Firmin, Lili, Gaspard, Yvon… Un <b>❗</b> au-dessus de sa tête : il a une mission pour toi.', 'Après trois missions, il raconte <b>son histoire</b> en trois chapitres, avec un cadeau à la fin. Cherche aussi les <b>lettres de la comtesse</b>, les clins d’œil cachés, et défie-le aux <b>jeux du village</b> (pétanque, pêche…). Tout est noté dans le 📖 Carnet du village.'] },
-  { ic: '⚙️', t: 'Les bons réflexes', img: 'g8',
-    p: ['💾 <b>Sauvegarde</b> : la partie s’enregistre seule. Copie ton code de temps en temps (Menu → Sauvegarde).', '🎵 <b>Son et musique</b> : couper, régler le volume, choisir la musique.', '🔭 <b>Le bouton sous le télescope</b> : vue de tout le village, puis retour au boulanger.', '📊 <b>Tableau de bord</b> : ce qui rentre, ce qui sort, ce qui attend d’être ramassé.'] },
+const GUIDE = [ // 23/11/2026 : des dioramas du jeu (banc/diorama.js) au lieu des captures, une phrase d'accroche et des points courts
+  { ic: '🥖', t: 'Bienvenue à Petite France', img: 'd1', lead: 'Tu es <b>le boulanger du village</b>.',
+    pts: [['🏡', 'Au début : une boulangerie, un champ et une dizaine d’habitants.'], ['🎯', 'Ton but : en faire un vrai village français, <b>jusqu’à 3 000 habitants</b>.']] },
+  { ic: '🎯', t: 'Faire grandir le village', img: 'd2', lead: 'Les habitants viennent quand il y a <b>des maisons</b> et un village <b>agréable</b>.',
+    pts: [['🏠', 'Construis des maisons : chaque style a son charme et sa place.'], ['🪜', 'À chaque palier (150, 250, 400… habitants), de nouveaux quartiers s’ouvrent.'], ['📈', 'Les prix montent un peu à chaque palier, toujours annoncé à l’avance.']] },
+  { ic: '🌾', t: 'Le pain, le cœur du village', img: 'd3', lead: '<b>Blé</b> → <b>moulin</b> → <b>four</b> → <b>vitrine</b>.',
+    pts: [['👩‍🍳', 'Embauche Léo, Jules, Inès et Margot (Menu → Améliorer) : tout tourne seul.'], ['🧺', 'Garde du pain en vitrine : les restaurants du village en achètent aussi.']] },
+  { ic: '🪙', t: 'Gagner des écus d’or', img: 'd4', lead: 'La caisse de la boulangerie, les <b>loyers</b> et les <b>commerces</b> rapportent.',
+    pts: [['👆', 'Touche une pastille 🪙 : le boulanger y va <b>à pied</b> et encaisse en arrivant.'], ['⏳', 'Une caisse se remplit pendant quelques heures puis s’arrête : reviens la vider.']] },
+  { ic: '🏗️', t: 'Construire et aménager', img: 'd5', lead: '<b>Menu → Construire</b> : maisons, rues, bâtiments et décors.',
+    pts: [['🌷', 'Plus le village est <b>beau</b> (fleurs, arbres, fontaines), plus les maisons se remplissent.'], ['📏', 'Rues : trace case par case, ou d’un point à un autre avec « Tracer ».'], ['↻', '<b>Aménager</b> : touche ce que tu as posé pour le déplacer, le tourner ou le démolir.']] },
+  { ic: '🍽️', t: 'Des commerces bien pensés', img: 'd6', lead: '<b>Un de chaque</b> vaut mieux que plusieurs pareils.',
+    pts: [['🥖', 'Les restaurants achètent leur pain chez toi : sans pain, ils vendent peu.'], ['🎡', 'Les attractions ont des frais d’entretien.'], ['🧾', 'Touche un commerce pour voir ce qu’il rapporte et choisir son prix.']] },
+  { ic: '💬', t: 'Les habitants et leurs secrets', img: 'd7', lead: 'Chaque quartier a son habitant : Firmin, Ginette, Yvon…',
+    pts: [['❗', 'Un ❗ au-dessus de sa tête : une mission pour toi. Après trois, il raconte son histoire.'], ['🎲', 'Défie-le aux jeux du village : pétanque en 13 points, pêche, chamboule-tout…'], ['📖', 'Lettres de la comtesse et clins d’œil cachés : tout est noté dans le Carnet.']] },
+  { ic: '⚙️', t: 'Les bons réflexes', img: 'd8', lead: 'Quelques boutons utiles, dans le Menu.',
+    pts: [['💾', '<b>Sauvegarde</b> : automatique. Copie ton code de temps en temps.'], ['🎵', '<b>Son et musique</b> : couper, régler, choisir la musique.'], ['🔭', '<b>Vue du village</b> puis <b>Retour au boulanger</b>.'], ['📊', '<b>Tableau de bord</b> : ce qui rentre, ce qui sort, ce qui attend.']] },
 ];
 let gdI = 0;
 const gdEl = document.createElement('div'); gdEl.id = 'gd'; gdEl.hidden = true;
-gdEl.innerHTML = '<div class="gd-card"><button type="button" class="x" id="gd-x" aria-label="Fermer">×</button><div class="gd-pic"><img id="gd-img" alt=""><span id="gd-ic"></span></div>'
+gdEl.innerHTML = '<div class="gd-card"><button type="button" class="x" id="gd-x" aria-label="Fermer">×</button><div class="gd-pic"><i class="gd-cl a"></i><i class="gd-cl b"></i><img id="gd-img" alt=""><span id="gd-ic"></span></div>'
   + '<div class="gd-body"><div class="kick" id="gd-k"></div><h2 id="gd-t"></h2><div id="gd-p"></div></div>'
   + '<div class="gd-dots" id="gd-dots"></div><div class="gd-nav"><button type="button" class="btn ghost" id="gd-prev">‹ Précédent</button><button type="button" class="btn gold" id="gd-next">Suivant ›</button></div></div>';
 document.body.appendChild(gdEl);
 GUIDE.forEach((g, i) => { const d = document.createElement('button'); d.type = 'button'; d.setAttribute('aria-label', 'Page ' + (i + 1)); d.addEventListener('click', () => guideShow(i)); $('gd-dots').appendChild(d); });
 function guideShow(i) { gdI = Math.max(0, Math.min(GUIDE.length - 1, i)); const g = GUIDE[gdI], img = $('gd-img');
   img.style.opacity = '0'; img.onload = () => { img.style.opacity = '1'; $('gd-ic').hidden = true; }; img.onerror = () => { img.removeAttribute('src'); $('gd-ic').hidden = false; };
-  $('gd-ic').textContent = g.ic; $('gd-ic').hidden = false; img.src = './guide/' + g.img + '.webp?v=1';
+  $('gd-ic').textContent = g.ic; $('gd-ic').hidden = false; img.src = './guide/' + g.img + '.webp?v=2';
   $('gd-k').textContent = 'Guide du village · ' + (gdI + 1) + ' / ' + GUIDE.length; $('gd-t').textContent = g.ic + ' ' + g.t;
-  $('gd-p').innerHTML = g.p.map((t) => '<p>' + t + '</p>').join('');
+  $('gd-p').innerHTML = '<p class="gd-lead">' + g.lead + '</p><ul class="gd-pts">' + g.pts.map((q) => '<li><i>' + q[0] + '</i><span>' + q[1] + '</span></li>').join('') + '</ul>';
   [...$('gd-dots').children].forEach((d, k) => d.classList.toggle('on', k === gdI));
   $('gd-prev').style.visibility = gdI ? 'visible' : 'hidden'; $('gd-next').textContent = gdI === GUIDE.length - 1 ? 'C’est parti !' : 'Suivant ›';
-  if (gdI + 1 < GUIDE.length) { const pre = new Image(); pre.src = './guide/' + GUIDE[gdI + 1].img + '.webp?v=1'; } }
+  if (gdI + 1 < GUIDE.length) { const pre = new Image(); pre.src = './guide/' + GUIDE[gdI + 1].img + '.webp?v=2'; } }
 function guideOpen(i) { if (typeof closeSheet === 'function') closeSheet(); gdEl.hidden = false; guideShow(i || 0); }
 function guideClose() { gdEl.hidden = true; if (S && !S.guideSeen) { S.guideSeen = true; S.introSeen = true; dirty = true; } }
 $('gd-x').addEventListener('click', guideClose);
@@ -5851,7 +5951,7 @@ function step() {
     if (d.market) {
       if (d.phase === 'in') { if (walkTo(v, d.door.x, d.door.z, 3, dt)) { d.phase = 'wait'; d.wait = 0; } }
       else if (d.phase === 'wait') { moving = false; d.wait += dt; if (d.wait > 0.8) { if (d.bq) { if (S.pull > 0) { S.pull--; const bp = Math.round(BQPR[Math.max(1, S.lv.bq)] * prixM('bq')); S.btill += bp; gain(4); floatAt(v, '👕 +' + bp + ' ' + C); dirty = true; } } else if (S.stall.length) { const pr = S.stall.shift(), pp = Math.max(1, Math.round(PROD[pr].p * prixM('market'))); S.mtill += pp; gain(2); floatAt(v, PROD[pr].e + ' +' + pp + ' ' + C); dirty = true; } d.phase = 'out'; } }
-      else if (walkTo(v, d.exitX, 1.8, 2.8, dt)) { freePerson(v); villagers.splice(i, 1); }
+      else if (walkTo(v, d.exitX, 2.05, 2.8, dt)) { freePerson(v); villagers.splice(i, 1); }
     } else if (d.phase === 'in' || d.phase === 'wait') {
       const k = queue.indexOf(v), at = walkTo(v, QBASE[0] + QDIR[0] * 0.72 * k, QBASE[1] + QDIR[1] * 0.72 * k, 3.2, dt);
       if (at) { moving = false; v.rotation.y = (MOV.shop ? MOV.shop.r : 0) + Math.PI; if (d.phase === 'in') d.phase = 'wait'; }
@@ -5862,7 +5962,7 @@ function step() {
         else if (d.wait > d.pat) { mood(v, d.got > 0); leaveQueue(v); }
       }
     } else if (d.car) { if (walkTo(v, d.car.g.position.x + 0.9, d.car.g.position.z - 0.6, d.angry ? 3.8 : 3.2, dt)) { d.car.phase = 'back'; freePerson(v); villagers.splice(i, 1); } }
-    else if (walkTo(v, d.exitX, 1.8, d.angry ? 3.8 : 2.8, dt)) { freePerson(v); villagers.splice(i, 1); }
+    else if (walkTo(v, d.exitX, 2.05, d.angry ? 3.8 : 2.8, dt)) { freePerson(v); villagers.splice(i, 1); }
     v.userData.body.position.y = moving ? Math.abs(Math.sin(d.walk)) * 0.07 : (d.wait / (d.pat || 1) > 0.7 ? Math.abs(Math.sin(d.walk * 0.8)) * 0.06 : 0.02 * Math.sin(d.walk * 0.3));
   }
   { const o = worst > 0.5 && S.q >= 6 ? Math.min(0.85, (worst - 0.5) * 1.8) : 0, pe = $('press'); if (Math.abs((pe._o || 0) - o) > 0.03) { pe._o = o; pe.style.opacity = o.toFixed(2); } }
