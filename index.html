@@ -2171,7 +2171,7 @@ function tap(x, y) {
     if (u.kind === 'garden') return gardenGo(u.id);
     if (u.kind === 'pen') return penGo(u.id);
     if (u.kind === 'cityhouse') return tapCityHouse(u.id);
-    if (u.kind === 'citydeco') { const it = S.city.items[u.id]; if (it && BIZ[it.k]) return gerer(undefined, u.id); continue; }
+    if (u.kind === 'citydeco') { const it = S.city.items[u.id]; if (typeof eggDeco === 'function' && eggDeco(it)) return; if (it && BIZ[it.k]) return gerer(undefined, u.id); continue; }
     if (!STN[u.kind]) continue;
     return stationGo(u.kind);
   }
@@ -2242,7 +2242,8 @@ const CATEGORIES = [
   { id: 'clotures', n: 'Clôtures et murets', ic: '🧱' },
   { id: 'sols', n: 'Sols et dallages', ic: '🟫' },
   { id: 'quais', n: 'Bords de l’eau', ic: '🦆' },
-  { id: 'parc', n: 'Parc et jardin botanique', ic: '🎡' }
+  { id: 'parc', n: 'Parc et jardin botanique', ic: '🎡' },
+  { id: 'cadeaux', n: 'Cadeaux et trésors', ic: '🎁' }
 ];
 /* ce qui tourne tout seul (grande roue, barques de l'étang, tourniquet) : le jeu fait avancer chaque pièce, voir tickSpin */
 const SPIN = [];
@@ -2986,6 +2987,49 @@ const CATALOGUE = (() => {
     for (let k = 0; k < 8; k++) { const a = k * PI / 4, L = k % 2 ? 0.75 : 1.15; const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(0.16, 0.16); sh.lineTo(0, L); sh.lineTo(-0.16, 0.16); sh.lineTo(0, 0);
       const m = mesh(gk('rsp' + L, () => new THREE.ShapeGeometry(sh).rotateX(-PI / 2)), k % 2 ? '#2B2E36' : GOLD, 0, 0.065, 0, g); m.rotation.y = a; m.castShadow = false; }
     CY(0.16, 0.16, 0.03, GOLD, 0, 0.06, 0, g, 12).castShadow = false; }
+  /* ---------------- les cadeaux (lot 4, 22/11/2026) : offerts par les habitants au bout de leur histoire, par les secrets et les mini-jeux ----------------
+     Ils n'apparaissent dans le catalogue qu'une fois reçus. */
+  function boitePoste(g) { CY(0.05, 0.06, 1.0, '#3A3A44', 0, 0, 0, g, 6); RB(0.5, 0.6, 0.38, '#F2C230', 0, 1.0, 0, g); B(0.32, 0.04, 0.02, '#2B2535', 0, 1.42, 0.2, g); lab(g, 'LA POSTE', 0.44, 0.12, '#F2C230', '#2F4B7C', 70, 0, 1.25, 0.2); SP(0.06, '#2F4B7C', 0, 1.65, 0, g, 0); }
+  function bidonsLait(g) { [[-0.4, 0.1], [0.1, -0.2], [0.45, 0.25]].forEach((q) => { LA([[0.2, 0], [0.22, 0.5], [0.14, 0.62], [0.1, 0.72], [0.12, 0.76], [0, 0.76]], '#C9CED2', q[0], 0, q[1], g, 12); CY(0.13, 0.13, 0.06, '#9AA4AC', q[0], 0.74, q[1], g, 10); });
+    B(1.2, 0.08, 0.6, LWOOD, -0.2, 0.25, 0.9, g); wheelX(g, 0.25, 0.06, WOOD, -0.85, 0.25, 0.9, 10); wheelX(g, 0.25, 0.06, WOOD, 0.45, 0.25, 0.9, 10); }
+  function phare(g) { CY(0.55, 0.65, 0.3, '#BFB49C', 0, 0, 0, g, 12); for (let k = 0; k < 4; k++) CY(0.42 - k * 0.04, 0.46 - k * 0.04, 0.55, k % 2 ? RED : WHITE, 0, 0.3 + k * 0.55, 0, g, 12);
+    CY(0.38, 0.38, 0.06, '#2B2535', 0, 2.5, 0, g, 12); CY(0.25, 0.25, 0.35, '#FFE9A8', 0, 2.56, 0, g, 10); CO(0.32, 0.3, RED, 0, 2.91, 0, g, 10); }
+  function horlogePlace(g) { CY(0.08, 0.1, 2.6, '#2E5A43', 0, 0, 0, g, 8); CY(0.22, 0.26, 0.3, '#2E5A43', 0, 0, 0, g, 8); const h = sub(g, 0, 2.8, 0); B(0.62, 0.62, 0.3, '#2E5A43', 0, -0.31, 0, h);
+    [-1, 1].forEach((s) => { const f = CY(0.25, 0.25, 0.02, WHITE, 0, 0, s * 0.16, h, 16); f.rotation.x = PI / 2; B(0.02, 0.17, 0.01, '#2B2535', 0, 0.06, s * 0.175, h); B(0.12, 0.02, 0.01, '#2B2535', 0.05, 0, s * 0.175, h); }); SP(0.08, GOLD, 0, 0.36, 0, h, 0); }
+  function vieilleCloche(g) { [-0.7, 0.7].forEach((x) => RD([x, 0, -0.3], [x, 2.0, 0], 0.08, WOOD, g) && RD([x, 0, 0.3], [x, 2.0, 0], 0.08, WOOD, g)); B(1.7, 0.14, 0.18, WOOD, 0, 1.98, 0, g);
+    LA([[0.05, 0], [0.12, 0.05], [0.18, 0.3], [0.32, 0.55], [0.36, 0.6], [0, 0.6]], '#B5893A', 0, 1.35, 0, g, 14).rotation.x = PI; SP(0.06, '#8A6A30', 0, 1.3, 0, g, 0); }
+  function deucheDede(g) { deuche(g, '#E3A73C'); const h = B(1.0, 0.04, 0.7, '#E3A73C', 0, 0, 0, g); h.position.set(0, 1.25, 1.0); h.rotation.x = -1.0; B(0.5, 0.25, 0.3, RED, 1.1, 0, 1.2, g); B(0.2, 0.02, 0.05, '#C9C9C9', 1.0, 0.27, 1.2, g); }
+  function pressoir(g) { CY(0.7, 0.7, 0.16, WOOD, 0, 0, 0, g, 14); for (let k = 0; k < 14; k++) { const a = k / 14 * 2 * PI; B(0.1, 0.8, 0.05, k % 2 ? LWOOD : WOOD, Math.cos(a) * 0.5, 0.16, Math.sin(a) * 0.5, g).rotation.y = -a; }
+    [-0.85, 0.85].forEach((x) => B(0.16, 1.9, 0.16, WOOD, x, 0, 0, g)); B(1.9, 0.18, 0.2, WOOD, 0, 1.75, 0, g); CY(0.06, 0.06, 0.9, '#5A5A60', 0, 0.9, 0, g, 8); B(1.4, 0.06, 0.06, '#5A5A60', 0, 1.25, 0, g); }
+  function cabaneGarde(g) { for (let k = 0; k < 6; k++) [[0, -0.9, 2.2, 0], [0, 0.9, 2.2, 0], [-1.05, 0, 1.7, PI / 2], [1.05, 0, 1.7, PI / 2]].forEach((q) => { const c = CY(0.11, 0.11, q[2], k % 2 ? '#8A6440' : '#7A5634', q[0], 0.1 + k * 0.22, q[1], g, 6); c.rotation.set(0, q[3], PI / 2); c.position.y = 0.11 + k * 0.22; });
+    const r1 = B(2.6, 0.08, 1.3, '#4E6B38', 0, 0, -0.5, g); r1.position.y = 1.65; r1.rotation.x = -0.6; const r2 = B(2.6, 0.08, 1.3, '#4E6B38', 0, 0, 0.5, g); r2.position.y = 1.65; r2.rotation.x = 0.6; B(0.5, 0.9, 0.05, '#5A3B26', 0.3, 0, 0.93, g); lab(g, 'GARDE', 0.5, 0.14, LWOOD, '#2B2535', 70, -0.5, 1.0, 0.95); }
+  function statueComtesse(g) { B(0.9, 0.9, 0.9, MARBLE, 0, 0, 0, g); B(1.0, 0.1, 1.0, '#D8CDB6', 0, 0.9, 0, g); CO(0.42, 1.2, '#E9E3D6', 0, 1.0, 0, g, 12); CY(0.12, 0.15, 0.35, '#E9E3D6', 0, 2.0, 0, g, 8); SP(0.13, '#EFE9DC', 0, 2.48, 0, g, 1);
+    CY(0.1, 0.12, 0.08, GOLD, 0, 2.6, 0, g, 8); lab(g, 'ALIÉNOR DE ROCHEVAL', 0.84, 0.12, MARBLE, '#5A4A3A', 60, 0, 0.6, 0.46); }
+  function ruchesLili(g) { [['#F2C230', -0.7], ['#8FB3E0', 0], ['#F0A6B8', 0.7]].forEach((q) => { B(0.5, 0.25, 0.5, LWOOD, q[1], 0, 0, g); for (let k = 0; k < 3; k++) B(0.48, 0.2, 0.48, q[0], q[1], 0.25 + k * 0.2, 0, g); const r = B(0.6, 0.06, 0.6, WHITE, q[1], 0.85, 0, g); B(0.12, 0.04, 0.02, '#2B2535', q[1], 0.3, 0.25, g); });
+    for (let k = 0; k < 8; k++) SP(0.035, '#2B2535', -0.8 + k * 0.22, 1.0 + (k % 3) * 0.15, 0.3 - (k % 2) * 0.4, g, 0); }
+  function nichePastis(g) { B(0.9, 0.6, 1.0, '#C89A5B', 0, 0, 0, g); const r1 = B(1.0, 0.05, 0.62, RED, 0, 0, 0, g); r1.position.set(-0.24, 0.78, 0); r1.rotation.z = 0.6; const r2 = B(1.0, 0.05, 0.62, RED, 0, 0, 0, g); r2.position.set(0.24, 0.78, 0); r2.rotation.z = -0.6; r1.rotation.y = r2.rotation.y = PI / 2;
+    B(0.4, 0.4, 0.04, '#3B2A22', 0, 0, 0.51, g); lab(g, 'PASTIS', 0.4, 0.1, '#FFFDF8', '#2B2535', 70, 0, 0.5, 0.52); const d = sub(g, 0.2, 0, 0.9); SP(0.22, '#E9DCC0', 0, 0.3, 0, d, 1).scale.set(0.9, 0.8, 1.3); SP(0.13, '#E9DCC0', 0, 0.45, 0.28, d, 1); SP(0.05, '#2B2535', 0, 0.44, 0.41, d, 0); [-1, 1].forEach((s) => SP(0.06, '#6B4A2E', s * 0.09, 0.55, 0.24, d, 0)); }
+  function pommierOr(g) { CY(0.14, 0.2, 1.3, '#8A5A30', 0, 0, 0, g, 7); const c = SP(1.3, '#6E9E43', 0, 2.3, 0, g); c.scale.y = 0.85; upperSphere(18, (x, y, z, k) => SP(0.11, GOLD, x * 1.25, 2.3 + y * 1.05, z * 1.25, g, 0)); }
+  function lunetteAstro(g) { [0, 2.1, 4.2].forEach((a) => RD([0, 1.0, 0], [Math.cos(a) * 0.55, 0, Math.sin(a) * 0.55], 0.03, '#8A6440', g)); const t = sub(g, 0, 1.05, 0); t.rotation.x = -0.7; CY(0.09, 0.12, 1.4, '#2E3A6A', 0, -0.4, 0, t, 10); CY(0.13, 0.13, 0.1, GOLD, 0, 0.98, 0, t, 10); }
+  function brochet(g) { B(0.8, 0.7, 0.6, '#BFB49C', 0, 0, 0, g); const f = sub(g, 0, 1.2, 0); const b = SP(0.3, '#6E8A5A', 0, 0, 0, f, 1); b.scale.set(0.55, 0.7, 2.4); SP(0.2, '#E8E2C8', 0, -0.08, 0.2, f, 1).scale.set(0.6, 0.4, 2);
+    const t = CO(0.3, 0.4, '#5A7448', 0, 0, -0.85, f, 4); t.rotation.x = -PI / 2; t.scale.x = 0.25; const m = CO(0.12, 0.35, '#6E8A5A', 0, -0.05, 0.85, f, 6); m.rotation.x = PI / 2; [-1, 1].forEach((s) => SP(0.04, '#2B2535', s * 0.1, 0.06, 0.55, f, 0)); lab(g, '1 MÈTRE !', 0.6, 0.14, '#BFB49C', '#2B2535', 70, 0, 0.45, 0.31); }
+  function filLinge(g) { [-1.3, 1.3].forEach((x) => CY(0.05, 0.06, 1.9, WOOD, x, 0, 0, g, 6)); RD([-1.3, 1.8, 0], [1.3, 1.8, 0], 0.012, '#DDD', g);
+    [['#FFFDF8', -0.9], ['#8FB3E0', -0.3], ['#F0A6B8', 0.3], ['#FFFDF8', 0.85]].forEach((q, i) => { const d = B(0.5, 0.7 - (i % 2) * 0.2, 0.02, q[0], q[1], 1.1 + (i % 2) * 0.2, 0, g); d.rotation.y = 0.05 * (i - 1.5); B(0.04, 0.06, 0.03, '#B9804A', q[1], 1.78, 0, g); }); }
+  function chevalet(g) { RD([-0.35, 0, 0.2], [0, 1.7, 0], 0.03, LWOOD, g); RD([0.35, 0, 0.2], [0, 1.7, 0], 0.03, LWOOD, g); RD([0, 0, -0.45], [0, 1.6, 0], 0.03, LWOOD, g);
+    const t = sub(g, 0, 1.15, 0.1); t.rotation.x = -0.12; B(0.8, 0.6, 0.03, WHITE, 0, -0.3, 0, t); B(0.74, 0.26, 0.01, '#8FC4E0', 0, -0.13, 0.02, t); B(0.74, 0.22, 0.01, '#7DB04E', 0, -0.42, 0.02, t); B(0.14, 0.18, 0.01, RED, 0.12, -0.28, 0.03, t); B(0.16, 0.06, 0.01, '#B5543C', 0.12, -0.16, 0.03, t);
+    CY(0.18, 0.18, 0.04, '#E3C9A0', 0.55, 0.9, 0.3, g, 10); CY(0.15, 0.15, 0.5, LWOOD, 0.55, 0, 0.3, g, 6); }
+  function barriques(g) { [[-0.55, 0.3, 0], [0.55, 0.3, 0], [0, 0.85, 0]].forEach((q) => { const b = LA([[0.3, 0], [0.37, 0.35], [0.3, 0.7], [0, 0.7]], '#8A5A30', q[0], q[1] - 0.3, q[2], g, 12); b.rotation.z = PI / 2; b.position.set(q[0] + 0.35, q[1], q[2]); });
+    B(0.6, 0.05, 0.6, LWOOD, 0, 0.8, 1.1, g); CY(0.04, 0.05, 0.8, WOOD, 0, 0, 1.1, g, 6); [-0.12, 0.12].forEach((x) => CY(0.04, 0.04, 0.26, '#3F1A28', x, 0.85, 1.1, g, 8)); }
+  function coffreTresor(g) { RB(1.2, 0.6, 0.75, '#7A5634', 0, 0, 0, g); [-0.45, 0, 0.45].forEach((x) => B(0.06, 0.62, 0.78, GOLD, x, 0, 0, g)); const l = CY(0.38, 0.38, 1.22, '#7A5634', 0, 0, 0, g, 12, 1); l.rotation.z = PI / 2; l.position.set(0, 0.6, 0); l.scale.set(1, 1, 1);
+    for (let k = 0; k < 14; k++) CY(0.08, 0.08, 0.02, GOLD, -0.6 + (k % 7) * 0.2, 0.02 + Math.floor(k / 7) * 0.03, 0.55 + (k % 3) * 0.05, g, 10); SP(0.08, '#D9283B', 0.2, 0.95, 0, g, 0); }
+  function coqDore(g) { B(0.6, 1.2, 0.6, MARBLE, 0, 0, 0, g); const c = sub(g, 0, 1.2, 0); SP(0.22, GOLD, 0, 0.3, 0, c, 1).scale.set(0.8, 0.9, 1.2); SP(0.12, GOLD, 0, 0.55, 0.18, c, 1); CO(0.05, 0.12, GOLD, 0, 0.66, 0.18, c, 4); B(0.03, 0.12, 0.1, '#D9283B', 0, 0.66, 0.16, c);
+    for (let k = 0; k < 4; k++) { const f = B(0.04, 0.4, 0.12, GOLD, 0, 0.35, -0.25, c); f.rotation.x = -0.4 - k * 0.25; } }
+  function nainJardin(g) { CY(0.16, 0.2, 0.35, '#2F6B8C', 0, 0, 0, g, 10); SP(0.14, '#E8BFA0', 0, 0.48, 0, g, 1); CO(0.15, 0.4, RED, 0, 0.55, 0, g, 10); SP(0.11, WHITE, 0, 0.38, 0.08, g, 1).scale.set(1, 1.3, 0.7); SP(0.03, '#E08A8A', 0, 0.48, 0.13, g, 0); B(0.4, 0.04, 0.3, '#5E8F3E', 0, 0, 0, g); }
+  function tropheePetanque(g) { B(0.6, 0.9, 0.6, MARBLE, 0, 0, 0, g); LA([[0.06, 0], [0.12, 0.05], [0.06, 0.2], [0.06, 0.35], [0.28, 0.55], [0.32, 0.8], [0, 0.8]], GOLD, 0, 0.9, 0, g, 14); [-1, 1].forEach((s) => SP(0.1, '#9AA4AC', s * 0.12, 1.85, 0, g, 1)); lab(g, 'CHAMPION', 0.5, 0.12, MARBLE, '#5A4A3A', 70, 0, 0.55, 0.31); }
+  function champiGeant(g) { CY(0.3, 0.38, 1.3, '#F4EEE0', 0, 0, 0, g, 12); const c = SP(1.0, '#D9283B', 0, 1.3, 0, g, 2); c.scale.set(1.1, 0.55, 1.1); upperSphere(12, (x, y, z) => { if (y > 0.1) SP(0.11, WHITE, x * 1.05, 1.3 + y * 0.55, z * 1.05, g, 0); }); }
+  function oursPeluche(g) { const c = '#B9804A'; SP(0.42, c, 0, 0.45, 0, g, 1).scale.set(1, 1.1, 0.85); SP(0.3, c, 0, 1.05, 0, g, 1); [-1, 1].forEach((s) => { SP(0.11, c, s * 0.22, 1.3, 0, g, 1); SP(0.15, c, s * 0.4, 0.55, 0.1, g, 1); SP(0.16, c, s * 0.22, 0.15, 0.2, g, 1); SP(0.035, '#2B2535', s * 0.1, 1.12, 0.26, g, 0); });
+    SP(0.12, '#E6CBA0', 0, 0.98, 0.24, g, 1); SP(0.04, '#2B2535', 0, 1.02, 0.34, g, 0); B(0.3, 0.08, 0.08, RED, 0, 0.82, 0.22, g); }
+  function carpeDoree(g) { CY(1.0, 1.05, 0.35, '#BFB49C', 0, 0, 0, g, 16); CY(0.9, 0.9, 0.04, WATER, 0, 0.3, 0, g, 16).castShadow = false; [[0.3, 0.1, 0.5], [-0.3, -0.2, 2.4], [0.1, -0.45, 4.0]].forEach((q) => { const f = SP(0.12, GOLD, q[0], 0.34, q[1], g, 1); f.scale.set(0.5, 0.35, 1.4); f.rotation.y = q[2]; }); }
   /* ---------------- l'étang et le parc (Eugénie, 22/11/2026) ---------------- */
   function pondShape(rx, rz, k) { const sh = new THREE.Shape(), n = 28; for (let i = 0; i <= n; i++) { const a = i / n * 2 * PI, w = 1 + 0.08 * Math.sin(a * 3 + k) + 0.05 * Math.cos(a * 5 + k * 2), x = Math.cos(a) * rx * w, y = Math.sin(a) * rz * w; if (i) sh.lineTo(x, y); else sh.moveTo(x, y); } return sh; }
   function pondFlat(key, rx, rz, k, c, y, p, x0) { const m = mesh(gk(key, () => new THREE.ShapeGeometry(pondShape(rx, rz, k), 2).rotateX(-PI / 2)), c, x0 || 0, y, 0, p, { noShadow: true }); m.castShadow = false; return m; }
@@ -3313,6 +3357,14 @@ const CATALOGUE = (() => {
     it('heron', 'quais', 'Héron cendré', '🪶', 80, 2, [1, 1], 4, heron),
     it('filets', 'quais', 'Filets de pêche qui sèchent', '🎣', 90, 2, [1, 1], 4, filets),
     it('barque', 'quais', 'Barque retournée sur tréteaux', '🛶', 140, 3, [1, 2], 5, barque),
+    // les cadeaux (lot 4) : gift = n'apparaît qu'une fois reçu
+    ...[['boite_poste', 'Boîte aux lettres de Firmin', '📮', boitePoste], ['bidons_lait', 'Bidons de lait de Ginette', '🥛', bidonsLait], ['phare', 'Le petit phare du capitaine Yvon', '🗼', phare], ['horloge_place', 'Horloge de la place de Maître Delorme', '🕰️', horlogePlace],
+      ['vieille_cloche', 'La vieille cloche de Sœur Agathe', '🔔', vieilleCloche], ['deuche_dede', 'La 2CV de Dédé, capot ouvert', '🚗', deucheDede], ['pressoir', 'Le pressoir d’Augustin', '🍇', pressoir], ['cabane_garde', 'La cabane de Gaspard', '🛖', cabaneGarde],
+      ['statue_comtesse', 'Statue d’Aliénor de Rocheval', '🗽', statueComtesse], ['ruches_lili', 'Les ruches peintes de Lili', '🐝', ruchesLili], ['niche_pastis', 'Pastis, le chien de Raymond, et sa niche', '🐕', nichePastis], ['pommier_or', 'Le pommier aux pommes d’or de Colette', '🍎', pommierOr],
+      ['lunette_astro', 'La lunette d’Albert', '🔭', lunetteAstro], ['brochet', 'Le brochet d’un mètre de Pierrot', '🐟', brochet], ['fil_linge', 'Le fil à linge de Madeleine', '👕', filLinge], ['chevalet', 'Le chevalet d’Edmond', '🎨', chevalet], ['barriques', 'Les barriques de Simone', '🍷', barriques],
+      ['coffre_tresor', 'Le trésor des Rocheval', '💰', coffreTresor], ['coq_dore', 'Le coq d’or', '🐓', coqDore], ['nain_jardin', 'Le nain de jardin voyageur', '🧙', nainJardin], ['trophee_petanque', 'Trophée de pétanque', '🏆', tropheePetanque],
+      ['champi_geant', 'Le champignon géant', '🍄', champiGeant], ['ours_peluche', 'L’ours en peluche de la fête', '🧸', oursPeluche], ['carpe_doree', 'Bassin aux carpes dorées', '🐠', carpeDoree]
+    ].map((q) => Object.assign(it(q[0], 'cadeaux', q[1], q[2], 150, 12, q[0] === 'deuche_dede' || q[0] === 'cabane_garde' || q[0] === 'fil_linge' ? [1, 2] : [1, 1], 1, q[3]), { gift: true })),
     // l'étang et le parc (Eugénie, 22/11/2026)
     it('etang', 'quais', 'Étang aux nénuphars', '🪷', 1400, 30, [6, 4], 4, etang),
     it('etang_barques', 'quais', 'Étang et location de barques (rapporte des écus)', '🛶', 2600, 40, [6, 4], 7, etangBarques),
@@ -4005,7 +4057,7 @@ function openBuildAt(k) { if (!S.started) return; const M = MOV[k]; if (!M) retu
 let BTAB = 'logements';
 function renderBuild() {
   $('bd-coins').textContent = fmt(S.coins); $('bd-pop').textContent = fmt(S.pop); $('bd-b').textContent = Math.round(beauty());
-  const tabs = [['logements', 'Logements', '🏠'], ['rues', 'Rues', '🧱'], ['batiments', 'Bâtiments', '🏛️']]; const cats = {}; Object.values(DECOS).forEach((d) => { cats[d.cat] = (cats[d.cat] || 0) + 1; });
+  const tabs = [['logements', 'Logements', '🏠'], ['rues', 'Rues', '🧱'], ['batiments', 'Bâtiments', '🏛️']]; const cats = {}; Object.values(DECOS).forEach((d) => { if (d.gift && !giftOn(d.id)) return; cats[d.cat] = (cats[d.cat] || 0) + 1; });
   Object.keys(DCAT_NAMES).forEach((c) => { if (cats[c]) tabs.push([c, DCAT_NAMES[c][0], DCAT_NAMES[c][1]]); });
   const lvT = level(), shown = tabs.filter(([id]) => lvT >= (TAB_LVL[id] || 1)), nextT = tabs.filter(([id]) => lvT < (TAB_LVL[id] || 1)).sort((a, b) => TAB_LVL[a[0]] - TAB_LVL[b[0]])[0];
   if (!shown.some(([id]) => id === BTAB)) BTAB = 'logements';
@@ -4021,7 +4073,7 @@ function renderBuild() {
       { t: '🧽 Oui, gommer des rues', s: 'Touche ou glisse sur une rue pour l’effacer.', btn: 'Gommer', ok: true, run: () => { closeSheet(); startRoad(-1); } },
       { t: 'Non, annuler', s: 'Ne rien effacer.', btn: 'Annuler', ok: true, run: closeSheet } ]); }); }
   else if (BTAB === 'batiments') batOrder().forEach((k) => { const M = MOV[k], need = M.placed ? '' : M.need(); row(M.ic, M.n, M.placed ? 'Déjà construit · en mode construction, touche-le pour le déplacer' : M.desc, M.placed ? 'Déplacer' : M.c + ' ' + C, M.placed || S.coins >= M.c, need ? 'il faut ' + need : '', () => M.placed ? startMoveProd(k) : startPlace({ t: 'p', k })); });
-  else { let teasers = 0; Object.values(DECOS).filter((d) => d.cat === BTAB && !d.hide).sort((a, b) => a.lvl - b.lvl || a.c - b.c).forEach((d) => { if (lv < (d.lvl || 1) && ++teasers > 2) return; const cnt = S.city.items.filter((it) => it.k === d.id).length, c = decoPrice(d.id); row(d.ic, d.n, '+' + Math.round(decoB(d)) + ' beauté' + (cnt ? ' · ' + cnt + ' posé' + (cnt > 1 ? 's' : '') : ''), c + ' ' + C, S.coins >= c, lv < (d.lvl || 1) ? 'niveau ' + d.lvl : '', () => startPlace({ t: 'd', k: d.id })); }); }
+  else { let teasers = 0; Object.values(DECOS).filter((d) => d.cat === BTAB && !d.hide && (!d.gift || giftOn(d.id))).sort((a, b) => a.lvl - b.lvl || a.c - b.c).forEach((d) => { if (lv < (d.lvl || 1) && ++teasers > 2) return; const cnt = S.city.items.filter((it) => it.k === d.id).length, c = decoPrice(d.id); row(d.ic, d.n, '+' + Math.round(decoB(d)) + ' beauté' + (cnt ? ' · ' + cnt + ' posé' + (cnt > 1 ? 's' : '') : ''), c + ' ' + C, S.coins >= c, lv < (d.lvl || 1) ? 'niveau ' + d.lvl : '', () => startPlace({ t: 'd', k: d.id })); }); }
 }
 /* mode Aménager : reprendre la main sur tout ce qui est posé, sans passer par le catalogue (Romain, 19/11/2026) */
 function amenager(i) { if (!S.started || VISIT.on) return; enterBuild(); if (i !== undefined && cityObjs[i]) select({ t: 'mi', i, g: cityObjs[i] }); else toast('✋ Mode Aménager', 'Touche une maison, un décor ou un bâtiment pour le déplacer, le tourner ou le démolir.'); }
@@ -4163,7 +4215,7 @@ function tickDirs() {
 /* ================= step by step: what the player can see grows with the level and the current objective ================= */
 const UP_LVL = [[/vélo/, 2], [/Nouvelle parcelle/, 2], [/Léo/, 3], [/Jules/, 4], [/Inès/, 5], [/Margot/, 6], [/Semences/, 5], [/Équipe ·/, 6], [/^Moulin/, 3], [/^Four/, 3], [/^Boulangerie/, 4], [/Barrière/, 4], [/maçons/, 5], [/Médor/, 7]];
 function upVisible(u) { const q = Q[Math.min(S.q, Q.length - 1)], qt = q ? q.t : ''; for (const [re, lv] of UP_LVL) if (re.test(u.t)) { const key = (u.t.match(/vélo|parcelle|Léo|Jules|Inès|Margot|barrière/i) || [''])[0]; return level() >= lv || (key && qt.toLowerCase().indexOf(key.toLowerCase()) >= 0); } return true; }
-const TAB_LVL = { logements: 1, rues: 1, batiments: 2, nature: 2, jardins: 3, mobilier: 4, lumieres: 5, clotures: 6, sols: 2, quais: 3, parc: 3, fontaines: 8, terrasses: 10, fete: 12, vehicules: 14, monuments: 16 };
+const TAB_LVL = { logements: 1, rues: 1, batiments: 2, nature: 2, jardins: 3, mobilier: 4, lumieres: 5, clotures: 6, sols: 2, quais: 3, parc: 3, cadeaux: 1, fontaines: 8, terrasses: 10, fete: 12, vehicules: 14, monuments: 16 };
 Object.values(DECOS).forEach((d) => { if (d.lvl > 2) d.lvl = Math.round(d.lvl * 1.7); }); // le catalogue s'ouvre sur toute la partie
 const buildUnlocked = () => S.q >= 6 || (S.city && S.city.items.length > 2) || level() >= 2;
 
@@ -4213,6 +4265,8 @@ $('b-menu').addEventListener('click', () => { if (!S.started || VISIT.on) return
   { t: '🔨 Améliorer' + (na ? ' · ' + na + ' possible' + (na > 1 ? 's' : '') : ''), s: 'Employés, ateliers, réserves, maisons à embellir, fête du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } },
   { t: '📜 Missions' + (nm ? ' · ' + nm + ' à faire' : ''), s: 'Les habitants de chaque quartier ont besoin de toi.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); missionsSheet(); } },
   { t: '📋 Commandes' + (nd ? ' · ' + nd + ' prête' + (nd > 1 ? 's' : '') : ''), s: 'Ce que le village te commande.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-od').click(); } },
+  { t: '📖 Carnet du village', s: 'Les histoires des habitants, le secret des Rocheval, les clins d’œil trouvés.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); carnetSheet(); } },
+  { t: '🎲 Jeux du village', s: 'Pétanque, pêche, champignons, chamboule-tout : des écus et des cadeaux.', btn: 'Jouer', ok: true, run: () => { closeSheet(); jeuxSheet(); } },
   { t: '🛡️ Mon village', s: 'Le nom, le blason et la devise de ton village.', btn: 'Modifier', ok: true, run: () => { closeSheet(); villageSheet(); } },
   { t: '🚶 Visiter le village', s: 'La caméra descend dans les rues et se promène de maison en maison, comme un habitant.', btn: 'Visiter', ok: true, run: () => { closeSheet(); startVisit(); } },
   { t: '🗺️ Carte', s: 'Voir les quartiers du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-map').click(); } },
@@ -4536,11 +4590,13 @@ function missionOf(id) { const Q = qById(id), N = NPC[id], m = misS()[id] || (mi
   if (m.k === 0) return { kind: 'find', obj: N.obj, t: 'Retrouver ' + N.obj[1], say: N.hi + ' Dites, j\'ai perdu ' + N.obj[1] + ' quelque part dans le quartier. Vous voulez bien m\'aider ?', coins: misReward(Q, 40), xp: 10 };
   if (m.k === 1) { const n = 4 + Q.tier * 3; return { kind: 'pain', n, t: 'Apporter ' + n + ' baguettes', say: 'Merci encore ! J\'aurais besoin de ' + n + ' baguettes pour recevoir la famille. Vous en avez en vitrine ?', coins: misReward(Q, 30) + n * 6, xp: 14 }; }
   if (m.k === 2) { const n = 1 + Math.floor(Q.tier / 2); return { kind: 'houses', n, t: 'Bâtir ' + n + ' maison' + (n > 1 ? 's' : '') + ' dans le quartier', say: 'Le quartier est bien calme… Une maison ou deux de plus, et on aurait des voisins pour la belote !', coins: misReward(Q, 60), xp: 20 }; }
-  if (now() < (m.next || 0)) return null; const o = N.more[(m.k - 3) % N.more.length];
+  if (now() < (m.next || 0)) return null;
+  if ((m.c || 0) < 3 && typeof STORY !== 'undefined' && STORY[id]) return chapMission(id, Q, m.c || 0); /* l'histoire du personnage, en trois chapitres (lot 4) */
+  const o = N.more[(m.k - 3) % N.more.length];
   return { kind: 'find', obj: o, t: 'Retrouver ' + o[1], say: 'Ah, vous tombez bien ! J\'ai encore perdu ' + o[1] + ' par ici. Je ne sais pas ce que je ferais sans vous.', coins: misReward(Q, 15), xp: 6 }; }
-function missionDone(id, M) { const m = misS()[id], N = NPC[id]; m.k++; m.seen = false; m.spot = null; m.next = now() + MISSION_EVERY; led('📜 Missions', M.coins); S.coins += M.coins; gain(M.xp); dirty = true; S.misDone = (S.misDone || 0) + 1;
+function missionDone(id, M) { const m = misS()[id], N = NPC[id]; if (M.chap !== undefined) chapDone(id, M); m.k++; m.seen = false; m.spot = null; m.next = now() + MISSION_EVERY; led('📜 Missions', M.coins); S.coins += M.coins; gain(M.xp); dirty = true; S.misDone = (S.misDone || 0) + 1;
   SFX.done(); buzz(30); toast('📜 Mission réussie · ' + N.who.split(',')[0], '+' + fmt(M.coins) + ' écus d’or'); const g = NPCG[id]; if (g) { floatAt(g, '+' + fmt(M.coins) + ' ' + C); burst(g.position.x, 2.2, g.position.z, ['#E3A73C', '#F3CF7A', N.c], 14, 5); } }
-function missionReady(id) { const M = missionOf(id); if (!M) return 0; if (M.kind === 'pain') return S.pain >= M.n ? 1 : 0; if (M.kind === 'houses') return housesIn(qById(id)) >= M.n ? 1 : 0; return misS()[id].seen ? 0 : 1; }
+function missionReady(id) { const M = missionOf(id); if (!M) return 0; if (M.kind === 'pain') return S.pain >= M.n ? 1 : 0; if (M.kind === 'deco' || M.kind === 'pop') return chapReady(id, M) ? 1 : 0; if (M.kind === 'houses') return housesIn(qById(id)) >= M.n ? 1 : 0; return misS()[id].seen ? 0 : 1; }
 function missionsReady() { let n = 0; Object.keys(NPC).forEach((id) => { n += missionReady(id); }); return n; }
 /* the lost object: somewhere free in the quartier, never in the river or on the road */
 function findSpot(Q) { for (let k = 0; k < 200; k++) { const x = Q.x0 + 2 + Math.random() * (Q.x1 - Q.x0 - 4), z = Q.z0 + 2 + Math.random() * (Q.z1 - Q.z0 - 4);
@@ -4554,17 +4610,18 @@ function npcBoot() { Object.keys(NPC).forEach((id) => { const Q = qById(id), N =
   const f = new THREE.Group(); f.userData.dyn = true; const ring = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.6, 24), new THREE.MeshBasicMaterial({ color: '#F3CF7A', transparent: true, opacity: 0.85, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; f.add(ring); f.visible = false; scene.add(f); FINDG[id] = f;
   const fl = label(f, 1.2); fl.act = () => findGo(id); FINDL[id] = fl; }); npcPlace(); }
 function npcPlace() { Object.keys(NPCG).forEach((id) => { const Q = qById(id), g = NPCG[id]; const [x, z] = npcHome(Q); g.position.set(x, groundY(x, z), z); g.userData.home = [x, z]; }); }
-function npcTap(id) { if (!S.started || VISIT.on) return; const N = NPC[id], M = missionOf(id), m = misS()[id] || (misS()[id] = { k: 0 });
+function npcTap(id) { if (!S.started || VISIT.on) return; if (typeof eggNpc === 'function' && eggNpc(id)) return; const N = NPC[id], M = missionOf(id), m = misS()[id] || (misS()[id] = { k: 0 });
   if (!M) { const Q = qById(id); return talk({ who: N.who, av: N.av, c: N.c, say: qUnlocked(Q) ? 'Rien pour l\'instant, merci ! Repassez me voir un peu plus tard.' : N.hi + ' Revenez quand le village comptera ' + TIER_POP[Q.tier] + ' habitants.' }); }
   m.seen = true; dirty = true; talk({ who: N.who, av: N.av, c: N.c, say: M.say });
   if (M.kind === 'find') { if (!m.spot) m.spot = findSpot(qById(id)); return; }
   if (M.kind === 'pain' && S.pain >= M.n) { S.pain -= M.n; return missionDone(id, M); }
-  if (M.kind === 'houses' && housesIn(qById(id)) >= M.n) return missionDone(id, M); }
+  if (M.kind === 'houses' && housesIn(qById(id)) >= M.n) return missionDone(id, M);
+  if ((M.kind === 'deco' || M.kind === 'pop') && chapReady(id, M)) return missionDone(id, M); }
 function findGo(id) { const m = misS()[id]; if (!m || !m.spot) return; goTo(m.spot[0], m.spot[1], 0.6, null); }
 function missionsSheet() { const opts = []; Object.keys(NPC).forEach((id) => { const Q = qById(id), N = NPC[id]; if (!Q || !qUnlocked(Q)) return; const M = missionOf(id), m = misS()[id] || {};
   if (!M) { opts.push({ t: N.who + ' · ' + qName(Q), s: 'Rien pour l\'instant. Prochaine trouvaille dans ' + Math.max(1, Math.ceil(((m.next || 0) - now()) / 60000)) + ' min.', btn: 'Voir', ok: true, run: () => { closeSheet(); const g = NPCG[id]; camTo(g.position.x, g.position.z); } }); return; }
-  const ready = missionReady(id) && M.kind !== 'find', prog = M.kind === 'pain' ? ' (' + Math.min(S.pain, M.n) + '/' + M.n + ')' : M.kind === 'houses' ? ' (' + Math.min(housesIn(Q), M.n) + '/' + M.n + ')' : '';
-  opts.push({ t: N.obj && M.kind === 'find' ? M.obj[0] + ' ' + M.t : (M.kind === 'pain' ? '🥖 ' : '🏡 ') + M.t + prog, s: N.who + ' · ' + qName(Q) + ' · +' + fmt(M.coins) + ' ' + C, btn: ready ? 'Valider' : M.kind === 'find' ? 'Y aller' : 'Voir', ok: true,
+  const ready = missionReady(id) && M.kind !== 'find', prog = M.kind === 'pain' ? ' (' + Math.min(S.pain, M.n) + '/' + M.n + ')' : M.kind === 'houses' ? ' (' + Math.min(housesIn(Q), M.n) + '/' + M.n + ')' : M.kind === 'deco' ? ' (' + Math.min(decosIn(Q, M.cat), M.n) + '/' + M.n + ')' : M.kind === 'pop' ? ' (' + fmt(Math.min(Math.floor(S.pop || 0), M.n)) + '/' + fmt(M.n) + ')' : '';
+  opts.push({ t: N.obj && M.kind === 'find' ? M.obj[0] + ' ' + M.t : (M.chap !== undefined ? '' : M.kind === 'pain' ? '🥖 ' : '🏡 ') + M.t + prog, s: N.who + ' · ' + qName(Q) + ' · +' + fmt(M.coins) + ' ' + C, btn: ready ? 'Valider' : M.kind === 'find' ? 'Y aller' : 'Voir', ok: true,
     run: () => { closeSheet(); const g = NPCG[id]; if (ready) return npcTap(id); if (M.kind === 'find') { if (!m.spot) { misS()[id].spot = findSpot(Q); misS()[id].seen = true; dirty = true; } const sp = misS()[id].spot; camTo(sp[0], sp[1]); goTo(sp[0], sp[1], 0.6, null); return; } camTo(g.position.x, g.position.z); } }); });
   if (!opts.length) opts.push({ t: 'Pas encore de mission', s: 'Les habitants arrivent avec le village.', btn: 'OK', ok: true, run: closeSheet });
   openSheet('📜 Missions', 'Chaque quartier a son habitant. Touchez-le, ou choisissez ici.', opts); }
@@ -4671,6 +4728,263 @@ function tickCultures(dt, n) { if (!S.started || !GRANDES.length) return; const 
   else { const i = st.p.findIndex((p) => p.s === 'pret'); if (i >= 0) goField(i); else if (Math.hypot(TR.x - (HANGAR[0] - 3.5), TR.z - HANGAR[1]) > 0.5) TR.path = routeTo(HANGAR[0] - 3.5, HANGAR[1]); }
   tractor.position.set(TR.x, groundY(TR.x, TR.z), TR.z); tractor.rotation.y = TR.ry; }
 if (location.hash === "#debug") window.__farm = { farmS, farmStart, collectFarm, farmSheet, GRANDES, TR, fieldGrow };
+/* ================= lot 4 : l'histoire du village, ses secrets, ses clins d'œil et ses jeux (Romain, 22/11/2026) =================
+   - Chaque habitant de quartier, après ses trois premières missions, raconte son histoire en trois chapitres. Le dernier offre un cadeau
+     (un décor qu'on ne trouve nulle part ailleurs).
+   - Le secret des Rocheval : six lettres de la comtesse Aliénor sont cachées dans le village. On ne les voit qu'en s'approchant.
+     Les six réunies mènent au trésor, au pied du château.
+   - Des clins d'œil cachés (easter eggs) : on ne sait pas lesquels avant de les trouver.
+   - Quatre petits jeux qui rapportent des écus, et un cadeau au premier beau score.
+   Tout se retrouve dans le « 📖 Carnet du village » (Menu). */
+
+/* ---------------- les cadeaux ---------------- */
+const giftS = () => S.gifts || (S.gifts = {});
+const giftOn = (id) => !!(S.gifts && S.gifts[id]);
+function giveGift(id, why) { if (giftOn(id)) return false; giftS()[id] = Date.now(); dirty = true; const D = DECOS[id];
+  toast('🎁 Cadeau : ' + (D ? D.n : id), (why ? why + ' ' : '') + 'Il t’attend dans Construire › Cadeaux et trésors.'); SFX.done(); buzz(60); return true; }
+
+/* ---------------- les histoires : trois chapitres par habitant ----------------
+   kind : find (retrouver obj), pain (n baguettes en vitrine), houses (n maisons dans le quartier), deco (n décors de la rubrique cat dans le quartier), pop (n habitants au village) */
+const STORY = {
+  bourg: [
+    { t: 'La lettre sans timbre', kind: 'find', obj: ['💌', 'une lettre très ancienne'], say: 'En vidant la vieille boîte de la poste, j’ai fait tomber une lettre. Elle date de 1789 ! Elle a roulé quelque part dans le bourg. Vous m’aidez ?' },
+    { t: 'Le facteur a faim', kind: 'pain', n: 12, say: 'Cette lettre est signée « Aliénor de Rocheval ». La comtesse d’autrefois ! J’ai passé la nuit à la lire. Je n’ai rien mangé : il me faudrait 12 baguettes pour moi et les collègues du tri.' },
+    { t: 'Une tournée de plus', kind: 'houses', n: 3, say: 'Aliénor parle d’autres lettres, cachées dans tout le village. Je les chercherai pendant ma tournée. Bâtissez donc trois maisons de plus dans le bourg : plus de boîtes aux lettres, plus de chances !', gift: 'boite_poste', clue: 'Firmin : « La comtesse a semé six lettres dans le village. On ne les voit qu’en passant tout près. »' } ],
+  campagne: [
+    { t: 'Marguerite a fugué', kind: 'find', obj: ['🐄', 'la clochette de Marguerite'], say: 'Marguerite, ma meilleure vache, s’est échappée cette nuit. Elle a perdu sa clochette. Sans elle, impossible de la retrouver dans le brouillard !' },
+    { t: 'Le pain du dimanche', kind: 'pain', n: 10, say: 'Marguerite est rentrée toute seule, l’air très fier. Pour fêter ça, je fais un grand déjeuner à la ferme. Il me faudrait 10 baguettes !' },
+    { t: 'Des fleurs pour la ferme', kind: 'deco', cat: 'jardins', n: 3, say: 'Ma grand-mère disait qu’une ferme fleurie donne un lait plus doux. C’est sûrement faux, mais posez trois massifs de fleurs dans la campagne, on verra bien.', gift: 'bidons_lait' } ],
+  quais: [
+    { t: 'La bouteille à la mer', kind: 'find', obj: ['🍾', 'une bouteille avec un message'], say: 'J’ai vu flotter une bouteille dans le canal, avec un papier dedans ! Elle s’est échouée quelque part sur les quais.' },
+    { t: 'Le dernier voyage', kind: 'pain', n: 14, say: 'Le message dit : « Le marinier ne sait pas lire. Tant mieux. » Mon arrière-grand-père était marinier… et il ne savait pas lire ! Je repars sur le canal sur ses traces. Pour la route : 14 baguettes, s’il vous plaît.' },
+    { t: 'Un phare pour le canal', kind: 'deco', cat: 'quais', n: 3, say: 'Mon aïeul a aidé la comtesse à cacher quelque chose, une nuit sans lune. Je suis fier ! Faites des quais un vrai port : trois décors au bord de l’eau.', gift: 'phare' } ],
+  hautbourg: [
+    { t: 'La clé sans serrure', kind: 'find', obj: ['🗝️', 'une clé en fer forgé'], say: 'Dans le coffre de l’étude, il y avait une clé que personne n’a jamais su utiliser. Je l’ai sortie pour l’examiner… et je l’ai perdue. Sans mes lunettes, évidemment.' },
+    { t: 'Le testament', kind: 'pain', n: 12, say: 'J’ai relu le testament des Rocheval : « La clé ira à celui qui saura lire mes six lettres. » Je vais y passer la nuit. Il me faut des forces : 12 baguettes.' },
+    { t: 'Un notaire respectable', kind: 'houses', n: 3, say: 'Un notaire digne de ce nom a besoin de clients. Trois maisons de plus au Haut-Bourg, et je vous confie un secret de famille.', gift: 'horloge_place', clue: 'Maître Delorme : « Le trésor est au pied d’une tour. Aliénor ne précise pas laquelle. Les comtesses aiment les devinettes. »' } ],
+  parvis: [
+    { t: 'Le carillon muet', kind: 'find', obj: ['🔔', 'le battant de la vieille cloche'], say: 'Le battant de notre vieille cloche a disparu. Les enfants jouent avec, je crois. Il est quelque part sur le parvis.' },
+    { t: 'Le repas des pauvres', kind: 'pain', n: 16, say: 'Merci ! Cette cloche a sonné pour le mariage d’Aliénor de Rocheval, en 1770. Samedi, nous servons un repas à qui veut. Il me faudrait 16 baguettes.' },
+    { t: 'Un parvis fleuri', kind: 'deco', cat: 'jardins', n: 3, say: 'Le registre de la paroisse dit qu’Aliénor chantait faux, mais qu’elle fleurissait l’église tous les dimanches. Faisons comme elle : trois massifs de fleurs sur le parvis.', gift: 'vieille_cloche', clue: 'Sœur Agathe : « Le curé d’autrefois avait juré le silence. Une des lettres est cachée près de l’église. »' } ],
+  faubourg: [
+    { t: 'La pièce introuvable', kind: 'find', obj: ['⚙️', 'un carburateur de 2CV'], say: 'Je restaure une 2CV de 1952 et j’ai perdu le carburateur. Il a dû rouler hors de l’atelier. Pas de panique. Enfin, un peu de panique.' },
+    { t: 'Le moteur tourne', kind: 'pain', n: 12, say: 'Elle démarre ! Elle fait un bruit de machine à coudre, c’est merveilleux. On fête ça avec les copains : 12 baguettes pour les sandwichs.' },
+    { t: 'La virée', kind: 'pop', n: 600, say: 'Je veux faire visiter le village en 2CV. Quand on sera 600 habitants, il y aura assez de monde pour la parade !', gift: 'deuche_dede' } ],
+  coteau: [
+    { t: 'La bouteille de 1789', kind: 'find', obj: ['🍷', 'une bouteille poussiéreuse'], say: 'En creusant la cave, j’ai trouvé une bouteille cachetée aux armes des Rocheval. Elle m’a glissé des mains et a roulé dans les vignes. Pas cassée, j’espère !' },
+    { t: 'La dégustation', kind: 'pain', n: 14, say: 'Elle est intacte ! Je l’ouvrirai pour une grande dégustation. Pas de vin sans pain : 14 baguettes, s’il vous plaît.' },
+    { t: 'Le coteau en fête', kind: 'deco', cat: 'nature', n: 4, say: 'Le vin de la comtesse avait un goût de cerise et de mystère. Plantez quatre arbres sur le coteau, pour l’ombre des vendangeurs.', gift: 'pressoir' } ],
+  bois: [
+    { t: 'Le renardeau', kind: 'find', obj: ['🦊', 'un renardeau perdu'], say: 'Un renardeau s’est perdu loin de sa mère. Il se cache quelque part dans les Bois. Doucement, il a peur.' },
+    { t: 'La nuit à l’affût', kind: 'pain', n: 10, say: 'Il a retrouvé sa famille. Ce soir, je veille à l’affût pour les voir passer. Il me faut de quoi tenir : 10 baguettes.' },
+    { t: 'Le domaine', kind: 'pop', n: 500, say: 'Mon rêve : que la réserve accueille des visiteurs de toute la région. Quand le village comptera 500 habitants, on aura assez de monde pour faire connaître nos bois.', gift: 'cabane_garde' } ],
+  butte: [
+    { t: 'Le portrait', kind: 'find', obj: ['🖼️', 'un petit portrait ovale'], say: 'Madame la comtesse me demande le portrait de son ancêtre Aliénor. Je l’ai posé quelque part sur la butte en chassant une guêpe. Je ne dirai rien à Madame.' },
+    { t: 'Le goûter de Madame', kind: 'pain', n: 16, say: 'Merci, Monsieur ! Madame reçoit pour le thé. Elle veut des tartines, beaucoup de tartines. 16 baguettes, sans faute.' },
+    { t: 'Le château renaît', kind: 'pop', n: 800, say: 'Madame dit qu’Aliénor a caché la fortune de la famille pendant la Révolution. Quand le village comptera 800 âmes, elle offrira sa statue au village.', gift: 'statue_comtesse', clue: 'Baptiste : « Madame dit que la tour regarde le soleil couchant. Le trésor aussi, sans doute. »' } ],
+  pres: [
+    { t: 'La reine s’est envolée', kind: 'find', obj: ['👑', 'la reine des abeilles'], say: 'Ma reine s’est encore envolée ! Elle aime les fleurs des prés. Si on la retrouve, les autres abeilles suivront.' },
+    { t: 'Le miel et le pain', kind: 'pain', n: 8, say: 'Les abeilles sont rentrées. Mon frère dit que le miel, c’est meilleur sur du pain. Pour une fois, il a raison : 8 baguettes !' },
+    { t: 'Un pré plein de fleurs', kind: 'deco', cat: 'jardins', n: 4, say: 'Plus il y a de fleurs, plus il y a de miel. Posez quatre massifs de fleurs dans les prés, et je vous peins mes ruches de toutes les couleurs.', gift: 'ruches_lili' } ],
+  val: [
+    { t: 'Pastis a filé', kind: 'find', obj: ['🦴', 'le grand os de Pastis'], say: 'Pastis, mon chien, refuse de rentrer sans son os. Il l’a enterré quelque part dans le val. Et il a oublié où.' },
+    { t: 'Le berger a faim', kind: 'pain', n: 10, say: 'Pastis est content, il ramène les moutons tout seul. Moi, j’ai faim : 10 baguettes pour la transhumance.' },
+    { t: 'Le val habité', kind: 'houses', n: 3, say: 'Un berger seul, c’est triste. Trois maisons dans le val, et Pastis aura des enfants à garder en plus des moutons.', gift: 'niche_pastis' } ],
+  vergers: [
+    { t: 'La pomme d’or', kind: 'find', obj: ['🍏', 'une pomme toute dorée'], say: 'Un de mes pommiers a donné une pomme dorée ! Elle est tombée et a roulé dans les vergers. Je ne l’ai pas encore goûtée.' },
+    { t: 'La tarte du village', kind: 'pain', n: 12, say: 'Elle a un goût de miel. Je vais faire la plus grande tarte aux pommes du canton. Il me faut du pain pour la pâte… enfin, 12 baguettes pour les invités.' },
+    { t: 'Le verger merveilleux', kind: 'deco', cat: 'nature', n: 4, say: 'Plantez quatre arbres dans les vergers. Avec un peu de chance, l’un d’eux donnera des pommes d’or.', gift: 'pommier_or' } ],
+  plateau: [
+    { t: 'L’étoile filante', kind: 'find', obj: ['☄️', 'un caillou tombé du ciel'], say: 'Cette nuit, une étoile filante est tombée sur le plateau. Une vraie ! Enfin, un petit caillou. Il est encore tiède.' },
+    { t: 'La nuit des étoiles', kind: 'pain', n: 10, say: 'C’est une météorite ! J’organise une nuit d’observation. Il faut nourrir les curieux : 10 baguettes.' },
+    { t: 'La carte du ciel', kind: 'pop', n: 700, say: 'Dans ma lunette, j’ai vu une lumière sur la butte, la nuit, là où se couche le soleil. À 700 habitants, je vous prête ma lunette.', gift: 'lunette_astro', clue: 'Albert : « La lumière brillait au pied de la tour du château, côté couchant. Ce n’était pas une étoile. »' } ],
+  bief: [
+    { t: 'Le brochet géant', kind: 'find', obj: ['🪝', 'son hameçon porte-bonheur'], say: 'J’ai perdu mon hameçon porte-bonheur. Sans lui, impossible d’attraper le brochet géant du bief. Il mesure au moins un mètre. Au moins.' },
+    { t: 'Le casse-croûte', kind: 'pain', n: 8, say: 'Je vais l’attendre toute la nuit. Il me faut un casse-croûte : 8 baguettes. Le brochet n’en aura pas.' },
+    { t: 'Un bief accueillant', kind: 'deco', cat: 'quais', n: 2, say: 'Je l’ai attrapé ! Puis je l’ai relâché, il avait l’air vexé. Aménagez le bief avec deux décors au bord de l’eau, et je lui fais faire une statue.', gift: 'brochet' } ],
+  rives: [
+    { t: 'La chemise envolée', kind: 'find', obj: ['🧺', 'le drap brodé de la comtesse'], say: 'Le vent a emporté un drap brodé aux armes des Rocheval. Je le lave depuis trente ans, ma mère avant moi. Il est quelque part sur les rives !' },
+    { t: 'La grande lessive', kind: 'pain', n: 10, say: 'Merci ! Demain, c’est la grande lessive de printemps. Les lavandières ont faim : 10 baguettes.' },
+    { t: 'Les rives habitées', kind: 'houses', n: 3, say: 'Trois maisons de plus sur les rives, et j’aurai assez de linge pour tendre un fil d’un bout à l’autre du village.', gift: 'fil_linge' } ],
+  hauts: [
+    { t: 'Le pinceau du maître', kind: 'find', obj: ['🖌️', 'son pinceau en martre'], say: 'J’ai perdu mon meilleur pinceau. Le vent, ou un écureuil jaloux. Il est quelque part dans les Hauts.' },
+    { t: 'Le tableau du village', kind: 'pain', n: 12, say: 'Je commence le grand tableau du village, vu des Hauts. Ce sera long. Il me faut des provisions : 12 baguettes.' },
+    { t: 'La vue parfaite', kind: 'deco', cat: 'nature', n: 4, say: 'Quatre arbres dans les Hauts, pour encadrer la vue. En peignant, j’ai remarqué un détail : une pierre plus claire au pied de la tour du château.', gift: 'chevalet', clue: 'Edmond : « Une pierre plus claire que les autres, la troisième au pied de la tour. Un peintre voit tout. »' } ],
+  vignes: [
+    { t: 'Le tire-bouchon d’argent', kind: 'find', obj: ['🍾', 'le tire-bouchon d’argent'], say: 'Mon tire-bouchon d’argent a glissé de ma poche entre les rangs de vigne. Sans lui, je refuse d’ouvrir quoi que ce soit.' },
+    { t: 'Le banquet des vendanges', kind: 'pain', n: 16, say: 'Ce soir, banquet des vendanges ! 16 baguettes, et le village chantera jusqu’à minuit.' },
+    { t: 'Le grand cru', kind: 'pop', n: 1200, say: 'À 1 200 habitants, le village aura son grand cru. Je vous offrirai mes plus belles barriques.', gift: 'barriques' } ]
+};
+const decosIn = (Q, cat) => S.city ? S.city.items.filter((it) => it.t === 'd' && DECOS[it.k] && DECOS[it.k].cat === cat && inQ(Q, it.x, it.z)).length : 0;
+const CAT_FR = { jardins: 'massifs de fleurs', quais: 'décors au bord de l’eau', nature: 'arbres' };
+function chapMission(id, Q, i) { const ch = STORY[id][i]; const M = { kind: ch.kind, chap: i, gift: ch.gift, clue: ch.clue, obj: ch.obj, n: ch.n, cat: ch.cat, coins: misReward(Q, 50 + i * 25), xp: 14 + i * 6, say: '📖 ' + ch.t + ' (chapitre ' + (i + 1) + '/3). ' + ch.say };
+  M.t = ch.kind === 'find' ? 'Retrouver ' + ch.obj[1] : ch.kind === 'pain' ? 'Apporter ' + ch.n + ' baguettes' : ch.kind === 'houses' ? 'Bâtir ' + ch.n + ' maisons dans le quartier' : ch.kind === 'deco' ? 'Poser ' + ch.n + ' ' + CAT_FR[ch.cat] + ' dans le quartier' : 'Atteindre ' + fmt(ch.n) + ' habitants';
+  M.t = '📖 ' + M.t; return M; }
+function chapReady(id, M) { const Q = qById(id); if (M.kind === 'deco') return decosIn(Q, M.cat) >= M.n; if (M.kind === 'pop') return Math.floor(S.pop || 0) >= M.n; return false; }
+function chapDone(id, M) { const m = misS()[id]; m.c = (m.c || 0) + 1; const N = NPC[id];
+  setTimeout(() => talk({ who: N.who, av: N.av, c: N.c, say: m.c >= 3 ? 'Merci du fond du cœur ! Mon histoire se termine bien grâce à vous. Pour la peine, voici un petit cadeau.' : 'Merci ! La suite de mon histoire bientôt : repassez me voir dans un quart d’heure.' }), 900); if (M.clue) { const H = S.clues || (S.clues = []); if (H.indexOf(M.clue) < 0) H.push(M.clue); }
+  if (M.gift) setTimeout(() => giveGift(M.gift, NPC[id].who.split(',')[0] + ' te remercie pour toute son histoire.'), 1800); }
+
+/* ---------------- le secret des Rocheval : six lettres, puis le trésor ---------------- */
+const LETTRES = [
+  { q: 'bourg', at: [-6, 14], txt: 'Été 1789. Les temps se troublent. J’ai décidé de mettre à l’abri ce que les Rocheval ont de plus précieux. Que celui qui trouve cette lettre trouve aussi les cinq autres.' },
+  { q: 'campagne', at: [-70, 8], txt: 'Le blé était haut. Personne ne remarque une dame qui se promène dans les champs avec un panier un peu lourd.' },
+  { q: 'quais', at: [-45, -30], txt: 'Le marinier qui m’a aidée ne sait pas lire. Tant mieux. Nous avons remonté le canal de nuit, sans lanterne.' },
+  { q: 'parvis', at: [30, 6], txt: 'Le curé m’a promis le silence. Il m’a aussi demandé de ne plus chanter pendant la messe. On ne peut pas tout avoir.' },
+  { q: 'hautbourg', at: [-16, -40], txt: 'Mon notaire garde la clé. Il ne sait pas ce qu’elle ouvre. Les notaires adorent garder ce qu’ils ne comprennent pas.' },
+  { q: 'butte', at: [12, -30], txt: 'Au pied de la tour, la troisième pierre, côté soleil couchant. Que mes descendants, ou quelqu’un d’aussi patient, en fassent bon usage. Aliénor.' } ];
+const letS = () => S.lettres || (S.lettres = {});
+const letG = [], letL = []; let letT = 0;
+LETTRES.forEach((L, i) => { const g = new THREE.Group(); g.userData.dyn = true; g.visible = false; scene.add(g);
+  const env = mesh(new THREE.BoxGeometry(0.42, 0.04, 0.3), '#F4E9D3', 0, 0.06, 0, g); env.rotation.y = 0.4; const seal = mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 10), '#B5303A', 0, 0.09, 0, g); seal.castShadow = false;
+  const glow = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 20), new THREE.MeshBasicMaterial({ color: '#F3CF7A', transparent: true, opacity: 0.7, depthWrite: false })); glow.rotation.x = -Math.PI / 2; glow.position.y = 0.05; g.add(glow);
+  letG.push(g); const l = label(g, 0.9); l.act = () => letterFound(i); letL.push(l); });
+function letterSpot(L) { const [x0, z0] = L.at; for (let r = 0; r < 30; r += 1) { const a = r * 2.4, x = x0 + Math.cos(a) * r * 0.8, z = z0 + Math.sin(a) * r * 0.8; if (!blocked(x, z, 0.6) && !roadAt(x, z) && Math.abs(z) > 3 && !(x > RIVER.x0 - 1.5 && x < RIVER.x1 + 1.5)) return [x, z]; } return [x0, z0]; }
+const letCount = () => Object.keys(letS()).length;
+function letterFound(i) { if (letS()[i]) return; letS()[i] = Date.now(); dirty = true; const L = LETTRES[i]; SFX.done(); gain(10); burst(letG[i].position.x, 0.8, letG[i].position.z, ['#F3CF7A', '#FFFDF8'], 14, 4);
+  talk({ who: 'Lettre d’Aliénor de Rocheval (' + letCount() + '/6)', av: '✉', c: '#B5303A', say: L.txt });
+  if (letCount() >= 6) setTimeout(() => toast('💰 Les six lettres sont réunies !', 'Aliénor parle de la tour du château, côté soleil couchant. Va voir au pied du château…'), 2500); }
+// le trésor, au pied de la tour, côté couchant
+const tresorG = new THREE.Group(); tresorG.userData.dyn = true; tresorG.visible = false; scene.add(tresorG);
+{ mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), '#7A5634', 0, 0.25, 0, tresorG); mesh(new THREE.BoxGeometry(0.94, 0.08, 0.64), '#E3A73C', 0, 0.5, 0, tresorG); const gl = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.8, 24), new THREE.MeshBasicMaterial({ color: '#F3CF7A', transparent: true, opacity: 0.8, depthWrite: false })); gl.rotation.x = -Math.PI / 2; gl.position.y = 0.05; tresorG.add(gl); }
+const tresorL = label(tresorG, 1.4); tresorL.act = () => tresorOpen();
+function tresorOpen() { if (S.tresor || letCount() < 6) return; S.tresor = Date.now(); dirty = true; const v = Math.round(2500 * (1 + (S.popMax || S.pop || 0) / 800)); led('💰 Trésor des Rocheval', v); S.coins += v; gain(40);
+  SFX.done(); buzz(120); for (let k = 0; k < 4; k++) setTimeout(() => burst(tresorG.position.x, 1, tresorG.position.z, ['#E3A73C', '#F3CF7A', '#FFFDF8'], 22, 6), k * 350);
+  talk({ who: 'Le trésor des Rocheval', av: '💰', c: '#E3A73C', say: 'Sous la troisième pierre : un coffre, des pièces d’or et un mot d’Aliénor. « Pour le village, qui saura en faire quelque chose de beau. » +' + fmt(v) + ' écus d’or !' });
+  setTimeout(() => giveGift('coffre_tresor', 'Le coffre d’Aliénor est à toi.'), 2500); }
+
+/* ---------------- les clins d'œil cachés ---------------- */
+const EGGS = [
+  { id: 'coq', n: '🐓 Cocorico !', how: 'Toucher cinq fois de suite le coq gaulois sur sa colonne.' },
+  { id: 'nain', n: '🧙 Le nain de jardin voyageur', how: 'Le trouver cinq fois : il change de place toutes les dix minutes.' },
+  { id: 'bavard', n: '💬 Le bavard', how: 'Toucher huit fois de suite un habitant de quartier : il finit par dire un secret.' },
+  { id: 'baguette', n: '🥖 Pluie de baguettes', how: 'Taper « baguette » au clavier.' },
+  { id: 'juillet', n: '🎆 Le 14 juillet', how: 'Jouer le jour de la fête nationale.' },
+  { id: 'noel', n: '🎄 Joyeux Noël', how: 'Jouer le 24 ou le 25 décembre.' },
+  { id: 'avril', n: '🐟 Poisson d’avril', how: 'Jouer le 1er avril.' },
+  { id: 'musique', n: '🎵 La fête de la musique', how: 'Jouer le 21 juin.' } ];
+const eggS = () => S.eggs || (S.eggs = {});
+function eggFound(id, msg) { const first = !eggS()[id]; if (first) { eggS()[id] = Date.now(); dirty = true; gain(8); } const E = EGGS.find((e) => e.id === id);
+  toast((first ? '🥚 Clin d’œil trouvé : ' : '') + E.n, msg + (first ? ' (' + Object.keys(eggS()).length + '/' + EGGS.length + ' dans le carnet)' : '')); return first; }
+// le coq gaulois : cinq touches de suite
+let coqTaps = 0, coqAt = 0;
+function eggDeco(it) { if (!it) return false; if (it.k === 'coq') { const n = Date.now(); coqTaps = n - coqAt < 2500 ? coqTaps + 1 : 1; coqAt = n; if (coqTaps >= 5) { coqTaps = 0; SFX.done(); burst(it.x, 4.5, it.z, ['#E3A73C', '#2F4B7C', '#FFFDF8', '#C9573F'], 24, 6); eggFound('coq', 'Cocorico ! Le coq chante pour tout le village.'); giveGift('coq_dore', 'Un coq d’or pour le village !'); return true; } return false; }
+  const G = { petanque: 'petanque', pecheur: 'peche', chamboule: 'chamboule' }[it.k]; if (G) { mgOpen(G); return true; } return false; }
+// les bavards : huit touches de suite sur un même habitant
+const SECRETS = { bourg: 'Firmin : « Je lis les cartes postales. Toutes. Madame Dupont écrit très mal. »', campagne: 'Ginette : « Je parle aux vaches en verlan. Elles préfèrent. »', quais: 'Yvon : « Je ne sais pas nager. Chut. »',
+  hautbourg: 'Maître Delorme : « Mes lunettes sont sur ma tête. Je le sais. Je fais semblant de chercher pour avoir de la compagnie. »', parvis: 'Sœur Agathe : « Je triche à la belote. Le Seigneur ferme les yeux, le père Anselme aussi. »',
+  faubourg: 'Dédé : « Je n’ai jamais eu mon permis. Je le passe la semaine prochaine. Depuis 1985. »', coteau: 'Augustin : « Mon vin préféré ? Le sirop de grenadine. »', bois: 'Gaspard : « J’ai peur des lapins. »',
+  butte: 'Baptiste : « Je m’appelle bien Baptiste. Madame m’appelle Bertrand. J’ai fini par répondre aux deux. »', pres: 'Lili : « C’est moi qui ai mangé le miel. Pas mon frère. »', val: 'Raymond : « Pastis sait compter jusqu’à douze. Moi, jusqu’à onze, après je m’endors. »',
+  vergers: 'Colette : « Je n’aime pas les pommes. Je préfère les fraises. »', plateau: 'Albert : « La lune, c’est mon étoile préférée. Je sais, ce n’en est pas une. »', bief: 'Pierrot : « Le brochet mesurait trente centimètres. »',
+  rives: 'Madeleine : « Le maire porte des chaussettes à pois. Je le sais, je les lave. »', hauts: 'Edmond : « Je peins les nuages en premier, ils bougent moins que les gens. »', vignes: 'Simone : « Je ne bois que de l’eau. Personne ne me croit. »' };
+let bavId = '', bavN = 0, bavAt = 0;
+function eggNpc(id) { const n = Date.now(); bavN = id === bavId && n - bavAt < 3000 ? bavN + 1 : 1; bavId = id; bavAt = n; if (bavN < 8) return false; bavN = 0;
+  talk({ who: NPC[id].who + ' (en secret)', av: NPC[id].av, c: NPC[id].c, say: SECRETS[id] || '…' }); eggFound('bavard', 'À force d’insister, on apprend des choses.'); return true; }
+// « baguette » au clavier
+let eggKeys = '';
+window.addEventListener('keydown', (e) => { if (!S.started || !e.key || e.key.length !== 1) return; eggKeys = (eggKeys + e.key.toLowerCase()).slice(-8); if (eggKeys === 'baguette') { eggKeys = '';
+  for (let k = 0; k < 10; k++) setTimeout(() => burst(player.position.x + (Math.random() - 0.5) * 8, 6, player.position.z + (Math.random() - 0.5) * 8, ['#D9A24A', '#E8C27A', '#B97A3A'], 10, 5), k * 160);
+  SFX.done(); eggFound('baguette', 'Il pleut des baguettes sur le village !'); } });
+// les dates
+let dateT = 30, fete = null;
+function eggDates() { const d = new Date(), m = d.getMonth() + 1, j = d.getDate(), key = d.getFullYear() + '-' + m + '-' + j; if (S.eggDay === key) return; S.eggDay = key;
+  if (m === 7 && j === 14) { fete = { k: 'juillet', t: 90 }; eggFound('juillet', 'Bonne fête nationale ! Feu d’artifice au-dessus du château.'); }
+  else if (m === 12 && (j === 24 || j === 25)) { fete = { k: 'noel', t: 60 }; eggFound('noel', 'Joyeux Noël à tout le village !'); }
+  else if (m === 4 && j === 1) { fete = { k: 'avril', t: 90 }; eggFound('avril', 'Regarde bien le dos des habitants…'); }
+  else if (m === 6 && j === 21) { fete = { k: 'musique', t: 90 }; eggFound('musique', 'Le village chante !'); } }
+function tickDateFete(dt) { if (!fete) return; fete.t -= dt; if (fete.t <= 0) { fete = null; return; } fete.cd = (fete.cd || 0) - dt; if (fete.cd > 0) return;
+  if (fete.k === 'juillet') { fete.cd = 0.7; burst(CASTLE[0] + (Math.random() - 0.5) * 16, 16 + Math.random() * 6, CASTLE[1] + (Math.random() - 0.5) * 10, [['#2F4B7C', '#FFFDF8', '#C9283B'][Math.floor(Math.random() * 3)], '#FFFDF8'], 26, 7); }
+  else if (fete.k === 'noel') { fete.cd = 1.2; burst(player.position.x + (Math.random() - 0.5) * 10, 7, player.position.z + (Math.random() - 0.5) * 10, ['#FFFDF8', '#E3A73C', '#3F6B3A', '#C9283B'], 14, 3); }
+  else { fete.cd = 2.2; const L = RES.filter((g) => g.visible); const g = L[Math.floor(Math.random() * L.length)]; if (g) floatAt(g, fete.k === 'avril' ? '🐟' : ['🎵', '🎶', '🎷', '🪗'][Math.floor(Math.random() * 4)]); } }
+// le nain de jardin voyageur
+const nainG = new THREE.Group(); nainG.userData.dyn = true; nainG.visible = false; scene.add(nainG);
+{ mesh(new THREE.CylinderGeometry(0.13, 0.16, 0.3, 10), '#2F6B8C', 0, 0.15, 0, nainG); mesh(new THREE.SphereGeometry(0.12, 10, 8), '#E8BFA0', 0, 0.4, 0, nainG); mesh(new THREE.ConeGeometry(0.13, 0.34, 10), '#C9573F', 0, 0.62, 0, nainG); const b = mesh(new THREE.SphereGeometry(0.09, 8, 6), '#FFFDF8', 0, 0.33, 0.07, nainG); b.scale.y = 1.3; }
+const nainL = label(nainG, 1.0); nainL.act = () => nainFound();
+function nainMove() { const Qs = QUARTIERS.filter((Q) => qUnlocked(Q)); const Q = Qs[Math.floor(Math.random() * Qs.length)]; if (!Q) return; const sp = findSpot(Q); nainG.position.set(sp[0], groundY(sp[0], sp[1]), sp[1]); nainG.rotation.y = Math.random() * 6.28; S.nainAt = Date.now() + 600000; S.nainP = sp; dirty = true; }
+function nainFound() { if (!S.nainP) return; S.nainN = (S.nainN || 0) + 1; const v = Math.round(30 * (1 + (S.pop || 0) / 400)); led('🧙 Nain de jardin', v); S.coins += v; SFX.coin(); burst(nainG.position.x, 0.8, nainG.position.z, ['#C9573F', '#2F6B8C'], 10, 3);
+  floatAt(nainG, '🧙 +' + v + ' ' + C); S.nainP = null; S.nainAt = Date.now() + 600000; nainG.visible = false; dirty = true;
+  if (S.nainN >= 5 && !eggS().nain) { eggFound('nain', 'Cinq fois trouvé ! Il a décidé de s’installer chez toi.'); giveGift('nain_jardin', ''); } else toast('🧙 Le nain de jardin voyageur', 'Trouvé ' + S.nainN + ' fois. Il repartira se cacher ailleurs dans dix minutes.'); }
+
+/* ---------------- les mini-jeux ---------------- */
+const MG = {
+  petanque: { n: 'La pétanque', ic: '🎯', how: 'Touche l’écran pour lancer : plus la jauge est haute, plus la boule va loin. Approche-toi du cochonnet. Trois boules.', gift: 'trophee_petanque', goal: 220, k: 0.7 },
+  peche: { n: 'La pêche', ic: '🎣', how: 'Attends que le bouchon plonge, puis touche vite ! Trop tôt, le poisson s’enfuit. Cinq lancers.', gift: 'carpe_doree', goal: 320, k: 0.55 },
+  champi: { n: 'La cueillette aux champignons', ic: '🍄', how: 'Touche les cèpes (bruns), surtout pas les amanites (rouges à pois blancs). 20 secondes.', gift: 'champi_geant', goal: 150, k: 1.1 },
+  chamboule: { n: 'Le chamboule-tout', ic: '🥫', how: 'Les boîtes bougent : touche pour lancer quand elles sont en face. Trois balles, six boîtes.', gift: 'ours_peluche', goal: 120, k: 1.3 } };
+const MG_WAIT = 300000; // 5 minutes entre deux parties d'un même jeu
+const mgS = (id) => { const A = S.mg || (S.mg = {}); return A[id] || (A[id] = { best: 0, last: 0, n: 0 }); };
+const mgLeft = (id) => Math.max(0, mgS(id).last + (fast ? MG_WAIT / 10 : MG_WAIT) - Date.now());
+let MGR = null;
+function mgOpen(id) { if (!S.started) return; closeSheet(); const G = MG[id], st = mgS(id), left = mgLeft(id);
+  if (left > 0) return toast(G.ic + ' ' + G.n, 'Encore ' + Math.ceil(left / 60000) + ' min avant de rejouer. Meilleur score : ' + st.best + '.');
+  let el = $('mg'); if (!el) { el = document.createElement('div'); el.id = 'mg'; el.style.cssText = 'position:fixed;inset:0;z-index:60;background:rgba(43,37,53,.55);display:flex;align-items:center;justify-content:center;touch-action:none';
+    el.innerHTML = '<div style="background:#FFFDF8;border:3px solid #2B2535;border-radius:22px;box-shadow:0 6px 0 rgba(43,37,53,.3);padding:12px;width:min(344px,94vw);text-align:center;font-family:Nunito,sans-serif"><b id="mg-t" style="font:900 18px Fraunces,Georgia,serif"></b><p id="mg-h" style="margin:4px 0 8px;font:700 13px/1.3 Nunito,sans-serif"></p><canvas id="mg-c" width="320" height="380" style="width:100%;max-width:320px;border-radius:14px;touch-action:none;display:block;margin:0 auto"></canvas><p id="mg-s" style="margin:8px 0 6px;font:800 14px Nunito,sans-serif"></p><button type="button" id="mg-x" class="btn ghost" style="padding:8px 16px">Fermer</button></div>';
+    document.body.appendChild(el); $('mg-x').addEventListener('click', mgClose); $('mg-c').addEventListener('pointerdown', (e) => { e.preventDefault(); if (MGR && MGR.tap) { const r = e.target.getBoundingClientRect(); MGR.tap((e.clientX - r.left) * 320 / r.width, (e.clientY - r.top) * 380 / r.height); } }); }
+  el.hidden = false; el.style.display = 'flex'; $('mg-t').textContent = G.ic + ' ' + G.n; $('mg-h').textContent = G.how; $('mg-s').textContent = 'Meilleur score : ' + st.best;
+  MGR = { id, t: 0, score: 0, over: false, ctx: $('mg-c').getContext('2d') }; MG_START[id](MGR); }
+function mgClose() { const el = $('mg'); if (el) { el.hidden = true; el.style.display = 'none'; } if (MGR && !MGR.over && MGR.started) mgEnd(); MGR = null; }
+function mgEnd() { const R = MGR; if (!R || R.over) return; R.over = true; const G = MG[R.id], st = mgS(R.id), sc = Math.max(0, Math.round(R.score)); st.last = Date.now(); st.n++; const rec = sc > st.best; if (rec) st.best = sc;
+  const v = Math.round(sc * G.k * (1 + (S.pop || 0) / 600)); if (v > 0) { led('🎲 Jeux du village', v); S.coins += v; SFX.coin(); } dirty = true;
+  $('mg-s').textContent = 'Score : ' + sc + (rec ? ' · nouveau record !' : '') + ' · +' + fmt(v) + ' ' + C;
+  if (sc >= G.goal) giveGift(G.gift, 'Bravo pour ce score au jeu « ' + G.n.replace(/^La |^Le /, '') + ' » !'); }
+const MG_START = {
+  petanque(R) { R.started = true; R.co = { x: 160 + (Math.random() - 0.5) * 80, y: 90 + Math.random() * 70 }; R.balls = []; R.left = 3; R.fly = null;
+    R.tap = () => { if (R.fly || R.left <= 0 || R.over) return; const p = (Math.sin(R.t * 2.4) + 1) / 2, ty = 350 - p * 330, tx = 160 + (Math.random() - 0.5) * 40 * (0.5 + p); R.fly = { x: 160, y: 350, tx, ty, u: 0 }; R.left--; }; },
+  peche(R) { R.started = true; R.casts = 5; R.st = 'wait'; R.w = 1.5 + Math.random() * 3.5; R.fish = [];
+    R.tap = () => { if (R.over) return; if (R.st === 'bite') { const sz = Math.round(30 + Math.random() * 70); R.score += sz; R.fish.push(sz); R.msg = '🐟 ' + sz + ' cm !'; } else if (R.st === 'wait') R.msg = 'Trop tôt ! Le poisson file.'; else return;
+      R.casts--; R.st = 'pause'; R.w = 1.0; if (R.casts <= 0) setTimeout(mgEnd, 600); }; },
+  champi(R) { R.started = true; R.left = 20; R.cells = Array(16).fill(null); R.spawn = 0;
+    R.tap = (x, y) => { if (R.over) return; const i = Math.floor((x - 20) / 70), j = Math.floor((y - 60) / 75); if (i < 0 || i > 3 || j < 0 || j > 3) return; const c = R.cells[j * 4 + i]; if (!c) return; R.score += c.bad ? -15 : 10; R.pop = { i, j, t: 0.4, bad: c.bad }; R.cells[j * 4 + i] = null; }; },
+  chamboule(R) { R.started = true; R.balls = 3; R.cans = [[-30, 0], [0, 0], [30, 0], [-15, 1], [15, 1], [0, 2]].map((q) => ({ dx: q[0], row: q[1], down: false })); R.fly = null;
+    R.tap = () => { if (R.fly || R.balls <= 0 || R.over) return; R.fly = { y: 350, x: 160 }; R.balls--; }; } };
+function tickMG(dt) { const R = MGR; if (!R || !R.ctx) return; R.t += dt; const g = R.ctx, W = 320, H = 380;
+  if (R.id === 'petanque') { g.fillStyle = '#E3CFA0'; g.fillRect(0, 0, W, H); g.strokeStyle = '#C9B282'; g.lineWidth = 2; g.strokeRect(10, 10, W - 20, H - 20);
+    g.fillStyle = '#E3A73C'; g.beginPath(); g.arc(R.co.x, R.co.y, 6, 0, 7); g.fill();
+    if (R.fly) { const F = R.fly; F.u = Math.min(1, F.u + dt * 1.4); const e = 1 - Math.pow(1 - F.u, 3); F.x = 160 + (F.tx - 160) * e; F.y = 350 + (F.ty - 350) * e; if (F.u >= 1) { const d = Math.hypot(F.x - R.co.x, F.y - R.co.y); const pts = Math.max(0, Math.round(100 - d * 0.6)); R.balls.push({ x: F.x, y: F.y, pts }); R.score += pts; R.fly = null; if (R.left <= 0) setTimeout(mgEnd, 500); } }
+    R.balls.concat(R.fly ? [R.fly] : []).forEach((b) => { g.fillStyle = '#9AA4AC'; g.beginPath(); g.arc(b.x, b.y, 11, 0, 7); g.fill(); g.strokeStyle = '#6E7880'; g.stroke(); });
+    if (!R.fly && R.left > 0) { const p = (Math.sin(R.t * 2.4) + 1) / 2; g.fillStyle = '#FFFDF8'; g.fillRect(292, 40, 16, 300); g.fillStyle = p > 0.8 ? '#C9573F' : '#5E8F3E'; g.fillRect(292, 40 + 300 * (1 - p), 16, 300 * p); g.strokeStyle = '#2B2535'; g.strokeRect(292, 40, 16, 300); g.fillStyle = '#9AA4AC'; g.beginPath(); g.arc(160, 350, 11, 0, 7); g.fill(); }
+    g.fillStyle = '#2B2535'; g.font = '800 15px Nunito, sans-serif'; g.fillText('Boules : ' + R.left + '   Points : ' + Math.round(R.score), 18, 32); }
+  else if (R.id === 'peche') { g.fillStyle = '#7FB9D6'; g.fillRect(0, 0, W, H); g.fillStyle = '#86A653'; g.fillRect(0, H - 60, W, 60); g.strokeStyle = 'rgba(255,255,255,.4)'; for (let k = 0; k < 6; k++) { g.beginPath(); g.arc(160, 170, 30 + ((R.t * 30 + k * 40) % 220), 0, 7); g.stroke(); }
+    R.w -= dt; if (R.st === 'wait' && R.w <= 0) { R.st = 'bite'; R.w = 0.75; } else if (R.st === 'bite' && R.w <= 0) { R.st = 'wait'; R.w = 1.5 + Math.random() * 3.5; R.msg = 'Raté… il a filé.'; R.casts--; if (R.casts <= 0) setTimeout(mgEnd, 600); } else if (R.st === 'pause' && R.w <= 0 && R.casts > 0) { R.st = 'wait'; R.w = 1.5 + Math.random() * 3.5; R.msg = ''; }
+    const dip = R.st === 'bite' ? 10 + Math.sin(R.t * 30) * 4 : Math.sin(R.t * 2) * 2; g.strokeStyle = '#2B2535'; g.beginPath(); g.moveTo(320, 0); g.lineTo(160, 160 + dip); g.stroke();
+    g.fillStyle = R.st === 'bite' ? '#C9283B' : '#C9573F'; g.beginPath(); g.arc(160, 165 + dip, 9, 0, 7); g.fill(); g.fillStyle = '#FFFDF8'; g.beginPath(); g.arc(160, 158 + dip, 6, Math.PI, 0); g.fill();
+    g.fillStyle = '#2B2535'; g.font = '800 15px Nunito, sans-serif'; g.fillText('Lancers : ' + R.casts + '   Prises : ' + R.fish.length + '   Points : ' + R.score, 14, 28); if (R.msg) { g.font = '900 20px Nunito, sans-serif'; g.fillText(R.msg, 160 - g.measureText(R.msg).width / 2, 260); } }
+  else if (R.id === 'champi') { g.fillStyle = '#5E7F3A'; g.fillRect(0, 0, W, H); if (!R.over) { R.left -= dt; if (R.left <= 0) { R.left = 0; mgEnd(); } }
+    R.spawn -= dt; if (R.spawn <= 0 && !R.over) { R.spawn = 0.45 + Math.random() * 0.3; const free = []; R.cells.forEach((c, i) => { if (!c) free.push(i); }); if (free.length) R.cells[free[Math.floor(Math.random() * free.length)]] = { t: 1.1, bad: Math.random() < 0.28 }; }
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { const x = 20 + i * 70 + 35, y = 60 + j * 75 + 45, c = R.cells[j * 4 + i]; g.fillStyle = '#4E6B30'; g.beginPath(); g.ellipse(x, y + 18, 28, 9, 0, 0, 7); g.fill();
+      if (c) { c.t -= dt; if (c.t <= 0) { R.cells[j * 4 + i] = null; continue; } g.fillStyle = '#F4EEE0'; g.fillRect(x - 6, y, 12, 18); g.fillStyle = c.bad ? '#D9283B' : '#8A5A30'; g.beginPath(); g.ellipse(x, y, 22, 14, 0, Math.PI, 0); g.fill(); if (c.bad) { g.fillStyle = '#FFFDF8'; [[-9, -6], [4, -9], [10, -3]].forEach((q) => { g.beginPath(); g.arc(x + q[0], y + q[1], 3, 0, 7); g.fill(); }); } } }
+    if (R.pop) { R.pop.t -= dt; g.fillStyle = R.pop.bad ? '#FFB0B0' : '#FFF3A0'; g.font = '900 18px Nunito, sans-serif'; g.fillText(R.pop.bad ? '−15' : '+10', 20 + R.pop.i * 70 + 22, 60 + R.pop.j * 75 + 20); if (R.pop.t <= 0) R.pop = null; }
+    g.fillStyle = '#FFFDF8'; g.font = '800 15px Nunito, sans-serif'; g.fillText('Temps : ' + Math.ceil(R.left) + ' s   Points : ' + R.score, 18, 32); }
+  else if (R.id === 'chamboule') { g.fillStyle = '#F4E9D3'; g.fillRect(0, 0, W, H); g.fillStyle = '#C9573F'; for (let k = 0; k < 8; k++) g.fillRect(k * 40, 0, 20, 18); g.fillStyle = '#B98A4E'; g.fillRect(40, 132, 240, 10);
+    const cx = 160 + Math.sin(R.t * 1.6) * 100; R.cans.forEach((c) => { if (c.down) return; const x = cx + c.dx, y = 108 - c.row * 26; g.fillStyle = ['#2F6B8C', '#E3A73C', '#3F6B3A'][c.row]; g.fillRect(x - 11, y, 22, 24); g.fillStyle = '#FFFDF8'; g.fillRect(x - 11, y + 8, 22, 6); });
+    if (R.fly) { R.fly.y -= dt * 700; g.fillStyle = '#D9283B'; g.beginPath(); g.arc(R.fly.x, R.fly.y, 10, 0, 7); g.fill(); if (R.fly.y < 130) { let hit = 0; R.cans.forEach((c) => { if (!c.down && Math.abs(cx + c.dx - R.fly.x) < 24) { c.down = true; hit++; } }); if (!hit) R.cans.forEach((c) => { if (!c.down && hit === 0 && Math.abs(cx + c.dx - R.fly.x) < 34) { c.down = true; hit++; } });
+      R.score = R.cans.filter((c) => c.down).length * 20; R.fly = null; if (R.balls <= 0 || R.cans.every((c) => c.down)) setTimeout(mgEnd, 500); } }
+    else if (R.balls > 0) { g.fillStyle = '#D9283B'; g.beginPath(); g.arc(160, 350, 10, 0, 7); g.fill(); }
+    g.fillStyle = '#2B2535'; g.font = '800 15px Nunito, sans-serif'; g.fillText('Balles : ' + R.balls + '   Boîtes : ' + R.cans.filter((c) => c.down).length + '/6', 18, 200); } }
+
+/* ---------------- le carnet du village et les jeux ---------------- */
+function jeuxSheet() { if (!S.started) return; openSheet('🎲 Jeux du village', 'Une partie toutes les 5 minutes par jeu. Un premier beau score offre un cadeau.', Object.keys(MG).map((id) => { const G = MG[id], st = mgS(id), left = mgLeft(id);
+  return { t: G.ic + ' ' + G.n + (giftOn(G.gift) ? ' · 🎁' : ''), s: 'Meilleur score ' + st.best + ' · cadeau à partir de ' + G.goal + (left > 0 ? ' · encore ' + Math.ceil(left / 60000) + ' min' : ''), btn: left > 0 ? 'Bientôt' : 'Jouer', ok: left <= 0, run: () => mgOpen(id) }; })); }
+function carnetSheet() { if (!S.started) return; const el = document.createElement('div'); el.className = 'tdb';
+  const ids = Object.keys(STORY), chap = ids.reduce((a, id) => a + Math.min(3, (misS()[id] || {}).c || 0), 0), gifts = Object.keys(S.gifts || {}).length, totalGifts = Object.values(DECOS).filter((d) => d.gift).length;
+  const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  let h = '<div class="kpi" style="grid-template-columns:repeat(3,1fr)"><div><small>Chapitres</small><b>' + chap + '/' + ids.length * 3 + '</b></div><div><small>Clins d’œil</small><b>' + Object.keys(eggS()).length + '/' + EGGS.length + '</b></div><div><small>Cadeaux</small><b>' + gifts + '/' + totalGifts + '</b></div></div>';
+  h += '<h4>💌 Le secret des Rocheval · ' + letCount() + '/6 lettres</h4>' + (S.tresor ? '<p class="ex">Le trésor a été trouvé. Aliénor serait fière.</p>' : '<p class="ex">' + (letCount() ? 'Les lettres trouvées :' : 'On raconte que la comtesse Aliénor a caché six lettres dans le village. On ne les voit qu’en passant tout près.') + '</p>');
+  LETTRES.forEach((L, i) => { if (letS()[i]) h += '<p class="ex">✉️ <i>' + esc(L.txt) + '</i></p>'; });
+  if ((S.clues || []).length) { h += '<h4>🔎 Ce que disent les habitants</h4>'; S.clues.forEach((c) => { h += '<p class="ex">' + esc(c) + '</p>'; }); }
+  h += '<h4>📖 Les histoires</h4>'; ids.forEach((id) => { const Q = qById(id), N = NPC[id], c = Math.min(3, (misS()[id] || {}).c || 0); if (!Q) return; const open = qUnlocked(Q);
+    h += '<p class="ex">' + (c >= 3 ? '✅' : open ? '📖' : '🔒') + ' <b>' + esc(N.who.split(',')[0]) + '</b> · ' + esc(qName(Q)) + ' · ' + (open ? c + '/3' + (c < 3 ? ' · « ' + esc(STORY[id][c].t) + ' »' : '') : 'à ' + TIER_POP[Q.tier] + ' habitants') + '</p>'; });
+  h += '<h4>🥚 Les clins d’œil</h4>'; EGGS.forEach((E) => { h += '<p class="ex">' + (eggS()[E.id] ? '✅ ' + esc(E.n) + ' : ' + esc(E.how) : '❔ ???') + '</p>'; });
+  el.innerHTML = h; openSheet('📖 Carnet du village', 'Les histoires des habitants, le secret des Rocheval, les clins d’œil trouvés.', [{ t: '🎲 Jeux du village', s: 'Pétanque, pêche, champignons, chamboule-tout.', btn: 'Jouer', ok: true, run: () => { closeSheet(); jeuxSheet(); } }], null, el); }
+
+/* ---------------- chaque image ---------------- */
+function tickHistoire(dt) { tickMG(dt); if (!S.started || !S.city) return; tickDateFete(dt); if ((dateT += dt) > 60) { dateT = 0; eggDates(); }
+  if ((letT += dt) < 0.4) return; letT = 0; const px = target.x, pz = target.z, open = (S.popMax || S.pop || 0) >= 25;
+  LETTRES.forEach((L, i) => { const g = letG[i], Q = qById(L.q), found = !!letS()[i]; const on = open && !found && Q && qUnlocked(Q); g.visible = false; setLabel(letL[i], '', ''); if (!on) return;
+    if (!L.sp || blocked(L.sp[0], L.sp[1], 0.5)) L.sp = letterSpot(L); g.position.set(L.sp[0], groundY(L.sp[0], L.sp[1]), L.sp[1]); const near = Math.hypot(px - L.sp[0], pz - L.sp[1]) < 16 && zoom < 60; g.visible = near; g.children[2].scale.setScalar(1 + 0.15 * Math.sin(Date.now() / 200)); if (near) setLabel(letL[i], '✉️', 'ready'); });
+  const tr = letCount() >= 6 && !S.tresor; tresorG.visible = tr; if (tr) { const x = CASTLE[0] - 9, z = CASTLE[1] + 2; tresorG.position.set(x, groundY(x, z), z); setLabel(tresorL, '💰 Le trésor !', 'ready'); } else setLabel(tresorL, '', '');
+  if ((S.popMax || 0) >= 60) { if (!S.nainP && Date.now() > (S.nainAt || 0)) nainMove(); if (S.nainP) { if (!nainG.visible) nainG.position.set(S.nainP[0], groundY(S.nainP[0], S.nainP[1]), S.nainP[1]); const near = Math.hypot(px - S.nainP[0], pz - S.nainP[1]) < 22 && zoom < 70; nainG.visible = near; setLabel(nainL, near ? '🧙' : '', 'ready'); } else setLabel(nainL, '', ''); } }
+if (location.hash === '#debug') window.__histoire = { STORY, LETTRES, EGGS, MG, mgOpen, letterFound, tresorOpen, giveGift, carnetSheet, jeuxSheet, nainMove, eggDeco, eggNpc };
 /* ================= ambiance : l'heure qu'il est en France, les saisons, la météo, le vent, la vie ================= */
 // La saison suit la date de Paris ; la journée du village dure 15 minutes. __pf.amb.set({ day (0 à 1), hour, season, wind }) force une valeur pour essayer ; set(null) revient au réel.
 const AMB = { hour: 12, h: 1, season: 'ete', weather: 'clair', wind: 0.1, night: 0, force: {}, rain: 0, snow: 0, mist: 0, cloud: 0.4, cover: 0 };
@@ -4917,7 +5231,7 @@ window.addEventListener('unhandledrejection', (ev) => showErr('promesse', ev.rea
 function frame() { if (!(window.__bot && window.__bot.manual)) { try { step(); } catch (e) { showErr('boucle', e); } } requestAnimationFrame(frame); }
 function step() {
   const raw = clockT.getDelta(), dt = Math.min(0.1, raw), t = clockT.elapsedTime, n = now();
-  ledTick(); tickPrix(dt); tickPlay(raw); tickCultures(dt, n);
+  ledTick(); tickPrix(dt); tickPlay(raw); tickCultures(dt, n); tickHistoire(dt);
   if (S.started && raw < 0.5) { perfN++; perfT += raw; if (perfN >= 90) { if (perfN / perfT < 38 && quality > 0) { quality--; applyQuality(); } perfN = 0; perfT = 0; } }
   // ---- the player walks (or rides) ----
   let wx = 0, wz = 0;
