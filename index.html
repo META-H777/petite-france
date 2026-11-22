@@ -4151,7 +4151,7 @@ function paintRoad(x, z) { const ix = tileOf(x), iz = tileOf(z), k = tileKey(ix,
   led('🧱 Rues', -ROAD_T[ROADM.t].c); S.coins -= ROAD_T[ROADM.t].c; R[k] = ROADM.t; dirty = true; links = null; drawRoads(); }
 
 // ---- selection of an existing thing in build mode ----
-const KIND2MOV = { shop: 'shop', oven: 'oven', mill: 'mill', plot: 'champ', market: 'market', garden: 'potager', cake: 'cake', bq: 'bq', mairie: 'mairie', parking: 'parking', church: 'church', bistrot: 'bistrot', fontaine: 'fontaine', ferme: 'ferme', hangar: 'hangar', chapelle: 'chapelle', cathedrale: 'cathedrale', chezmoi: 'chezmoi' };
+const KIND2MOV = { shop: 'shop', oven: 'oven', mill: 'mill', plot: 'champ', market: 'market', garden: 'potager', cake: 'cake', bq: 'bq', mairie: 'mairie', parking: 'parking', church: 'church', bistrot: 'bistrot', fontaine: 'fontaine', ferme: 'ferme', hangar: 'hangar', chapelle: 'chapelle', cathedrale: 'cathedrale', chezmoi: 'chezmoi', reserve: 'reserve' };
 function buildTap(sx, sy) {
   const gp = groundHit(sx, sy);
   if (ROADM) { if (gp) paintRoad(gp[0], gp[1]); return true; }
@@ -4160,6 +4160,10 @@ function buildTap(sx, sy) {
   for (const h of ray.intersectObjects(scene.children, true)) { let o = h.object; while (o && !(o.userData && o.userData.kind)) o = o.parent; if (!o) continue; const u = o.userData;
     if (u.kind === 'cityhouse' || u.kind === 'citydeco') { select({ t: 'mi', i: u.id, g: o }); return true; }
     const mk = u.kind === 'pen' ? 'pen_' + u.id : KIND2MOV[u.kind]; if (mk && MOV[mk] && MOV[mk].placed) { select({ t: 'mp', k: mk, g: MOV[mk].objs[0].ob }); return true; } }
+  /* rien de touché directement (le pré de la réserve, l'herbe d'un enclos…) : on prend le bâtiment dont l'emprise contient le point touché, le plus petit d'abord */
+  if (gp) { let best = null, ba = 1e9; Object.keys(MOV).forEach((k) => { const M = MOV[k]; if (!M.placed || !M.objs || !M.objs[0] || !M.objs[0].ob || typeof M.x !== 'number') return; const f = mfp(M, M.r);
+      if (Math.abs(gp[0] - M.x) <= f[0] / 2 && Math.abs(gp[1] - M.z) <= f[1] / 2 && f[0] * f[1] < ba) { ba = f[0] * f[1]; best = k; } });
+    if (best) { select({ t: 'mp', k: best, g: MOV[best].objs[0].ob }); return true; } }
   SEL = null; selRing.visible = false; $('selbar').hidden = true; return true;
 }
 function select(s) { SEL = s; selRing.visible = true; const sz = s.t === 'mi' ? itemFp(S.city.items[s.i]) : mfp(MOV[s.k], MOV[s.k].r); selRing.scale.setScalar(Math.max(sz[0], sz[1]) * 0.6);
