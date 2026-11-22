@@ -4626,8 +4626,13 @@ function findSpot(Q) { for (let k = 0; k < 200; k++) { const x = Q.x0 + 2 + Math
   if (x < BX0 + 2 || x > BX1 - 2 || z < BZ0 + 2 || z > BZ1 - 2 || (x > RIVER.x0 - 2 && x < RIVER.x1 + 2) || Math.abs(z) < 3 || blocked(x, z, 0.6) || roadAt(x, z) || Math.hypot(x - HILL.x, z - HILL.z) < HILL.r1 - 4) continue; return [x, z]; } return [(Q.x0 + Q.x1) / 2, (Q.z0 + Q.z1) / 2]; }
 /* the characters stand in their quartier */
 const NPCG = {}, NPCL = {}, FINDG = {}, FINDL = {};
-function npcHome(Q) { const I = Q.ilots.reduce((b, i) => (!b || Math.hypot(i.cx, i.cz) < Math.hypot(b.cx, b.cz) ? i : b), null); let x = I.cx, z = I.cz;
-  for (let r = 0; r < 14 && (blocked(x, z, 0.5) || roadAt(x, z) || Math.abs(z) < 3); r += 1) { const a = r * 2.4; x = I.cx + Math.cos(a) * r; z = I.cz + Math.sin(a) * r; } return [x, z]; }
+/* une place libre près du centre du quartier ; si un grand bâtiment (corps de ferme, manoir…) la recouvre, on cherche plus loin, en cercles serrés,
+   sans sortir du quartier (Romain, 22/11/2026 : Lili avait disparu sous un corps de ferme) */
+function npcHome(Q) { const I = Q.ilots.reduce((b, i) => (!b || Math.hypot(i.cx, i.cz) < Math.hypot(b.cx, b.cz) ? i : b), null);
+  const ok = (x, z) => !blocked(x, z, 0.6) && !roadAt(x, z) && Math.abs(z) >= 3 && (!Q.x1 || (x > Q.x0 + 1 && x < Q.x1 - 1 && z > Q.z0 + 1 && z < Q.z1 - 1));
+  if (ok(I.cx, I.cz)) return [I.cx, I.cz];
+  for (let r = 1.5; r <= 40; r += 1.5) { const n = Math.max(8, Math.round(r * 2.5)); for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2 + r, x = I.cx + Math.cos(a) * r, z = I.cz + Math.sin(a) * r; if (ok(x, z)) return [x, z]; } }
+  return [I.cx, I.cz]; }
 function npcBoot() { Object.keys(NPC).forEach((id) => { const Q = qById(id), N = NPC[id]; if (!Q) return; const L0 = N.look, g = person(L0[0], L0[1], L0[2], L0[3]); g.scale.setScalar(1.1); g.userData.kind = 'npc'; g.userData.id = id; g.visible = false; NPCG[id] = g;
   const l = label(g, 2.5, 'name'); l.act = () => npcTap(id); NPCL[id] = l;
   const f = new THREE.Group(); f.userData.dyn = true; const ring = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.6, 24), new THREE.MeshBasicMaterial({ color: '#F3CF7A', transparent: true, opacity: 0.85, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; f.add(ring); f.visible = false; scene.add(f); FINDG[id] = f;
@@ -4649,7 +4654,7 @@ function missionsSheet() { const opts = []; Object.keys(NPC).forEach((id) => { c
   if (!opts.length) opts.push({ t: 'Pas encore de mission', s: 'Les habitants arrivent avec le village.', btn: 'OK', ok: true, run: closeSheet });
   openSheet('📜 Missions', 'Chaque quartier a son habitant. Touchez-le, ou choisissez ici.', opts); }
 let npcT = 0, npcPT = 0;
-function tickNpc(dt, t) { if (!S.started || !S.city) return; if ((npcPT += dt) > 20) { npcPT = 0; Object.keys(NPCG).forEach((id) => { const g = NPCG[id], h = g.userData.home; if (h && (blocked(h[0], h[1], 0.5) || roadAt(h[0], h[1]))) npcPlace(); }); }
+function tickNpc(dt, t) { if (!S.started || !S.city) return; if ((npcPT += dt) > 3) { npcPT = 0; Object.keys(NPCG).forEach((id) => { const g = NPCG[id], h = g.userData.home; if (h && (blocked(h[0], h[1], 0.5) || roadAt(h[0], h[1]))) npcPlace(); }); }
   Object.keys(NPCG).forEach((id) => { const g = NPCG[id]; if (g.visible) g.rotation.y = Math.sin(t * 0.4 + g.position.x) * 0.6; const f = FINDG[id]; if (f.visible) f.children[0].scale.setScalar(1 + 0.12 * Math.sin(t * 5)); });
   if ((npcT += dt) < 0.4) return; npcT = 0;
   const px = player.position.x, pz = player.position.z;
