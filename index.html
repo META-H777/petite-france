@@ -941,7 +941,11 @@ STALLX.forEach((sx, si) => { const s = new THREE.Group(); s.position.x = sx; sta
   solidRect(MKSQ.x + sx, MKSQ.z - 1, 2.6, 1.6); });
 { const s = sign('MARCHÉ', 2.4, 0.6, '#2F4B7C', '#FFFDF8', 104); s.position.set(0, 2.9, 0.9); stallG.add(s); }
 // the car park, south of the road
-const PARK = { x0: -19, x1: -7, z: 6.4 };
+const PARK = { x0: -19, x1: -7, z: 6.4, r: 0 };
+/* le parking et le marché peuvent tourner (Romain, 22/11/2026) : leurs emprises suivent l'orientation */
+const oddR = (r) => Math.round((r || 0) / (Math.PI / 2)) % 2 !== 0;
+function parkHit(x, z, pad) { const cx = (PARK.x0 + PARK.x1) / 2, hw = (oddR(PARK.r) ? 1.6 : 6) + pad, hd = (oddR(PARK.r) ? 6 : 1.6) + pad; return Math.abs(x - cx) < hw && Math.abs(z - PARK.z) < hd; }
+function mkHit(x, z) { let o = false; try { o = !!(MOV.market && oddR(MOV.market.r)); } catch (e) {} /* MOV n'existe pas encore au tout premier dessin de l'herbe */ return Math.abs(x - MKSQ.x) < (o ? 3.5 : 8.5) && Math.abs(z - MKSQ.z) < (o ? 8.5 : 3.5); }
 /* le parking ne se donne plus au départ : il s'achète dans Construire › Bâtiments, et sans lui pas de voitures (Eugénie, 19/11/2026) */
 const parkG = new THREE.Group(); parkG.position.set(-13, 0, 6.4); parkG.userData = { kind: 'parking' }; scene.add(parkG);
 flat(13, 4.6, '#C8C1B4', 0, 0, 0.03, parkG);
@@ -1107,8 +1111,8 @@ function free(x, z, pad) {
   if (x > RIVER.x0 - 0.8 && x < RIVER.x1 + 0.8) return false;
   if (x > FENCE.x0 - 0.3 && x < FENCE.x1 + 0.3 && z > FENCE.z0 - 0.3 && z < FENCE.z1 + 0.3) return false;
   if (Math.hypot(x - PLACE[0], z - PLACE[1]) < 8.4) return false;
-  if (x > MKSQ.x - 8.5 && x < MKSQ.x + 8.5 && z > MKSQ.z - 3.5 && z < MKSQ.z + 3.5) return false;
-  if (x > PARK.x0 - 1 && x < PARK.x1 + 1 && z > PARK.z - 2.6 && z < PARK.z + 2.6) return false;
+  if (mkHit(x, z)) return false;
+  if (parkHit(x, z, 1)) return false;
   if (x < BX0 - 4 || x > BX1 + 4 || z < BZ0 - 4 || z > BZ1 + 4) return false;
   for (const s of solids) if (Math.hypot(x - s[0], z - s[1]) < s[2] + (pad || 0.15)) return false;
   for (const r of rects) if (Math.abs(x - r[0]) < r[2] + 0.3 && Math.abs(z - r[1]) < r[3] + 0.3) return false;
@@ -1344,7 +1348,9 @@ function make2CV(col) { return baked((b) => {
 
 /* ---------------- parking and cars ---------------- */
 const tv = new THREE.Vector3();
-const SLOTS = [0, 1, 2, 3, 4].map((k) => ({ x: PARK.x0 + 1.45 + k * 2.3, car: null }));
+const SLOTS = [0, 1, 2, 3, 4].map((k) => ({ x: PARK.x0 + 1.45 + k * 2.3, z: PARK.z, car: null }));
+// un point près d'un enclos (dx, dz : décalage vu depuis l'enclos), qui suit son orientation
+const penAt = (k, dx, dz) => { let M = null; try { M = MOV['pen_' + k]; } catch (e) {} const r = M ? M.r || 0 : 0, c = Math.cos(r), s = Math.sin(r); return [PEN[k].x + dx * c + dz * s, PEN[k].z - dx * s + dz * c]; };
 const cars = [], carPool = []; let carT = 14;
 const CARCOL = ['#7FB5C9', '#E8B94A', '#C9573F', '#8FBF8A', '#F0A6B8', '#F4EAD5', '#6F86B8'];
 function makeCar() {
@@ -1364,7 +1370,7 @@ function spawnCar() {
 function tickCars(dt) {
   for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i], g = c.g;
     if (c.phase === 'drive') { if (stepToward(g, tv.set(c.slot.x, 0, c.lane), 9, dt)) c.phase = 'park'; }
-    else if (c.phase === 'park') { if (stepToward(g, tv.set(c.slot.x, 0, PARK.z), 3.2, dt)) { c.phase = 'shop'; spawnVillager(c); } }
+    else if (c.phase === 'park') { if (stepToward(g, tv.set(c.slot.x, 0, c.slot.z !== undefined ? c.slot.z : PARK.z), 3.2, dt)) { c.phase = 'shop'; spawnVillager(c); } }
     else if (c.phase === 'back') { const sg = Math.sign(c.lane); g.position.z -= sg * 3.2 * dt; if (sg * (g.position.z - c.lane) <= 0) { g.position.z = c.lane; c.phase = 'leave'; c.slot.car = null; } }
     else if (c.phase === 'leave') { if (stepToward(g, tv.set(c.exitX, 0, c.lane), 9, dt)) { g.visible = false; carPool.push(g); cars.splice(i, 1); } }
   }
@@ -1580,7 +1586,7 @@ function tapMairie() {
 function penCollect(k, w) { const Pn = PEN[k], st = S.pen[k]; if (!(st.n > 0)) return false; const n = st.n; st.n = 0;
   if (k === 'hen') S.eggs += n; else if (k === 'sheep') S.wool += n; else { const bag = w ? w.bagV : S.vcarry; for (let i = 0; i < n; i++) bag.push(4); }
   gain(2 * n); dirty = true; floatAt(Pn.g, '+' + n + ' ' + Pn.e); SFX.pick(3); buzz(12); burst(Pn.x, 0.8, Pn.z, ['#FFFDF8', '#F3CF7A'], w ? 3 : 8); return true; }
-function penGo(k) { if (S.lv[k] < 1) return openUp(); if (GOD && S.hired.lucie) { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); return; } goTo(PEN[k].x + 0.4, PEN[k].z - 2.9, 0.5, () => { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); }); }
+function penGo(k) { if (S.lv[k] < 1) return openUp(); if (GOD && S.hired.lucie) { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); return; } goTo(penAt(k, 0.4, -2.9)[0], penAt(k, 0.4, -2.9)[1], 0.5, () => { if (!penCollect(k)) toast(PEN[k].name, 'Rien à ramasser pour l\'instant.'); }); }
 
 /* ---------------- the pastry shop ---------------- */
 function cakeStart() { const n = Math.min(CAKECAP[S.lv.cake], S.farine, Math.floor(S.eggs / 2)); if (n < 1) return false; S.farine -= n; S.eggs -= 2 * n; S.cakeJob = { end: now() + dur(10000 * n), out: n }; dirty = true; SFX.start(); pop(cakeG); return true; }
@@ -1767,7 +1773,7 @@ function autoWork(k, c, u, n, dt) {
   } else if (k === 'lucie') {
     if (!u.bagV) u.bagV = []; c.userData.carry.visible = u.bagV.length > 0;
     let best = null, bd = 1e9; PKEYS.forEach((key) => { if (S.lv[key] > 0 && S.pen[key].n > 0) { const d = Math.hypot(c.position.x - PEN[key].x, c.position.z - PEN[key].z); if (d < bd) { bd = d; best = key; } } });
-    if (best) { const key = best; u.target.set(PEN[key].x + 0.6, 0, PEN[key].z - 2.7); u.job = () => { penCollect(key, u); }; }
+    if (best) { const key = best, d = penAt(key, 0.6, -2.7); u.target.set(d[0], 0, d[1]); u.job = () => { penCollect(key, u); }; }
     else if (u.bagV.length && S.lv.mk > 0) { u.target.copy(SPOT.market); u.job = () => { stockStall(u.bagV); if (u.bagV.length) u.cool = 4; }; }
     else u.target.copy(HOME.lucie);
   } else if (k === 'camille') {
@@ -2036,7 +2042,7 @@ function spawnVillager(car) {
 }
 function spawnMarket() {
   const g = newPerson(), fromLeft = Math.random() < 0.5; g.position.set(fromLeft ? GATEX + 1 : -6, 0, 1.6 + Math.random() * 0.8);
-  g.userData.v = { phase: 'in', market: true, exitX: fromLeft ? GATEX + 1 : -6, door: new THREE.Vector3(MKSQ.x + STALLX[Math.floor(Math.random() * 4)] + (Math.random() - 0.5), 0, STN.market[1] - 0.3 + Math.random() * 0.5), wait: 0, walk: 0 };
+  g.userData.v = { phase: 'in', market: true, exitX: fromLeft ? GATEX + 1 : -6, door: (() => { const r = MOV.market ? MOV.market.r || 0 : 0, dx = STALLX[Math.floor(Math.random() * 4)] + (Math.random() - 0.5), dz = -0.3 + Math.random() * 0.5, c = Math.cos(r), s = Math.sin(r); return new THREE.Vector3(STN.market[0] + dx * c + dz * s, 0, STN.market[1] - dx * s + dz * c); })(), wait: 0, walk: 0 };
   villagers.push(g); return g;
 }
 function leaveQueue(v) { const k = queue.indexOf(v); if (k >= 0) queue.splice(k, 1); v.userData.v.phase = 'out'; }
@@ -2130,7 +2136,7 @@ function clearLine(x0, z0, x1, z1) { const d = Math.hypot(x1 - x0, z1 - z0), n =
 // roads, lanes and paths: people keep to them (a step off the road costs seven on it), so nobody cuts across the fields or the river
 let roadG = null;
 function isRoad(x, z) { if (Math.abs(z) < 2.5) return true; if (roadAt(x, z)) return true;
-  if (typeof MOV !== 'undefined' && MOV.market && MOV.market.placed && Math.abs(x - MOV.market.x) < 8 && Math.abs(z - MOV.market.z) < 3) return true;
+  if (typeof MOV !== 'undefined' && MOV.market && MOV.market.placed && Math.abs(x - MOV.market.x) < (oddR(MOV.market.r) ? 3 : 8) && Math.abs(z - MOV.market.z) < (oddR(MOV.market.r) ? 8 : 3)) return true;
   for (const c of GCOVER) { if (!c[5]) continue; const dx = x - c[0], dz = z - c[1]; if (Math.abs(dx) + Math.abs(dz) > c[2] + c[3] + 1) continue; const cs = Math.cos(c[4]), sn = Math.sin(c[4]); if (Math.abs(dx * cs - dz * sn) < c[2] + 0.4 && Math.abs(dx * sn + dz * cs) < c[3] + 0.4) return true; }
   return false; }
 function roadCells() { if (!roadG) { roadG = new Uint8Array(GW * GH); for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) if (isRoad(GX0 + i * GC, GZ0 + j * GC)) roadG[j * GW + i] = 1; } return roadG; }
@@ -3599,7 +3605,7 @@ function wildScare(a, who) { if (a.st === 'flee') return; const SP = WSPEC[a.sp]
 function wildTargets() { const L = [];
   if (!MOV.champ || MOV.champ.placed) for (let i = 0; i < S.unlocked; i++) if (S.plots[i].s !== 'empty') L.push({ kind: 'plot', i, x: PLOT_POS[i][0], z: PLOT_POS[i][1], nm: 'plot' });
   if (MOV.potager && MOV.potager.placed) for (let i = 0; i < Math.min(6, S.gun || 0); i++) if (S.garden[i].s !== 'empty') L.push({ kind: 'garden', i, x: GPOS[i][0], z: GPOS[i][1], nm: 'garden' });
-  PKEYS.forEach((k) => { if (S.lv[k] > 0 && S.pen[k].n > 0 && MOV['pen_' + k] && MOV['pen_' + k].placed) L.push({ kind: 'pen', k, x: PEN[k].x + 0.6, z: PEN[k].z - 2.7, nm: k }); });
+  PKEYS.forEach((k) => { if (S.lv[k] > 0 && S.pen[k].n > 0 && MOV['pen_' + k] && MOV['pen_' + k].placed) { const d = penAt(k, 0.6, -2.7); L.push({ kind: 'pen', k, x: d[0], z: d[1], nm: k }); } });
   return L; }
 function wildDamage(a) { const T = a.target, SP = WSPEC[a.sp], n = now(); let done = 0, what = '';
   if (T.kind === 'plot') { const all = []; for (let i = 0; i < S.unlocked; i++) if (S.plots[i].s !== 'empty') all.push(i); all.sort((p, q) => Math.hypot(PLOT_POS[p][0] - T.x, PLOT_POS[p][1] - T.z) - Math.hypot(PLOT_POS[q][0] - T.x, PLOT_POS[q][1] - T.z));
@@ -3690,7 +3696,7 @@ function tickFaune(dt, t, n) {
   if (!WILD.length) return; const res = reserveOn();
   for (const a of WILD) { if (a.sp === 'aigle') tickWildEagle(a, dt, t, n); else tickWildGround(a, dt, t, n); }
   tickWildRaids(n, res); tickGarde(dt, t);
-  if (typeof MOV !== 'undefined' && MOV.champ) DOGHOME.set(MOV.champ.x - 7.5, 0, MOV.champ.z + 5.2);
+  if (typeof MOV !== 'undefined' && MOV.champ) { const q = rotP(-7.5, 5.2, MOV.champ.r || 0); DOGHOME.set(MOV.champ.x + q[0], 0, MOV.champ.z + q[1]); }
 }
 const wildDogTargets = () => WILD.filter((a) => (a.st === 'raid' || a.st === 'eat') && WSPEC[a.sp] && WSPEC[a.sp].dog).map((a) => ({ g: a.g, phase: 'run' }));
 function fauneBoot() {
@@ -3758,9 +3764,10 @@ function moveTo(M, x, z, r) { grassChanged();
   M.dirs.forEach((e) => { const [dx, dz] = rotP(e.lx, e.lz, M.r); e.D[0] = dx; e.D[1] = dz; });
   const odd = Math.round(M.r / (Math.PI / 2)) % 2 !== 0;
   M.cols.forEach((e) => { const [dx, dz] = rotP(e.lx, e.lz, M.r); e.c[0] = x + dx + off; e.c[1] = z + dz; if (e.b !== null) { e.c[2] = odd ? e.b : e.a; e.c[3] = odd ? e.a : e.b; } });
-  grid = null;
+  grid = null; if (M.after) M.after();
 }
 // footprint of a movable, in metres along X/Z once rotated
+const parkZ = (r) => (oddR(r) ? 11 : 7); // distance du parking à l'axe de la grand-rue : 7 m à plat, 11 m quand il est tourné d'un quart
 const mfp = (M, r) => (Math.round((r || 0) / (Math.PI / 2)) % 2 ? [M.fp[1], M.fp[0]] : M.fp);
 
 /* ---- the production buildings, registered with every point that must follow them ---- */
@@ -3769,22 +3776,24 @@ movable('shop', { n: 'Boulangerie', ic: '🥖', pivot: [SHOPP[0], SHOPP[1]], obj
 movable('oven', { n: 'Four à pain', ic: '🔥', pivot: [OVENP[0], OVENP[1]], objs: [oven, woodpile], fp: [7, 5], pts: [ptA(OVENP), ptA(STN.oven), ptA(OV), ptV(SPOT.oven), ptV(HOME.ines)], cols: [findSolid(OVENP[0], OVENP[1]), findSolid(OVENP[0] + 2.4, OVENP[1] - 0.6)] });
 movable('mill', { n: 'Moulin', ic: '⚙️', pivot: [MILLP[0], MILLP[1]], objs: [mill], fp: [6, 6], pts: [ptA(MILLP), ptA(STN.mill), ptA(MI), ptV(SPOT.mill), ptV(HOME.jules)], cols: [findSolid(MILLP[0], MILLP[1])] });
 { const cx = (PLOT_POS[0][0] + PLOT_POS[23][0]) / 2, cz = (PLOT_POS[0][1] + PLOT_POS[23][1]) / 2, F0 = { x: FENCE.x0, z: FENCE.z0 }, F1 = { x: FENCE.x1, z: FENCE.z1 };
-  movable('champ', { n: 'Champ de blé', ic: '🌾', pivot: [cx, cz], rot: false, objs: [...plotMeshes, lockG, fenceG, fieldAnchor], fp: [12, 8],
+  movable('champ', { n: 'Champ de blé', ic: '🌾', pivot: [cx, cz], objs: [...plotMeshes, lockG, fenceG, fieldAnchor], fp: [12, 8],
     pts: [...PLOT_POS.map(ptA), ptA(FI), ptV(HOME.leo), ptV(DOGHOME), { get: () => [F0.x, F0.z], set: (x, z) => { FENCE.x0 = x; FENCE.z0 = z; } }, { get: () => [F1.x, F1.z], set: (x, z) => { FENCE.x1 = x; FENCE.z1 = z; } }], cols: [] });
   // lockG and fenceG are groups at the origin holding world-placed children: give them a pivot-relative offset
-  MOV.champ.objs.forEach((e) => { if (e.ob === lockG || e.ob === fenceG) { e.lx = -cx; e.lz = -cz; } }); }
-movable('market', { n: 'Marché', ic: '🥕', pivot: [MKSQ.x, MKSQ.z], rot: false, objs: [stallG, mkPave], fp: [16, 6], pts: [ptO(MKSQ), ptA(STN.market), ptV(SPOT.market)], cols: STALLX.map((sx) => findRect(MKSQ.x + sx, MKSQ.z - 1)), c: MKCOST[0], need: () => ((S.pop || 0) < 20 ? '20 habitants' : ''), on: () => { if (S.lv.mk < 1) S.lv.mk = 1; if (S.gun < 1) S.gun = 0; }, desc: 'Fruits, légumes et lait de la ferme. Nécessaire au-delà de 60 habitants.' });
+  MOV.champ.objs.forEach((e) => { if (e.ob === lockG || e.ob === fenceG) { e.lx = -cx; e.lz = -cz; } });
+  // une fois tourné, les coins de la clôture peuvent s'inverser : on remet x0 < x1 et z0 < z1
+  MOV.champ.after = () => { if (FENCE.x0 > FENCE.x1) { const t = FENCE.x0; FENCE.x0 = FENCE.x1; FENCE.x1 = t; } if (FENCE.z0 > FENCE.z1) { const t = FENCE.z0; FENCE.z0 = FENCE.z1; FENCE.z1 = t; } }; }
+movable('market', { n: 'Marché', ic: '🥕', pivot: [MKSQ.x, MKSQ.z], objs: [stallG, mkPave], fp: [16, 6], pts: [ptO(MKSQ), ptA(STN.market), ptV(SPOT.market)], cols: STALLX.map((sx) => findRect(MKSQ.x + sx, MKSQ.z - 1)), c: MKCOST[0], need: () => ((S.pop || 0) < 20 ? '20 habitants' : ''), on: () => { if (S.lv.mk < 1) S.lv.mk = 1; if (S.gun < 1) S.gun = 0; }, desc: 'Fruits, légumes et lait de la ferme. Nécessaire au-delà de 60 habitants.' });
 { const gx = (GPOS[0][0] + GPOS[5][0]) / 2, gz = GPOS[0][1];
-  movable('potager', { n: 'Potager', ic: '🥬', pivot: [gx, gz], rot: false, objs: gardens, fp: [10, 3], pts: [...GPOS.map(ptA), ptV(HOME.paul)], cols: [], c: 75, need: () => (S.lv.mk < 1 ? 'le marché' : ''), on: () => { if (S.gun < 1) S.gun = 1; }, desc: '6 carrés de légumes pour l\'étal du marché.' }); }
+  movable('potager', { n: 'Potager', ic: '🥬', pivot: [gx, gz], objs: gardens, fp: [10, 3], pts: [...GPOS.map(ptA), ptV(HOME.paul)], cols: [], c: 75, need: () => (S.lv.mk < 1 ? 'le marché' : ''), on: () => { if (S.gun < 1) S.gun = 1; }, desc: '6 carrés de légumes pour l\'étal du marché.' }); }
 PKEYS.forEach((k) => { const P = PEN[k];
-  movable('pen_' + k, { n: P.name, ic: k === 'hen' ? '🐔' : k === 'cow' ? '🐄' : '🐑', pivot: [P.x, P.z], rot: false, objs: [P.g], fp: [6, 5], pts: [ptO(P), ...(k === 'cow' ? [ptV(PEN_LUCIE)] : [])], cols: [findSolid(P.x - 1.3, P.z - 1.1)], c: P.cost[0],
+  movable('pen_' + k, { n: P.name, ic: k === 'hen' ? '🐔' : k === 'cow' ? '🐄' : '🐑', pivot: [P.x, P.z], objs: [P.g], fp: [6, 5], pts: [ptO(P), ...(k === 'cow' ? [ptV(PEN_LUCIE)] : [])], cols: [findSolid(P.x - 1.3, P.z - 1.1)], c: P.cost[0],
     need: () => (k === 'cow' && S.lv.mk < 1 ? 'le marché' : k === 'sheep' && level() < 6 ? 'niveau 6' : k === 'hen' && level() < 4 ? 'niveau 4' : ''), on: () => { if (S.lv[k] < 1) S.lv[k] = 1; }, desc: k === 'hen' ? 'Des œufs pour les gâteaux.' : k === 'cow' ? 'Du lait pour le marché.' : 'De la laine pour les pulls.' }); });
 movable('cake', { n: 'Pâtisserie', ic: '🧁', pivot: [CAKEP[0], CAKEP[1]], objs: [cakeG], fp: [6, 6], pts: [ptA(CAKEP), ptA(STN.cake), ptV(SPOT.cake), ptV(HOME.camille)], cols: [findRect(CAKEP[0], CAKEP[1])], c: CAKECOST[0], need: () => (S.lv.hen < 1 ? 'le poulailler' : ''), on: () => { if (S.lv.cake < 1) S.lv.cake = 1; }, desc: '1 farine + 2 œufs = 1 gâteau. Nécessaire au-delà de 1 600 habitants.' });
 movable('bq', { n: 'Boutique de vêtements', ic: '👕', pivot: [BQP_[0], BQP_[1]], objs: [bqG], fp: [6, 6], pts: [ptA(BQP_), ptA(BQDOOR), ptA(STN.bq)], cols: [findRect(BQP_[0], BQP_[1])], c: BQCOST[0], need: () => (S.lv.sheep < 1 ? 'la bergerie' : ''), on: () => { if (S.lv.bq < 1) S.lv.bq = 1; }, desc: '2 laines = 1 pull. Nécessaire au-delà de 2 200 habitants.' });
 movable('mairie', { n: 'Mairie', ic: '🏛️', pivot: [MAIRIEP[0], MAIRIEP[1]], objs: [mairie], fp: [10, 7], pts: [ptA(MAIRIEP), ptA(STN.mairie)], cols: [findRect(MAIRIEP[0], MAIRIEP[1])], c: 150, need: () => ((S.pop || 0) < 25 ? '25 habitants' : ''), desc: 'Lettre, panier et commandes du jour. Nécessaire au-delà de 150 habitants.' });
 fountain.userData.kind = 'fontaine';
-movable('parking', { n: 'Parking', ic: '🅿️', pivot: [-13, 6.4], rot: false, objs: [parkG], fp: [14, 6], cols: [], c: 400, need: () => ((S.pop || 0) < 20 ? '20 habitants' : ''),
-  pts: [{ get: () => [(PARK.x0 + PARK.x1) / 2, PARK.z], set: (x, z) => { PARK.x0 = x - 6; PARK.x1 = x + 6; PARK.z = z; SLOTS.forEach((s, k) => { s.x = PARK.x0 + 1.45 + k * 2.3; }); } }],
+movable('parking', { n: 'Parking', ic: '🅿️', pivot: [-13, 6.4], objs: [parkG], fp: [14, 6], cols: [], c: 400, need: () => ((S.pop || 0) < 20 ? '20 habitants' : ''),
+  pts: [{ get: () => [(PARK.x0 + PARK.x1) / 2, PARK.z], set: (x, z) => { PARK.x0 = x - 6; PARK.x1 = x + 6; PARK.z = z; const r = MOV.parking ? MOV.parking.r || 0 : 0; PARK.r = r; SLOTS.forEach((s, k) => { const q = rotP(-6 + 1.45 + k * 2.3, 0, r); s.x = x + q[0]; s.z = z + q[1]; }); } }],
   desc: 'À poser le long de la grand-rue. Les gens des villages voisins viennent en voiture : +15 % de clients.' });
 movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 1500, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'Une grande fontaine de pierre à vasques, au milieu de la place du village. Les habitants la réclament au-delà de 400 habitants. +30 beauté.' });
 movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
@@ -4062,7 +4071,7 @@ function cellFree(px, pz) {
   { const M = MOV.champ; if (M && !(PLC && (PLC.t === 'p' || PLC.t === 'mp') && PLC.k === 'champ') && Math.abs(px - M.x) < M.fp[0] / 2 + 0.6 && Math.abs(pz - M.z) < M.fp[1] / 2 + 0.6) return false; } /* jamais de maison sur le champ de blé */
   if (px < BX0 + 1 || px > BX1 - 1 || pz < BZ0 + 1 || pz > BZ1 - 1) return false;
   if (px > RIVER.x0 - 0.9 && px < RIVER.x1 + 0.9) return false;
-  if (!(PLC && PLC.k === 'parking') && px > PARK.x0 - 1 && px < PARK.x1 + 1 && pz > PARK.z - 2.6 && pz < PARK.z + 2.6) return false;
+  if (!(PLC && PLC.k === 'parking') && parkHit(px, pz, 1)) return false;
   if (Math.abs(pz) < 2.6) return false; for (const c of GCOVER) { if (!c[5]) continue; const dx = px - c[0], dz = pz - c[1]; if (Math.abs(dx) + Math.abs(dz) > c[2] + c[3] + 1) continue; const cs = Math.cos(c[4]), sn = Math.sin(c[4]); if (Math.abs(dx * cs - dz * sn) < c[2] && Math.abs(dx * sn + dz * cs) < c[3]) return false; } if (Math.hypot(px - HILL.x, pz - HILL.z) < HILL.r1 + 1) return false; if (roadAt(px, pz)) return false; if (blocked(px, pz, 0.05)) return false;
   return true; }
 const CELLS = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false }), 800);
@@ -4117,18 +4126,18 @@ function plCost() { const s = PLC; if (s.t === 'h') return housePrice(s.m); if (
 function plFree() { const [w, d] = plSize(PLC.r), s = PLC; let saved = null;
   if (s.t === 'mp' || s.t === 'p') { saved = MOV[s.k].cols.map((e) => [e.c[0], e.c[1]]); MOV[s.k].cols.forEach((e) => { e.c[0] += 5000; }); }
   if (s.t === 'mi' && s.col) s.col[0] += 5000;
-  const ok = areaFree(PLC.x, PLC.z, w, d, true) && !(s.k === 'parking' && Math.abs(PLC.z) > 7.5) && !offQuai(s); /* le parking touche la grand-rue, la guinguette les quais */
+  const ok = areaFree(PLC.x, PLC.z, w, d, true) && !(s.k === 'parking' && Math.abs(PLC.z) > parkZ(s.r) + 0.5) && !offQuai(s); /* le parking touche la grand-rue, la guinguette les quais */
   if (saved) MOV[s.k].cols.forEach((e, i) => { e.c[0] = saved[i][0]; }); if (s.t === 'mi' && s.col) s.col[0] -= 5000; return ok; }
 function offQuai(s) { const k = s.t === 'd' ? s.k : s.t === 'mi' && S.city.items[s.i] ? S.city.items[s.i].k : null, B2 = k && BIZ[k]; return !!(B2 && B2.quai && (quartierAt(s.x, s.z) || {}).id !== 'quais' && !nearPond(s.x, s.z)); }
 function showPlace() {
-  const s = PLC, [w, d] = plSize(s.r); s.x = snapC(s.x, w); s.z = snapC(s.z, d); if (s.k === 'parking' && (s.t === 'p' || s.t === 'mp')) s.z = s.z < 0 ? -7 : 7; /* le parking se colle toujours à la grand-rue */
+  const s = PLC, [w, d] = plSize(s.r); s.x = snapC(s.x, w); s.z = snapC(s.z, d); if (s.k === 'parking' && (s.t === 'p' || s.t === 'mp')) s.z = s.z < 0 ? -parkZ(s.r) : parkZ(s.r); /* le parking se colle toujours à la grand-rue, même tourné */
   if (s.t === 'h' || s.t === 'd') { const gk = s.t + (s.m || s.k) + s.r; if (s.g && s.gk === gk) { s.g.position.set(s.x, groundY(s.x, s.z), s.z); } else { if (s.g) dropGhost(s.g); s.g = s.t === 'h' ? houseGroup({ t: 'h', m: s.m, x: s.x, z: s.z, r: s.r }, -1) : decoGroup({ t: 'd', k: s.k, x: s.x, z: s.z, r: s.r }, -1); s.g.userData.kind = 'ghost'; s.gk = gk; loadNear(); } }
   if (s.t === 'p' || s.t === 'mp') { const M = MOV[s.k]; M.placed = true; moveTo(M, s.x, s.z, s.r); }
   if (s.t === 'mi') { s.g.position.set(s.x, groundY(s.x, s.z), s.z); s.g.rotation.y = s.r; }
   const ok = plFree(), cost = plCost(); ghostBox.visible = false;
   $('placebar').hidden = false; $('selbar').hidden = true;
   const nm = s.t === 'h' ? HOUSE_T[s.m].n : s.t === 'd' ? DECOS[s.k].n : s.t === 'mi' ? (S.city.items[s.i].t === 'h' ? HOUSE_T[S.city.items[s.i].m].n : DECOS[S.city.items[s.i].k].n) : MOV[s.k].n;
-  $('pl-t').textContent = nm + (ok ? ' · touche le sol pour déplacer' : s.k === 'parking' && Math.abs(s.z) > 7.5 ? ' · à poser le long de la grand-rue' : offQuai(s) ? ' · à poser sur les quais ou au bord d’un étang' : !landOwned(s.x, s.z) ? ' · terrain pas encore acheté, touche ailleurs' : ' · place occupée, touche ailleurs'); $('pl-ok').disabled = !ok || S.coins < cost; rich($('pl-ok'), cost ? 'Poser · ' + cost + ' ' + C : 'Poser ici'); $('pl-rot').disabled = (s.t === 'p' || s.t === 'mp') && !MOV[s.k].rot;
+  $('pl-t').textContent = nm + (ok ? ' · touche le sol pour déplacer' : s.k === 'parking' && Math.abs(s.z) > parkZ(s.r) + 0.5 ? ' · à poser le long de la grand-rue' : offQuai(s) ? ' · à poser sur les quais ou au bord d’un étang' : !landOwned(s.x, s.z) ? ' · terrain pas encore acheté, touche ailleurs' : ' · place occupée, touche ailleurs'); $('pl-ok').disabled = !ok || S.coins < cost; rich($('pl-ok'), cost ? 'Poser · ' + cost + ' ' + C : 'Poser ici'); $('pl-rot').disabled = (s.t === 'p' || s.t === 'mp') && !MOV[s.k].rot;
 }
 function cancelPlace() { const s = PLC; if (!s) return; if (s.g && (s.t === 'h' || s.t === 'd')) dropGhost(s.g);
   if (s.t === 'p') { MOV[s.k].placed = false; moveTo(MOV[s.k], MOV[s.k].x, MOV[s.k].z, 0); }
@@ -5701,7 +5710,7 @@ function step() {
   questTick();
   tickVisit(dt);
   if (!window.__nodraw) renderer.render(scene, VISIT.on ? VISIT.cam : FPV.on ? FPV.cam : cam); if (!VISIT.on && !FPV.on) placeLabels();
-  tickSave(dt); tickCodeReminder(dt); tickMusic(dt);
+  tickSave(dt); tickCodeReminder(dt); tickMusic(dt); tickBaker(dt);
   saveT += dt; if (saveT > 3 && dirty) { saveT = 0; try { save(); } catch (e) { showErr('sauvegarde', e); } }
 }
 
@@ -5789,13 +5798,27 @@ function tickCodeReminder(dt) { if (!S.started || (S.pop || 0) < 50) return; if 
   if (now() - (S.codeAt || 0) > 2 * 3600000 && now() - (S.codeRem || 0) > 2 * 3600000) { S.codeRem = now(); dirty = true; toast('💾 Pense à ton code de sauvegarde', 'Menu → Sauvegarde → Copier mon code. Pour reprendre ta partie partout.'); } }
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ S: JSON.parse(JSON.stringify(Object.assign({}, S, { px: player.position.x, pz: player.position.z, lastSeen: now() }))), playing: !!S.started, fast, t: now() })); } catch (e) {}
 
+/* ---------------- le boulanger ne se perd jamais (Romain, 22/11/2026 : « j'ai perdu le boulanger ») ----------------
+   S'il se retrouve dans un bâtiment (posé ou tourné par-dessus lui), hors du village, ou avec une position abîmée, on le pose
+   sur la place libre la plus proche (devant la boulangerie si tout le reste échoue). Seuls les mini-jeux ont le droit de le cacher. */
+function bakerSafe() { const p = player.position; let x = p.x, z = p.z;
+  const lost = !isFinite(x) || !isFinite(z) || x < BX0 - 2 || x > BX1 + 2 || z < BZ0 - 2 || z > BZ1 + 2;
+  if (lost) { x = STN.shop[0]; z = STN.shop[1]; } else if (!blocked(x, z, 0)) return false;
+  if (blocked(x, z, 0.35)) { let f = null; for (let r = 1; r <= 40 && !f; r += 1) { const n = Math.max(8, r * 3); for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2, qx = x + Math.cos(a) * r, qz = z + Math.sin(a) * r; if (qx > BX0 && qx < BX1 && qz > BZ0 && qz < BZ1 && !blocked(qx, qz, 0.4) && !roadAt(qx, qz)) { f = [qx, qz]; break; } } } if (f) { x = f[0]; z = f[1]; } }
+  P.goal = null; P.act = null; P.path = []; player.position.set(x, groundY(x, z), z); dirty = true; return true; }
+let bakerT = 0, bakerStuck = 0;
+function tickBaker(dt) { if (!S.started) return; if (!player.visible && !FPV.on) player.visible = true;
+  if ((bakerT += dt) < 1) return; bakerT = 0; if (FPV.on || VISIT.on) return;
+  const p = player.position, inside = !isFinite(p.x) || !isFinite(p.z) || p.x < BX0 - 2 || p.x > BX1 + 2 || p.z < BZ0 - 2 || p.z > BZ1 + 2 || blocked(p.x, p.z, 0);
+  bakerStuck = inside ? bakerStuck + 1 : 0; if (bakerStuck >= 2) { bakerStuck = 0; if (bakerSafe()) floatAt(player, '🙂 Me revoilà !'); } }
 /* ---------------- la musique : une boucle par quartier (Romain, 22/11/2026), toutes sur le thème du village ----------------
    Composée et synthétisée ici (beta13/musique_src/quartiers.py), sans échantillon ni droit tiers. On entend le quartier que l'on regarde ;
    en passant d'un quartier à l'autre, les deux boucles se croisent en fondu pendant 3 secondes. Web Audio les joue au sample près (pas de trou à la reprise).
    Seules les boucles en train de jouer sont gardées en mémoire (une boucle décodée pèse ~30 Mo : important sur iPad). */
 const QMUS = { bief:  72.0, bois:  99.310345, bourg:  57.6, butte:  102.857143, campagne:  80.0, coteau:  62.608696, faubourg:  53.333333, hautbourg:  87.272727, hauts:  87.272727, parvis:  96.0, plateau:  96.0, pres:  75.789474, quais:  68.571429, rives:  75.789474, val:  87.272727, vergers:  73.846154, vignes:  65.454545 }; // durée exacte de chaque boucle, en secondes
 const MUSIC_ON = true, MVOL = 0.42, MFADE = 6, MDWELL = 20; // fondu de 6 s ; on change de musique après 20 s dans un nouveau quartier (Eugénie : « pas de bazar quand on traverse la carte »)
-const SND = { mute: false, vol: 0.6, mode: 'quartier' }; // mode : quartier (par défaut, choix de Romain), heure (la vraie heure : matin, après-midi, soir), une (toujours la même) try { Object.assign(SND, JSON.parse(localStorage.getItem('pf-son') || '{}')); } catch (e) {}
+// mode : quartier (par défaut, choix de Romain), heure (la vraie heure : matin, après-midi, soir), une (toujours la même)
+const SND = { mute: false, vol: 0.6, mode: 'quartier' }; try { Object.assign(SND, JSON.parse(localStorage.getItem('pf-son') || '{}')); } catch (e) {} // le réglage du joueur, relu à chaque ouverture
 muted = !!SND.mute;
 function sndSave() { try { localStorage.setItem('pf-son', JSON.stringify(SND)); } catch (e) {} }
 const tracks = {}; let mCur = null, mBus = null, mQT = 0, mCand = null, mCandT = 0;
@@ -5875,7 +5898,7 @@ function boot(loaded, hot) {
     ['vcarry', 'stall', 'orders'].forEach((k) => { if (!Array.isArray(S[k])) S[k] = []; }); if (!Array.isArray(S.garden) || S.garden.length !== 6) S.garden = fresh().garden;
     ['carry', 'mtill', 'gun', 'cst', 'cbuild', 'gate'].forEach((k) => { if (typeof S[k] !== 'number') S[k] = 0; }); S.unlocked = Math.max(4, Math.min(PLOTS, S.unlocked || 4)); if (typeof S.freq !== 'number') S.freq = 60;
     if (!S.day || !Array.isArray(S.day.done)) S.day = fresh().day; S.tasks = S.tasks || {};
-    if (typeof S.px === 'number' && S.px) { player.position.set(S.px, groundY(S.px, S.pz), S.pz); target.set(S.px, 0, S.pz); }
+    if (typeof S.px === 'number' && S.px && isFinite(S.px) && isFinite(S.pz)) { player.position.set(S.px, groundY(S.px, S.pz), S.pz); target.set(S.px, 0, S.pz); }
     if (!hot) calcOffline(loaded.lastSeen);
     if (loaded.fast) $('fast').checked = true;
     hadSave = true; $('home-cont').hidden = false; $('home-new').hidden = true;
@@ -5888,6 +5911,7 @@ function boot(loaded, hot) {
   try { ambBoot(); } catch (e) { showErr('ambiance', e); }
   try { fauneBoot(); } catch (e) { showErr('faune', e); }
   try { npcBoot(); } catch (e) { showErr('missions', e); }
+  try { if (bakerSafe()) target.set(player.position.x, 0, player.position.z); } catch (e) {} // au chargement : s'il est coincé dans un bâtiment, on le sort tout de suite
   resize(); placeCam(); frame(); loadNear();
   let auto = null; try { auto = sessionStorage.getItem('pf-autostart'); sessionStorage.removeItem('pf-autostart'); } catch (e) {}
   if (auto) startPlay(auto); else if (hot) startPlay();
