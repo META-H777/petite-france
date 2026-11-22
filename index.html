@@ -155,6 +155,8 @@
   body.building #stick { display:none; }
   #knob { position:absolute; left:50%; top:50%; width:46px; height:46px; margin:-23px 0 0 -23px; border-radius:50%; background:var(--gold); border:2.5px solid var(--ink); box-shadow:0 3px 0 var(--ink); }
   #guide { position:fixed; left:0; top:0; width:44px; height:44px; margin:-22px 0 0 -22px; border-radius:50%; background:var(--gold); border:2.5px solid var(--ink); box-shadow:0 3px 0 var(--ink); display:grid; place-items:center; font-size:20px; font-weight:900; pointer-events:none; }
+  .savebox textarea { width:100%; box-sizing:border-box; font:600 11px ui-monospace,monospace; border-radius:12px; border:2px solid rgba(0,0,0,.12); padding:8px; margin:8px 0; resize:vertical; word-break:break-all; }
+  .savep { font-size:13.5px; font-weight:700; margin:0; } .saverow { display:flex; flex-wrap:wrap; gap:8px; } .saverow .btn { flex:1 1 140px; }
   .hint { font-size:13.5px; font-weight:800; color:var(--mute); margin:10px 0 0; }
   .pill.bump { animation:bump .25s ease-out; } @keyframes bump { 40% { transform:scale(1.14); } }
   #b-snd { position:fixed; left:calc(env(safe-area-inset-left,0px) + 10px); bottom:calc(env(safe-area-inset-bottom,0px) + 104px); width:42px; height:42px; border-radius:50%; border:2.5px solid var(--ink); background:var(--white); box-shadow:0 3px 0 var(--ink); font-size:18px; padding:0; }
@@ -240,7 +242,7 @@
 <div id="talk" hidden><div class="av" id="tk-av">O</div><div class="tx"><b id="tk-who"></b><p id="tk-say"></p></div></div>
 <div class="quest" id="quest"><div class="av" id="q-av">★</div><div class="tx"><b id="q-who">Objectif</b><p id="q-text"></p></div><button class="btn gold" id="q-btn" type="button" hidden></button></div>
 <div class="toast" id="toast" hidden><b id="toast-t"></b><span id="toast-s"></span></div>
-<div class="nosave" id="nosave" hidden>Progression gardée sur cet appareil seulement</div>
+<div class="nosave" id="nosave" hidden>Partie enregistrée sur cet appareil · Menu → Sauvegarde</div>
 
 <div class="sheet" id="sheet" hidden><button class="x" id="sheet-x" type="button" aria-label="Fermer">×</button><h3 id="sh-t"></h3><p class="sub" id="sh-s"></p><div id="sh-body"></div></div>
 
@@ -262,6 +264,7 @@
       </div>
       <button class="btn ghost wide" id="b-back" type="button" hidden>Retour</button>
     </div>
+    <button class="btn ghost wide" id="b-restore" type="button" style="margin-top:8px">💾 Reprendre une partie avec un code</button>
     <p class="hint">📱 Glisse pour te promener, pince pour zoomer, touche pour agir.<br>💻 ZQSD ou flèches, ou clic. Molette : zoom.</p>
     <label class="tog" style="display:none"><input type="checkbox" id="lefty"> Joystick à gauche (pour les gauchers)</label>
     <label class="tog"><input type="checkbox" id="fast"> Mode présentation (minuteurs 10 fois plus courts)</label>
@@ -4267,6 +4270,7 @@ $('b-menu').addEventListener('click', () => { if (!S.started || VISIT.on) return
   { t: '📋 Commandes' + (nd ? ' · ' + nd + ' prête' + (nd > 1 ? 's' : '') : ''), s: 'Ce que le village te commande.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-od').click(); } },
   { t: '📖 Carnet du village', s: 'Les histoires des habitants, le secret des Rocheval, les clins d’œil trouvés.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); carnetSheet(); } },
   { t: '🎲 Jeux du village', s: 'Pétanque, pêche, champignons, chamboule-tout : des écus et des cadeaux.', btn: 'Jouer', ok: true, run: () => { closeSheet(); jeuxSheet(); } },
+  { t: '💾 Sauvegarde', s: 'Ta partie s’enregistre toute seule. Copie un code pour la reprendre sur un autre appareil.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); saveSheet(); } },
   { t: '🛡️ Mon village', s: 'Le nom, le blason et la devise de ton village.', btn: 'Modifier', ok: true, run: () => { closeSheet(); villageSheet(); } },
   { t: '🚶 Visiter le village', s: 'La caméra descend dans les rues et se promène de maison en maison, comme un habitant.', btn: 'Visiter', ok: true, run: () => { closeSheet(); startVisit(); } },
   { t: '🗺️ Carte', s: 'Voir les quartiers du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-map').click(); } },
@@ -5448,6 +5452,7 @@ function step() {
   questTick();
   tickVisit(dt);
   if (!window.__nodraw) renderer.render(scene, VISIT.on ? VISIT.cam : cam); if (!VISIT.on) placeLabels();
+  tickSave(dt); tickCodeReminder(dt);
   saveT += dt; if (saveT > 3 && dirty) { saveT = 0; try { save(); } catch (e) { showErr('sauvegarde', e); } }
 }
 
@@ -5466,7 +5471,73 @@ function save() {
   pending = { next: null };
   ref.set(snap).catch(() => {}).then(() => { const nx = pending.next; pending = null; if (nx) ref.set(nx).catch(() => {}); });
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && S.started) save(); });
+
+/* ---------------- sauvegarde à toute épreuve (Romain et PA, 22/11/2026 : le grand test jusqu'à 3 000 habitants) ----------------
+   - la partie s'écrit aussi quand l'onglet se ferme (pagehide, beforeunload) et au moins toutes les 20 s ;
+   - une copie de secours est gardée à côté (LSK + '-bak'), toutes les 2 minutes : si la sauvegarde principale est abîmée, on repart de la copie ;
+   - on demande au navigateur de ne pas effacer les données du jeu (navigator.storage.persist) ;
+   - un code de sauvegarde (texte à copier) ou un fichier permet de retrouver la partie sur un autre appareil ou un autre navigateur. */
+const LSB = LSK + '-bak';
+let bakT = 0, forceT = 0, lastSaveAt = 0;
+function saveHard() { if (!S.started || resetting) return; try { save(); lastSaveAt = now(); } catch (e) {} }
+window.addEventListener('pagehide', saveHard);
+window.addEventListener('beforeunload', saveHard);
+function tickSave(dt) { if (!S.started) return;
+  if ((forceT += dt) > 20) { forceT = 0; dirty = true; }
+  if ((bakT += dt) > 120) { bakT = 0; try { const cur = localStorage.getItem(LSK); if (cur && JSON.parse(cur).rid === RID) localStorage.setItem(LSB, cur); } catch (e) {} } }
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+function readSave(k) { try { const d = JSON.parse(localStorage.getItem(k) || 'null'); return d && d.v === 14 && d.rid === RID ? d : null; } catch (e) { return null; } }
+function bestLocal() { const a = readSave(LSK), b = readSave(LSB); if (!a) return b; if (!b) return a; return (b.lastSeen || 0) > (a.lastSeen || 0) ? b : a; }
+// le code : JSON compressé (gzip quand le navigateur sait le faire), en base64, préfixé PF1 (compressé) ou PF0 (brut)
+const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const unb64 = (s) => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+async function saveCode() { save(); const json = JSON.stringify(S), raw = new TextEncoder().encode(json);
+  try { if (window.CompressionStream) { const z = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()); return 'PF1' + b64(z); } } catch (e) {}
+  return 'PF0' + b64(raw); }
+async function readCode(txt) { let t = String(txt || '').replace(/\s+/g, ''); if (t.charAt(0) === '{') return JSON.parse(txt);
+  const tag = t.slice(0, 3), u = unb64(t.slice(3));
+  if (tag === 'PF0') return JSON.parse(new TextDecoder().decode(u));
+  if (tag === 'PF1') { if (!window.DecompressionStream) throw new Error('navigateur trop ancien'); return JSON.parse(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text()); }
+  throw new Error('code inconnu'); }
+function restoreSave(d) {
+  if (!d || d.v !== 14 || d.rid !== RID) { alert('Ce code ne correspond pas à une partie de cette version du jeu.'); return false; }
+  const info = Math.floor(d.pop || 0) + ' habitants', cur = S.started || hadSave ? ' Le village actuel sur cet appareil sera remplacé.' : '';
+  if (!confirm('Reprendre la partie à ' + info + ' ?' + cur)) return false;
+  resetting = true; d.lastSeen = Math.min(d.lastSeen || now(), now());
+  try { const cur2 = localStorage.getItem(LSK); if (cur2) localStorage.setItem(LSB + '-avant', cur2); localStorage.setItem(LSK, JSON.stringify(d)); localStorage.setItem(LSB, JSON.stringify(d)); } catch (e) { alert('Impossible d’écrire la sauvegarde sur cet appareil.'); resetting = false; return false; }
+  const go = () => location.reload();
+  if (ref) Promise.resolve(ref.set(JSON.parse(JSON.stringify(d)))).catch(() => {}).then(go); else go(); return true; }
+function ago(t) { const s = Math.max(0, Math.round((now() - t) / 1000)); return s < 5 ? 'à l’instant' : s < 60 ? 'il y a ' + s + ' s' : 'il y a ' + Math.round(s / 60) + ' min'; }
+// la fenêtre « Sauvegarde » : menu du jeu et écran d'accueil
+function saveSheet() {
+  if (S.started) saveHard();
+  const box = document.createElement('div'); box.className = 'savebox';
+  box.innerHTML = '<p class="savep"></p><textarea id="save-code" rows="4" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Colle ici un code de sauvegarde (il commence par PF1)"></textarea><div class="saverow"></div>';
+  const p = box.querySelector('.savep'), ta = box.querySelector('textarea'), row = box.querySelector('.saverow');
+  p.textContent = S.started ? '✅ Partie enregistrée sur cet appareil ' + ago(S.lastSeen || now()) + ' (' + Math.floor(S.pop || 0) + ' habitants). Elle s’enregistre toute seule, même si tu fermes l’onglet. Garde aussi un code de temps en temps : il te permet de reprendre ta partie sur un autre appareil, ou si le navigateur efface ses données.' : 'Tu as un code de sauvegarde ou un fichier ? Colle le code ci-dessous, ou choisis le fichier, pour reprendre ta partie.';
+  const mk = (txt, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + cls; b.textContent = txt; b.addEventListener('click', fn); row.appendChild(b); return b; };
+  if (S.started) {
+    mk('📋 Copier mon code', 'gold', async (ev) => { const b = ev.currentTarget; const c = await saveCode(); ta.value = c; ta.select();
+      let ok = false; try { await navigator.clipboard.writeText(c); ok = true; } catch (e) { try { ok = document.execCommand('copy'); } catch (e2) {} }
+      b.textContent = ok ? '✅ Code copié' : 'Sélectionne et copie le code'; S.codeAt = now(); dirty = true;
+      toast('💾 Code de sauvegarde', ok ? 'Colle-le dans tes notes ou envoie-le-toi par message.' : 'Le code est affiché : copie-le à la main.'); });
+    mk('⬇️ Fichier', 'ghost', async () => { const c = await saveCode(), a = document.createElement('a'), d = new Date();
+      a.href = URL.createObjectURL(new Blob([c], { type: 'text/plain' })); a.download = 'petite-france-' + Math.floor(S.pop || 0) + 'hab-' + d.toISOString().slice(0, 10) + '.txt';
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); S.codeAt = now(); dirty = true; });
+  }
+  mk('♻️ Reprendre avec ce code', S.started ? 'ghost' : 'gold', async () => { if (!ta.value.trim()) { ta.focus(); return; } try { restoreSave(await readCode(ta.value)); } catch (e) { alert('Ce code est incomplet ou abîmé. Vérifie qu’il a été copié en entier.'); } });
+  const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.txt,.json,text/plain'; fi.hidden = true; box.appendChild(fi);
+  fi.addEventListener('change', async () => { const f = fi.files && fi.files[0]; if (!f) return; try { restoreSave(await readCode(await f.text())); } catch (e) { alert('Ce fichier n’est pas une sauvegarde Petite France.'); } fi.value = ''; });
+  mk('📂 Choisir un fichier', 'ghost', () => fi.click());
+  openSheet('💾 Sauvegarde', 'Ta partie, à l’abri.', [], null, box);
+  $('sheet').style.zIndex = S.started ? '' : '9'; // depuis l'écran d'accueil, la fenêtre passe devant
+}
+$('b-restore').addEventListener('click', saveSheet);
+// un petit rappel : un code toutes les 2 heures de jeu environ, à partir de 50 habitants
+let codeRemT = 0;
+function tickCodeReminder(dt) { if (!S.started || (S.pop || 0) < 50) return; if ((codeRemT += dt) < 60) return; codeRemT = 0;
+  if (now() - (S.codeAt || 0) > 2 * 3600000 && now() - (S.codeRem || 0) > 2 * 3600000) { S.codeRem = now(); dirty = true; toast('💾 Pense à ton code de sauvegarde', 'Menu → Sauvegarde → Copier mon code. Pour reprendre ta partie partout.'); } }
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ S: JSON.parse(JSON.stringify(Object.assign({}, S, { px: player.position.x, pz: player.position.z, lastSeen: now() }))), playing: !!S.started, fast, t: now() })); } catch (e) {}
 
 /* ---------------- background music: original loops composed for the game (beta13/musique_src/compose.py), one per quarter, cross-faded ---------------- */
@@ -5496,6 +5567,7 @@ $('b-snd').addEventListener('click', () => { muted = !muted; $('b-snd').textCont
 function startPlay(mode) {
   try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {}
   musicTo(zoneOf(player.position.x, player.position.z).id);
+  $('sheet').style.zIndex = ''; closeSheet();
   SFX.done(); fast = $('fast').checked; S.fast = fast; if (mode) S.mode = mode; $('start').hidden = true; S.started = true; ensureDay(); showOffline();
   if (S.over && S.mode === 'comp') { S.over = false; gameOver(); } else S.over = false;
   try { window.focus(); canvas.focus(); } catch (e) {} dirty = true; loadNear();
@@ -5519,7 +5591,7 @@ $('b-back').addEventListener('click', () => { $('home-cont').hidden = false; $('
 let ready = false;
 function boot(loaded, hot) {
   if (ready) return; ready = true;
-  if (!loaded) { try { const ls = JSON.parse(localStorage.getItem(LSK) || 'null'); if (ls && (!ref || !loaded)) loaded = ls; } catch (e) {} }
+  if (!loaded) { loaded = bestLocal(); if (!loaded) { try { loaded = JSON.parse(localStorage.getItem(LSK) || 'null'); } catch (e) { loaded = null; } } }
   if (loaded && loaded.v === 14 && loaded.rid === RID) {
     S = Object.assign(fresh(), JSON.parse(JSON.stringify(loaded)), { started: false });
     if (!Array.isArray(S.plots) || S.plots.length !== PLOTS) S.plots = fresh().plots;
@@ -5553,7 +5625,7 @@ function bootDb() {
     if (!db || !user || !user.id) { clearTimeout(timer); $('nosave').hidden = false; boot(null); return; }
     return Promise.resolve(user.id()).then((id) => {
       uid = id; ref = db.collection('data/users/' + id).doc('state');
-      return ref.get().then((snap) => { clearTimeout(timer); const d = snap && typeof snap.data === 'function' ? snap.data() : null; let best = d; try { const ls = JSON.parse(localStorage.getItem(LSK) || 'null'); if (ls && ls.rid === RID && (!best || (ls.lastSeen || 0) > (best.lastSeen || 0))) best = ls; } catch (e) {} boot(best || null); });
+      return ref.get().then((snap) => { clearTimeout(timer); const d = snap && typeof snap.data === 'function' ? snap.data() : null; let best = d; { const ls = bestLocal(); if (ls && (!best || (ls.lastSeen || 0) > (best.lastSeen || 0))) best = ls; } boot(best || null); });
     });
   }).catch(() => { clearTimeout(timer); $('nosave').hidden = false; boot(null); });
 }
