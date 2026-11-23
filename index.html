@@ -8,7 +8,7 @@
   /* Layout: full-screen 3D village, HUD pinned to the safe-area edges, sheets slide up from the bottom (thumb reach). */
   :root { --cream:#F7F0E2; --blue:#2F4B7C; --blue-l:#5D7BAE; --gold:#E3A73C; --gold-l:#F3CF7A; --ink:#2B2535; --mute:#6E6578; --green:#5E8F3E; --red:#C9573F; --white:#FFFDF8; --sky:#F4DDB4; color-scheme: light; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html, body { margin:0; height:100%; overflow:hidden; background:var(--sky); font-family:Nunito, system-ui, sans-serif; color:var(--ink); }
+  html, body { margin:0; height:100%; width:100%; overflow:hidden; overflow:clip; overscroll-behavior:none; background:var(--sky); font-family:Nunito, system-ui, sans-serif; color:var(--ink); }
   [hidden] { display:none !important; }
   #c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
   html, body { touch-action:pan-x pan-y; } button, .btn, .sheet, #sheet, label, a { touch-action:manipulation; }
@@ -25,6 +25,7 @@
   @keyframes rentpulse { 50% { transform:scale(1.06); } }
   #ambfx { position:fixed; inset:0; pointer-events:none; transition:background 2s linear; }
   #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+  body { position:fixed; inset:0; } /* sur iPhone, rien ne doit élargir la page : sinon tout ce qui est calé à droite glisse hors de l'écran (retour de PA, 23/11/2026) */
   body.placing #labels * { pointer-events:none !important; }
   .cn { display:inline-block; width:1em; height:1em; border-radius:50%; background:radial-gradient(circle at 35% 32%, #FCE7A6 0 18%, #EDB84A 45%, #B9802A 100%); border:.11em solid var(--ink); vertical-align:-.16em; font-style:normal; }
   .lb { position:absolute; left:0; top:0; transform:translate(-50%,-100%); white-space:nowrap; font-weight:900; font-size:12px; line-height:1; padding:5px 9px; border-radius:999px; background:var(--white); border:2px solid var(--ink); box-shadow:0 2px 0 var(--ink); pointer-events:auto; cursor:pointer; touch-action:manipulation; }
@@ -217,8 +218,8 @@
   /* small windows (a narrow side pane, a laptop split screen): the whole interface shrinks with the window */
   .hud, .res, .side, .quest, #b-snd, #zone, .toast, .modal .card, .buildbar, .placebar, #load, #guide { zoom: var(--ui, 1); }
   .lb { font-size: calc(12px * (0.45 + 0.55 * var(--ui, 1))); padding: calc(5px * var(--ui, 1)) calc(9px * var(--ui, 1)); } .lb.coin.big { font-size: calc(16px * (0.45 + 0.55 * var(--ui, 1))); } .dir { font-size: calc(12px * (0.45 + 0.55 * var(--ui, 1))); } /* small windows: the labels shrink with the rest */
-  .sheet { zoom: var(--uis, 1); width: calc(var(--vw, 100vw) / var(--uis, 1)); box-sizing:border-box; } /* --vw : la largeur de l'écran en pixels ; Safari ne zoome pas les vw, Chrome si : en pixels, les deux s'accordent (bug de PA, 23/11/2026) */
-  #dirs { position:fixed; inset:0; pointer-events:none; z-index:3; } .dir { position:absolute; left:0; top:0; pointer-events:auto; display:flex; align-items:center; gap:5px; background:rgba(47,75,124,.92); color:#fff; border:2px solid var(--white); border-radius:999px; padding:4px 10px 4px 6px; font:900 12px Nunito, sans-serif; box-shadow:0 2px 6px rgba(0,0,0,.25); cursor:pointer; white-space:nowrap; } .dir i { font-style:normal; display:inline-block; color:var(--gold-l); }
+  .sheet { zoom: var(--uis, 1); width: var(--sheetw, auto); box-sizing:border-box; } /* --vw : la largeur de l'écran en pixels ; Safari ne zoome pas les vw, Chrome si : en pixels, les deux s'accordent (bug de PA, 23/11/2026) */
+  #dirs { position:fixed; inset:0; pointer-events:none; z-index:3; overflow:hidden; } .dir { position:absolute; left:0; top:0; pointer-events:auto; display:flex; align-items:center; gap:5px; background:rgba(47,75,124,.92); color:#fff; border:2px solid var(--white); border-radius:999px; padding:4px 10px 4px 6px; font:900 12px Nunito, sans-serif; box-shadow:0 2px 6px rgba(0,0,0,.25); cursor:pointer; white-space:nowrap; } .dir i { font-style:normal; display:inline-block; color:var(--gold-l); }
   .camctl { position:fixed; left:calc(env(safe-area-inset-left,0px) + 10px); bottom:calc(env(safe-area-inset-bottom,0px) + 152px); display:flex; flex-direction:column; gap:8px; z-index:3; zoom:var(--ui,1); } .camctl button { width:42px; height:42px; border-radius:50%; border:2.5px solid var(--ink); background:var(--white); box-shadow:0 3px 0 var(--ink); font-size:18px; padding:0; cursor:pointer; }
   .introc { text-align:center; } .in-ic { font-size:54px; line-height:1.1; margin:6px 0 2px; } .introc p { font-size:15px; color:var(--ink); min-height:84px; } .introc p b { color:var(--blue); }
   .dots { display:flex; gap:6px; justify-content:center; margin:4px 0 12px; } .dots i { width:9px; height:9px; border-radius:50%; background:#D8CFBD; } .dots i.on { background:var(--gold); }
@@ -469,7 +470,7 @@ const OFF = new THREE.Vector3(26, 30, 26);
 function placeCam() { cam.position.copy(target).add(OFF); cam.lookAt(target); }
 function resize() {
   const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false);
-  document.documentElement.style.setProperty('--ui', Math.max(0.5, Math.min(1, h / 760, w / 430)).toFixed(3)); document.documentElement.style.setProperty('--vw', w + 'px'); { const u = Math.max(0.5, Math.min(1, h / 760, w / 430)); document.documentElement.style.setProperty('--uis', (u < 0.8 ? u : 1).toFixed(3)); } /* la fenêtre du bas ne rétrécit que dans les toutes petites fenêtres : sur téléphone, elle reste à sa taille, quel que soit le navigateur */
+  document.documentElement.style.setProperty('--ui', Math.max(0.5, Math.min(1, h / 760, w / 430)).toFixed(3)); document.documentElement.style.setProperty('--vw', w + 'px'); { const u = Math.max(0.5, Math.min(1, h / 760, w / 430)); document.documentElement.style.setProperty('--uis', (u < 0.8 ? u : 1).toFixed(3)); document.documentElement.style.setProperty('--sheetw', u < 0.8 ? (w / u).toFixed(1) + 'px' : 'auto'); } /* la fenêtre du bas ne rétrécit que dans les toutes petites fenêtres : sur téléphone, elle reste à sa taille, quel que soit le navigateur */
   const a = w / h, z = a < 0.75 ? zoom * 1.45 : zoom;
   cam.left = -z * a / 2; cam.right = z * a / 2; cam.top = z / 2; cam.bottom = -z / 2; cam.updateProjectionMatrix(); placeCam();
 }
