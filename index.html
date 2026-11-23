@@ -3918,12 +3918,17 @@ const SERV = [[60, 'market', 'un marché'], [150, 'mairie', 'une mairie'], [400,
 const HOUSE_T = { // logements de village uniquement. Plus un logement est grand : plus cher par habitant, mais plus d'habitants par minute de maçon et par mètre carré.
   maisonnette: { n: 'Maisonnette', ic: '🛖', cap: 12, c: 60, fp: [4, 4], t: 2, lvl: 1, fb: ['s', 3.6, 3.6], glb: 1 },
   maison_a: { n: 'Maison de village', ic: '🏡', cap: 24, c: 150, fp: [6, 6], t: 3.6, lvl: 1, fb: ['a'] },
-  chaumiere: { n: 'Chaumière normande', ic: '🛖', cap: 20, c: 130, fp: [6, 6], t: 3.2, lvl: 3, fb: ['s', 5.6, 5.6], glb: 1 },
-  maison_bretonne: { n: 'Maison bretonne', ic: '⚓', cap: 26, c: 200, fp: [6, 6], t: 3.8, lvl: 4, fb: ['s', 5.6, 5.6], glb: 1 },
+  chaumiere: { n: 'Chaumière normande', ic: '🛖', cap: 20, c: 130, fp: [6, 6], t: 3.2, lvl: 3, fb: ['s', 5.6, 5.6], glb: 1, hide: 1 },
+  maison_bretonne: { n: 'Maison bretonne', ic: '⚓', cap: 26, c: 200, fp: [6, 6], t: 3.8, lvl: 4, fb: ['s', 5.6, 5.6], glb: 1, hide: 1 },
+  maison_lucarne: { n: 'Maison à lucarne', ic: '🏡', cap: 20, c: 120, fp: [6, 6], t: 3.0, lvl: 2, fb: ['s', 5.6, 5.6], glb: 1 },
+  maisons_jumelles: { n: 'Maisons jumelles', ic: '🏘️', cap: 36, c: 260, fp: [8, 6], t: 4.4, lvl: 5, fb: ['s', 7.6, 5.6], glb: 1 },
   maison_b: { n: 'Grande maison', ic: '🏠', cap: 30, c: 280, fp: [6, 6], t: 4.2, lvl: 6, fb: ['b'] },
-  maison_provencale: { n: 'Mas provençal', ic: '🌿', cap: 30, c: 300, fp: [6, 6], t: 4.3, lvl: 8, fb: ['s', 5.6, 5.6], glb: 1 },
-  maison_basque: { n: 'Maison basque', ic: '🌶️', cap: 32, c: 330, fp: [6, 6], t: 4.4, lvl: 12, fb: ['s', 5.6, 5.6], glb: 1 },
-  maison_alsacienne: { n: 'Maison alsacienne', ic: '🥨', cap: 34, c: 380, fp: [6, 6], t: 4.6, lvl: 16, fb: ['s', 5.6, 5.6], glb: 1 },
+  maison_auvent: { n: 'Maison à auvent', ic: '🏠', cap: 30, c: 300, fp: [6, 6], t: 4.2, lvl: 7, fb: ['s', 5.6, 5.6], glb: 1 },
+  maison_tourelle: { n: 'Maison à tourelle', ic: '🗼', cap: 32, c: 340, fp: [6, 6], t: 4.5, lvl: 9, fb: ['s', 5.6, 5.6], glb: 1 },
+  maison_perron: { n: 'Maison à perron', ic: '🏡', cap: 36, c: 420, fp: [6, 6], t: 4.8, lvl: 11, fb: ['s', 5.6, 5.6], glb: 1 },
+  maison_provencale: { n: 'Mas provençal', ic: '🌿', cap: 30, c: 300, fp: [6, 6], t: 4.3, lvl: 8, fb: ['s', 5.6, 5.6], glb: 1, hide: 1 },
+  maison_basque: { n: 'Maison basque', ic: '🌶️', cap: 32, c: 330, fp: [6, 6], t: 4.4, lvl: 12, fb: ['s', 5.6, 5.6], glb: 1, hide: 1 },
+  maison_alsacienne: { n: 'Maison alsacienne', ic: '🥨', cap: 34, c: 380, fp: [6, 6], t: 4.6, lvl: 16, fb: ['s', 5.6, 5.6], glb: 1, hide: 1 },
   maison_colombages: { n: 'Maison à colombages', ic: '🏚️', cap: 34, c: 360, fp: [6, 6], t: 4.5, lvl: 10, fb: ['s', 5.6, 5.6], glb: 1 },
   maison_ville: { n: 'Maison de bourg', ic: '🏘️', cap: 40, c: 480, fp: [6, 6], t: 5.1, lvl: 14, fb: ['s', 5.6, 5.6], glb: 1 },
   longere: { n: 'Longère', ic: '🏡', cap: 60, c: 800, fp: [12, 6], t: 7.4, lvl: 18, fb: ['s', 11.6, 5.6], glb: 1 },
@@ -4177,7 +4182,7 @@ function renderBuild() {
   const row = (ic, n, s, price, ok, why, fn) => { const it = document.createElement('div'); it.className = 'item' + (ok ? ' best' : ''); it.innerHTML = '<div class="ic"></div><div class="t"><b></b><span></span></div><button class="btn" type="button"></button>';
     it.querySelector('.ic').textContent = ic; it.querySelector('b').textContent = n; rich(it.querySelector('span'), s); const bt = it.querySelector('button'); if (why) { bt.textContent = '🔒'; bt.disabled = true; rich(it.querySelector('span'), s + ' · ' + why); } else { rich(bt, price); bt.classList.toggle('gold', ok); bt.disabled = !ok; bt.addEventListener('click', fn); } el.appendChild(it); };
   { const vm = villageMul(), nx = PALIERS[palierI() + 1]; if (BTAB !== 'rues' && BTAB !== 'batiments') { const d = document.createElement('div'); d.style.cssText = 'font-size:12px;font-weight:800;opacity:.75;margin:0 2px 8px;line-height:1.3'; d.textContent = '📌 Prix fixes : acheter ne fait pas monter le suivant.' + (vm > 1 ? ' Palier du village × ' + String(vm).replace('.', ',') + '.' : '') + (nx ? ' Au prochain palier (' + nx[0] + ' habitants), les prix passeront à × ' + String(nx[1]).replace('.', ',') + '.' : ''); el.appendChild(d); } }
-  if (BTAB === 'logements') { let teaser = false; Object.keys(HOUSE_T).sort((a, b) => HOUSE_T[a].lvl - HOUSE_T[b].lvl).forEach((k) => { const T = HOUSE_T[k]; if (T.glb && !GLB_OK[k]) return; if (lv < T.lvl) { if (teaser) return; teaser = true; } const c = housePrice(k); row(T.ic, T.n, T.cap + ' habitants · chantier ' + longT(dur(T.t * 60000 * timeMul())), c + ' ' + C, S.coins >= c, lv < T.lvl ? 'niveau ' + T.lvl : '', () => startPlace({ t: 'h', m: k })); }); }
+  if (BTAB === 'logements') { let teaser = false; Object.keys(HOUSE_T).sort((a, b) => HOUSE_T[a].lvl - HOUSE_T[b].lvl).forEach((k) => { const T = HOUSE_T[k]; if (T.hide || (T.glb && !GLB_OK[k])) return; /* hide : les maisons régionales, gardées pour les futurs villages de région (Romain, 23/11/2026) ; celles déjà posées restent */ if (lv < T.lvl) { if (teaser) return; teaser = true; } const c = housePrice(k); row(T.ic, T.n, T.cap + ' habitants · chantier ' + longT(dur(T.t * 60000 * timeMul())), c + ' ' + C, S.coins >= c, lv < T.lvl ? 'niveau ' + T.lvl : '', () => startPlace({ t: 'h', m: k })); }); }
   else if (BTAB === 'rues') { ROAD_T.map((T, i) => i).sort((a, b) => ROAD_T[a].o - ROAD_T[b].o).forEach((i) => { const T = ROAD_T[i]; row(T.ic, T.n, T.g + ' · ' + T.d + ' · ' + T.c + ' ' + C + ' la case de 2 m', T.c + ' ' + C, S.coins >= T.c, lv < (T.lvl || 1) ? 'niveau ' + T.lvl : '', () => startRoad(i)); });
     row('🧽', 'Gomme', 'Retire des cases de rue (remboursées à moitié)', 'Gommer', true, '', () => { $('build').hidden = true; openSheet('Êtes-vous sûr ?', 'La gomme efface les cases de rue que tu touches ou glisses. Chaque case est remboursée à moitié, on ne peut pas revenir en arrière.', [
       { t: '🧽 Oui, gommer des rues', s: 'Touche ou glisse sur une rue pour l’effacer.', btn: 'Gommer', ok: true, run: () => { closeSheet(); startRoad(-1); } },
