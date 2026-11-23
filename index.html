@@ -11,7 +11,9 @@
   html, body { margin:0; height:100%; overflow:hidden; background:var(--sky); font-family:Nunito, system-ui, sans-serif; color:var(--ink); }
   [hidden] { display:none !important; }
   #c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
-  html, body { touch-action:pan-x pan-y; } /* pas de zoom de la page au pincement ni au double appui ; le canevas du jeu garde ses propres gestes */
+  html, body { touch-action:pan-x pan-y; } button, .btn, .sheet, #sheet, label, a { touch-action:manipulation; }
+  input, textarea, select { font-size:16px !important; } /* en dessous de 16 px, Safari sur iPhone zoome la page au toucher et ne revient pas (bug de PA, 23/11/2026) */
+  /* pas de zoom de la page au pincement ni au double appui ; le canevas du jeu garde ses propres gestes */
   #talk { position:fixed; left:50%; bottom:calc(88px + env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(440px, calc(100vw - 24px)); box-sizing:border-box; display:flex; gap:12px; align-items:flex-start; padding:12px 14px; background:#FFFDF8; border:3px solid var(--ink, #2B2535); border-radius:20px; box-shadow:0 5px 0 rgba(43,37,53,.25); z-index:30; cursor:pointer; }
   #talk.in { animation:talkin .35s cubic-bezier(.2,1.4,.4,1); }
   @keyframes talkin { from { transform:translate(-50%, 30px) scale(.9); opacity:0; } to { transform:translate(-50%, 0) scale(1); opacity:1; } }
@@ -162,6 +164,7 @@
   #fp-t { font:900 16px Fraunces,Georgia,serif; background:rgba(255,253,248,.94); padding:6px 12px; border-radius:999px; border:2px solid var(--ink); white-space:nowrap; }
   #fp-sc { flex:1; text-align:center; font:900 14px Nunito,sans-serif; background:rgba(255,253,248,.9); padding:6px 10px; border-radius:999px; border:2px solid var(--ink); }
   #fp-x { padding:6px 14px; }
+  @media (max-width:560px) { #fpg .fp-top { flex-wrap:wrap; } #fp-t { flex:1; text-align:left; } #fp-sc { order:3; flex-basis:100%; font-size:12.5px; border-radius:14px; padding:5px 10px; } } /* téléphone : le score passe sur sa ligne */
   #fp-msg { position:absolute; left:50%; top:20%; transform:translateX(-50%); width:90%; text-align:center; font:900 21px Nunito,sans-serif; color:#FFFDF8; text-shadow:0 2px 0 rgba(43,37,53,.7),0 0 14px rgba(43,37,53,.55); pointer-events:none; }
   #fp-h { position:absolute; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 14px); transform:translateX(-50%); width:min(560px,92vw); box-sizing:border-box; background:rgba(255,253,248,.93); border:2px solid var(--ink); border-radius:16px; padding:8px 12px; font:800 13.5px/1.3 Nunito,sans-serif; text-align:center; pointer-events:none; }
   #fp-aim { position:absolute; width:46px; height:46px; margin:-23px 0 0 -23px; border:3px solid #FFFDF8; border-radius:50%; box-shadow:0 0 0 2px rgba(43,37,53,.6); pointer-events:none; }
@@ -2166,6 +2169,12 @@ window.addEventListener('wheel', (e) => { if (e.target === canvas) return; if (e
 { let gs = 1; ['gesturestart', 'gesturechange', 'gestureend'].forEach((t) => document.addEventListener(t, (e) => { e.preventDefault(); if (t === 'gesturestart') gs = 1; else if (e.scale) { zoomBy(gs / e.scale); gs = e.scale; } }, { passive: false })); }
 document.addEventListener('touchmove', (e) => { if (e.touches && e.touches.length > 1 && e.target !== canvas) e.preventDefault(); }, { passive: false });
 document.addEventListener('dblclick', (e) => { if (e.target !== canvas) e.preventDefault(); }, { passive: false });
+// filet de sécurité sur iPhone : si la page est restée zoomée (champ de texte, double appui…), elle reprend sa taille dès que le clavier est rangé
+{ const vv = window.visualViewport, meta = document.querySelector('meta[name=viewport]'); let busy = false;
+  const unzoom = () => { if (!vv || busy || vv.scale < 1.02) return; const a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; busy = true;
+    if (meta) { const c = meta.content; meta.content = 'width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no'; setTimeout(() => { meta.content = c; busy = false; }, 400); } else busy = false; window.scrollTo(0, 0); };
+  if (vv) { vv.addEventListener('resize', () => setTimeout(unzoom, 250)); document.addEventListener('focusout', () => setTimeout(unzoom, 350)); setInterval(unzoom, 3000); }
+}
 
 const STN = { mill: [-63, -5.2, 3.0], oven: [11.5, -6.4, 3.0], shop: [3, -4.7, 1.8], chateau: [GATEP[0], GATEP[1], 2.2], market: [MKSQ.x, -6.6, 1.6], cake: [40, -5.6, 1.4], bq: [BQDOOR[0], BQDOOR[1], 1.4], church: [53.6, 15, 2.2], mairie: [26, -5.4, 1.4], bistrot: [55, -5.6, 1.4], gate: [GATEX + 1.5, 0, 1.5] };
 // pathfinding on a 1 m grid with a binary heap, so a tap always finds its way around houses, the river and the hill
@@ -5061,6 +5070,7 @@ function mgOpen(id, it) { if (!S.started || FPV.on || VISIT.on || BUILD) return;
   document.body.classList.add('visiting', 'fpgame'); fpEl.hidden = false; $('fp-end').hidden = true; $('fp-aim').hidden = true; $('fp-h').hidden = false;
   $('fp-t').textContent = G.ic + ' ' + G.n; $('fp-h').textContent = G.how; fpMsg('');
   MG_START[id](MGR); fpScore();
+  if (window.innerWidth / window.innerHeight < 0.8 && (id === 'chamboule' || id === 'petanque')) { const k = id === 'chamboule' ? 1.35 : 1.25; MGR.eye = MGR.eye.map((v, i) => MGR.at[i] + (v - MGR.at[i]) * k); MGR.eye[1] = Math.max(MGR.eye[1], 1.6); } /* téléphone tenu droit : on recule un peu pour tout voir */
   const c = FPV.cam; c.aspect = window.innerWidth / window.innerHeight; c.fov = c.aspect < 0.8 ? 72 : 56; c.updateProjectionMatrix();
   fpPose(MGR.eye, MGR.at); FPV.to = { p: c.position.clone(), q: c.quaternion.clone() }; FPV.from = { p: cam.position.clone(), q: cam.quaternion.clone() }; c.position.copy(FPV.from.p); c.quaternion.copy(FPV.from.q); FPV.intro = 0;
   setTimeout(() => { if (MGR && MGR.hello) fpSay(MGR.hello, 3.5); }, 900); }
@@ -5099,7 +5109,7 @@ MG_START.petanque = function (R) {
   const dist = (b) => (co ? Math.hypot(b.x - co.x, b.z - co.z) : 99);
   const best = (s) => bodies.filter((b) => b.s === s).reduce((m, b) => Math.min(m, dist(b)), 99);
   const leader = () => { const a = best(0), b = best(1); return a === 99 && b === 99 ? -1 : a < b ? 0 : 1; };
-  R.scoreTxt = () => 'Toi ' + R.me + ' · ' + R.foe.name + ' ' + R.him + ' (en ' + PET_GOAL + ') · mène ' + mene + ' · ⚪' + left[0] + ' 🟤' + left[1] + (leader() < 0 ? '' : ' · point : ' + (leader() === 0 ? 'toi' : R.foe.name));
+  R.scoreTxt = () => 'Toi ' + R.me + ' – ' + R.him + ' ' + R.foe.name + ' · en ' + PET_GOAL + ' · mène ' + mene + ' · ⚪' + left[0] + ' 🟤' + left[1] + (leader() < 0 ? '' : ' · point : ' + (leader() === 0 ? 'toi' : R.foe.name));
   R.endTxt = () => 'Toi ' + R.me + ' · ' + R.foe.name + ' ' + R.him + ' en ' + (mene) + ' mène' + (mene > 1 ? 's' : '');
   const hint = (t) => { $('fp-h').textContent = t; };
   function launch(b, from, to, roll, T) { b.x = from[0]; b.z = from[2]; b.vx = b.vz = 0; const d = Math.hypot(to[0] - from[0], to[1] - from[2]); fly = { b, from, to, roll, u: 0, T: T || 0.55 + d * 0.09, h: T ? 0.35 + d * 0.06 : 0.5 + d * 0.16 }; }
