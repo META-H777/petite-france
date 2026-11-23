@@ -217,7 +217,7 @@
   /* small windows (a narrow side pane, a laptop split screen): the whole interface shrinks with the window */
   .hud, .res, .side, .quest, #b-snd, #zone, .toast, .modal .card, .buildbar, .placebar, #load, #guide { zoom: var(--ui, 1); }
   .lb { font-size: calc(12px * (0.45 + 0.55 * var(--ui, 1))); padding: calc(5px * var(--ui, 1)) calc(9px * var(--ui, 1)); } .lb.coin.big { font-size: calc(16px * (0.45 + 0.55 * var(--ui, 1))); } .dir { font-size: calc(12px * (0.45 + 0.55 * var(--ui, 1))); } /* small windows: the labels shrink with the rest */
-  .sheet { zoom: var(--ui, 1); width: calc(100vw / var(--ui, 1)); }
+  .sheet { zoom: var(--uis, 1); width: calc(var(--vw, 100vw) / var(--uis, 1)); box-sizing:border-box; } /* --vw : la largeur de l'écran en pixels ; Safari ne zoome pas les vw, Chrome si : en pixels, les deux s'accordent (bug de PA, 23/11/2026) */
   #dirs { position:fixed; inset:0; pointer-events:none; z-index:3; } .dir { position:absolute; left:0; top:0; pointer-events:auto; display:flex; align-items:center; gap:5px; background:rgba(47,75,124,.92); color:#fff; border:2px solid var(--white); border-radius:999px; padding:4px 10px 4px 6px; font:900 12px Nunito, sans-serif; box-shadow:0 2px 6px rgba(0,0,0,.25); cursor:pointer; white-space:nowrap; } .dir i { font-style:normal; display:inline-block; color:var(--gold-l); }
   .camctl { position:fixed; left:calc(env(safe-area-inset-left,0px) + 10px); bottom:calc(env(safe-area-inset-bottom,0px) + 152px); display:flex; flex-direction:column; gap:8px; z-index:3; zoom:var(--ui,1); } .camctl button { width:42px; height:42px; border-radius:50%; border:2.5px solid var(--ink); background:var(--white); box-shadow:0 3px 0 var(--ink); font-size:18px; padding:0; cursor:pointer; }
   .introc { text-align:center; } .in-ic { font-size:54px; line-height:1.1; margin:6px 0 2px; } .introc p { font-size:15px; color:var(--ink); min-height:84px; } .introc p b { color:var(--blue); }
@@ -469,7 +469,7 @@ const OFF = new THREE.Vector3(26, 30, 26);
 function placeCam() { cam.position.copy(target).add(OFF); cam.lookAt(target); }
 function resize() {
   const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false);
-  document.documentElement.style.setProperty('--ui', Math.max(0.5, Math.min(1, h / 760, w / 430)).toFixed(3));
+  document.documentElement.style.setProperty('--ui', Math.max(0.5, Math.min(1, h / 760, w / 430)).toFixed(3)); document.documentElement.style.setProperty('--vw', w + 'px'); { const u = Math.max(0.5, Math.min(1, h / 760, w / 430)); document.documentElement.style.setProperty('--uis', (u < 0.8 ? u : 1).toFixed(3)); } /* la fenêtre du bas ne rétrécit que dans les toutes petites fenêtres : sur téléphone, elle reste à sa taille, quel que soit le navigateur */
   const a = w / h, z = a < 0.75 ? zoom * 1.45 : zoom;
   cam.left = -z * a / 2; cam.right = z * a / 2; cam.top = z / 2; cam.bottom = -z / 2; cam.updateProjectionMatrix(); placeCam();
 }
