@@ -842,7 +842,13 @@ water.rotation.x = -Math.PI / 2; water.position.set(RMID, WY, 0); water.userData
       lamp(px, zb, true, TOP + 1.1, br, true); solid(RMID + px, zb, 0.35); }); }); }
 /* deux petits ponts de pierre, au nord (les Prés et le Bief) et au sud (le Val et les Rives) : les routes du village y traversent la rivière (Romain, 22/11/2026) */
 const PONTS = [-62, 46];
-PONTS.forEach((pz) => { const L = RW + 1.6, D = 4.8, TOP = 0.04, rx = RW / 2, ry = 0.55, base = WY - 0.6, sh = new THREE.Shape();
+// pontAdd : aussi pour les ponts que le joueur construit avec une Route (Romain, 24/11/2026) : on ouvre le passage dans la berge
+const PONTS_FAITS = new Set();
+function pontAdd(pz, D) { if (PONTS_FAITS.has(pz)) return; PONTS_FAITS.add(pz); if (!PONTS.includes(pz)) PONTS.push(pz); pontBuild(pz, D);
+  for (let k = rects.length - 1; k >= 0; k--) { const r = rects[k]; if (r[0] === RMID && r[2] === RW / 2 + 0.2 && Math.abs(r[1] - pz) < D / 2 + 0.5) rects.splice(k, 1); }
+  if (typeof grid !== 'undefined') grid = null; if (typeof grassChanged === 'function') grassChanged(); }
+PONTS.forEach((pz) => { PONTS_FAITS.add(pz); pontBuild(pz, 4.8); });
+function pontBuild(pz, D) { const L = RW + 1.6, TOP = 0.04, rx = RW / 2, ry = 0.55, base = WY - 0.6, sh = new THREE.Shape();
   sh.moveTo(-L / 2, base); sh.lineTo(-rx, base); sh.lineTo(-rx, WY);
   for (let k = 1; k < 14; k++) { const a = Math.PI - k * Math.PI / 14; sh.lineTo(rx * Math.cos(a), WY + ry * Math.sin(a)); }
   sh.lineTo(rx, WY); sh.lineTo(rx, base); sh.lineTo(L / 2, base); sh.lineTo(L / 2, TOP); sh.lineTo(-L / 2, TOP); sh.closePath();
@@ -851,7 +857,7 @@ PONTS.forEach((pz) => { const L = RW + 1.6, D = 4.8, TOP = 0.04, rx = RW / 2, ry
   [-1, 1].forEach((f) => { const zb = f * (D / 2 - 0.12);
     mesh(new THREE.BoxGeometry(L - 0.3, 0.5, 0.24), STONE3, 0, TOP + 0.25, zb, br); mesh(new THREE.BoxGeometry(L - 0.2, 0.08, 0.32), STONE, 0, TOP + 0.54, zb, br);
     [-1, 1].forEach((s) => { const px = s * (L / 2 - 0.2); box(0.42, 0.75, 0.42, STONE, px, TOP, zb, br); box(0.5, 0.08, 0.5, STONE3, px, TOP + 0.75, zb, br); solid(RMID + px, pz + zb, 0.28); }); });
-  flat(L - 0.4, D - 0.5, '#DCCDAF', RMID, pz, TOP + 0.03); GCOVER.push([RMID, pz, L / 2 + 0.3, D / 2 - 0.2, 0, 1]); });
+  flat(L - 0.4, D - 0.5, '#DCCDAF', RMID, pz, TOP + 0.03); GCOVER.push([RMID, pz, L / 2 + 0.3, D / 2 - 0.2, 0, 1]); }
 for (let z = BZ0 - 6; z < BZ1 + 6; z += 1.4) { if (Math.abs(z) < 3.4 || PONTS.some((p) => Math.abs(z - p) < 2.9)) continue; rects.push([RMID, z, RW / 2 + 0.2, 0.71]); }
 // a little blue boat moored by the quay
 { const b = new THREE.Group(); b.position.set(RMID + 0.35, WY, 13); b.rotation.y = 0.05; scene.add(b);
@@ -1971,7 +1977,7 @@ const Q = [
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Les clients font la queue ! Vends 4 baguettes.', say: 'Regarde, ils reviennent ! Madame Rabier est déjà là. Elle arrive toujours la première… pour avoir le temps de critiquer.', at: () => (S.pain > 0 ? null : flowAt()), goal: () => S.vendus >= 4, xp: 10, coins: 10 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Touche les écus d’or au-dessus de la boulangerie pour les ramasser.', say: 'Les sous, on les ramasse tout de suite, sinon c\'est le chat qui joue avec.', at: SH, goal: () => S.encaisse > 0, xp: 6, coins: 0 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Ouvre 🏗️ Construire et bâtis 3 maisons.', say: 'Bonnefoy, maire de cette commune depuis 31 ans ! Un village sans habitants, c\'est une mairie sans électeurs. Bâtissez, que diable !', build: 1, goal: () => cityHouses() >= 3, xp: 12, coins: 20 },
-  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Trace 3 cases de rue pavée devant tes maisons.', say: 'De la boue jusqu\'aux chevilles ? Dans MA commune ? Pavez-moi ça, que diable !', build: 1, goal: () => Object.keys(S.city.roads).length - Object.keys(S.city.vr || {}).length >= 3, xp: 12, coins: 20 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Trace 3 cases de rue pavée devant tes maisons.', say: 'De la boue jusqu\'aux chevilles ? Dans MA commune ? Pavez-moi ça, que diable !', build: 1, goal: () => Object.keys(S.city.roads).length >= 3, xp: 12, coins: 20 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Achète le vélo du boulanger.', say: 'À mon âge je faisais la tournée à vélo. En côte. Avec 40 baguettes. Et sans me plaindre.', up: 1, goal: () => S.bike, xp: 8, coins: 10 },
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Embauche Léo : il récoltera le champ à ta place.', say: 'Salut ! Moi c\'est Léo. Je fauche, je sème, je parle aux vaches. Enfin surtout je fauche. Tu m\'embauches ?', up: 1, goal: () => S.hired.leo, xp: 10, coins: 10 },
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Achète une nouvelle parcelle.', say: 'Plus de champ, plus de blé, plus de pain. C\'est pas compliqué, l\'agriculture. Enfin, si. Mais là non.', up: 1, goal: () => S.unlocked >= 5, xp: 10, coins: 15 },
@@ -2189,7 +2195,7 @@ function nearFree(i, j) { if (!grid[j * GW + i]) return [i, j]; for (let r = 1; 
 function clearLine(x0, z0, x1, z1) { const d = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(d / 0.25); for (let k = 0; k <= n; k++) { const u = n ? k / n : 0; if (blocked(x0 + (x1 - x0) * u, z0 + (z1 - z0) * u, 0.3)) return false; } return true; }
 // roads, lanes and paths: people keep to them (a step off the road costs seven on it), so nobody cuts across the fields or the river
 let roadG = null;
-function isRoad(x, z) { if (Math.abs(z) < 2.5) return x < RIVER.x0 - 1 || Math.abs(z) > 1.7; /* à l'est de la rivière, la chaussée est aux voitures : on marche sur les trottoirs */ if (roadAt(x, z)) return true;
+function isRoad(x, z) { if (Math.abs(z) < 2.5) return x < RIVER.x0 - 1 || Math.abs(z) > 1.7; /* à l'est de la rivière, la chaussée est aux voitures : on marche sur les trottoirs */ if (roadAt(x, z)) return typeof rtWalk !== 'function' || rtWalk(x, z);
   if (typeof MOV !== 'undefined' && MOV.market && MOV.market.placed && Math.abs(x - MOV.market.x) < (oddR(MOV.market.r) ? 3 : 8) && Math.abs(z - MOV.market.z) < (oddR(MOV.market.r) ? 8 : 3)) return true;
   for (const c of GCOVER) { if (!c[5]) continue; const dx = x - c[0], dz = z - c[1]; if (Math.abs(dx) + Math.abs(dz) > c[2] + c[3] + 1) continue; const cs = Math.cos(c[4]), sn = Math.sin(c[4]); if (Math.abs(dx * cs - dz * sn) < c[2] + 0.4 && Math.abs(dx * sn + dz * cs) < c[3] + 0.4) return true; }
   return false; }
@@ -4010,7 +4016,8 @@ const ROAD_T = [{ n: 'Rue pavée', ic: '🧱', c: 6, o: 3, g: 'Village', d: 'pav
   { n: 'Sable ocre', ic: '🟧', c: 3, o: 1.5, g: 'Rustique', d: 'allée de sable stabilisé, comme dans les jardins du Midi' }, { n: 'Chemin enherbé', ic: '🌱', c: 3, o: 0.5, g: 'Rustique', d: 'l’herbe a repris, la terre affleure : pour les vergers et les prés' },
   { n: 'Pavés de grès rose', ic: '🌸', c: 10, o: 4.5, g: 'Village', d: 'grès rose des Vosges posé en rangs, chaleureux', lvl: 7 }, { n: 'Calade en arêtes', ic: '🐟', c: 10, o: 4.6, g: 'Village', d: 'galets en épis entre des bandes de pierre, la ruelle provençale', lvl: 8 },
   { n: 'Opus incertum', ic: '🪨', c: 13, o: 6.5, g: 'Bourgeois', d: 'grandes pierres plates irrégulières, pour une cour ou une terrasse', lvl: 10 }, { n: 'Tomettes de Provence', ic: '🔶', c: 14, o: 6.6, g: 'Bourgeois', d: 'hexagones de terre cuite, pour une terrasse de mas', lvl: 11 },
-  { n: 'Damier de marbre', ic: '♟️', c: 30, o: 9, g: 'Prestige', d: 'marbre noir et blanc, la cour d’honneur d’un hôtel particulier', lvl: 17 }];
+  { n: 'Damier de marbre', ic: '♟️', c: 30, o: 9, g: 'Prestige', d: 'marbre noir et blanc, la cour d’honneur d’un hôtel particulier', lvl: 17 },
+  { n: 'Route', ic: '🛣️', c: 50, o: -1, g: 'Route', d: '6 m de large, chaussée pavée et trottoirs, comme la grand-route ; un pont se construit si elle traverse la rivière', route: 1 }]; // 3dab-routes.js (RT = 15)
 const RMAX = 3000;
 const roadMesh = ROAD_T.map((t, i) => { const geo = new THREE.PlaneGeometry(TILE, TILE).rotateX(-Math.PI / 2);
   const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ map: i === 0 ? paveTex(1, 1) : roadTex(i) }), RMAX); m.count = 0; m.receiveShadow = true; m.userData.dyn = true; m.frustumCulled = false; scene.add(m); return m; });
@@ -4024,8 +4031,8 @@ function roadClip(ix, iz) { let x0 = ix * TILE, x1 = x0 + TILE, z0 = iz * TILE, 
   for (const b of B) { const ox = Math.min(x1, b[1]) - Math.max(x0, b[0]), oz = Math.min(z1, b[3]) - Math.max(z0, b[2]); if (ox <= 0.001 || oz <= 0.001) continue;
     if (oz <= ox) { if (z0 < b[2]) z1 = Math.max(z0 + 0.4, b[2]); else z0 = Math.min(z1 - 0.4, b[3]); } else { if (x0 < b[0]) x1 = Math.max(x0 + 0.4, b[0]); else x0 = Math.min(x1 - 0.4, b[1]); } }
   return [(x0 + x1) / 2, (z0 + z1) / 2, (x1 - x0) / TILE, (z1 - z0) / TILE]; }
-function drawRoads() { const R = (S.city && S.city.roads) || {}, n = ROAD_T.map(() => 0), VR = (S.city && S.city.vr) || {};
-  Object.keys(R).forEach((k) => { if (VR[k]) return; /* les routes du village ont leur propre dessin, continu (drawVillage) */ const t = R[k], [ix, iz] = k.split(',').map(Number); if (n[t] >= RMAX) return; const cl = roadClip(ix, iz), cx = cl[0], cz = cl[1], gx = (groundY(cx + 1, cz) - groundY(cx - 1, cz)) / 2, gz = (groundY(cx, cz + 1) - groundY(cx, cz - 1)) / 2;
+function drawRoads() { const R = (S.city && S.city.roads) || {}, n = ROAD_T.map(() => 0);
+  Object.keys(R).forEach((k) => { if (R[k] === RT || !ROAD_T[R[k]]) return; /* la Route a son propre dessin, continu (drawVillage) */ const t = R[k], [ix, iz] = k.split(',').map(Number); if (n[t] >= RMAX) return; const cl = roadClip(ix, iz), cx = cl[0], cz = cl[1], gx = (groundY(cx + 1, cz) - groundY(cx - 1, cz)) / 2, gz = (groundY(cx, cz + 1) - groundY(cx, cz - 1)) / 2;
     if (Math.abs(gx) + Math.abs(gz) < 0.002) tmpM.compose(tmpP.set(cx, groundY(cx, cz) + 0.07 + t * 0.002, cz), tmpQ.identity(), tmpS.set(cl[2], 1, cl[3])); else { tmpQ.setFromUnitVectors(UPV, tmpP.set(-gx, 1, -gz).normalize()); tmpM.compose(tmpP.set(cx, groundY(cx, cz) + 0.08 + t * 0.002, cz), tmpQ, tmpS.set(1.04 * cl[2], 1, 1.04 * cl[3])); } // a street laid on a slope leans with it
     roadMesh[t].setMatrixAt(n[t]++, tmpM); });
   roadMesh.forEach((m, i) => { m.count = n[i]; m.instanceMatrix.needsUpdate = true; }); try { drawVillage(); } catch (e) {} hideGrass(); }
@@ -4099,7 +4106,7 @@ function computeLinks() { roadNet = roadNetwork(); links = S.city.items.map((it)
 /* un beau décor cher rapporte plus de beauté qu'un petit massif (jusqu'à +25 %) */
 const decoB = (d) => d.b * (1 + 0.25 * Math.min(1, Math.max(0, (d.c - 40) / 360)));
 function beauty() { let b = 0; const home = MOV.chezmoi && MOV.chezmoi.placed ? MOV.chezmoi : null; S.city.items.forEach((it) => { if (it.free) return; if (it.t === 'd' && DECOS[it.k]) b += (it.mon ? DECOS[it.k].b * 1.5 : decoB(DECOS[it.k])) * (home && Math.hypot(it.x - home.x, it.z - home.z) < 8 ? 2 : 1); else if (it.t === 'h') b += [0, 0, 3, 8][it.l || 0]; });
-  PROD_KEYS.forEach((k) => { if (MOV[k].placed && SERV_BEAUTY[k]) b += SERV_BEAUTY[k]; }); b += Math.min(60, (Object.keys(S.city.roads).length - Object.keys(S.city.vr || {}).length) * 0.1); return (S.feteB || 0) > now() ? b * 1.05 : b; } /* une fête embellit le village pendant une heure */
+  PROD_KEYS.forEach((k) => { if (MOV[k].placed && SERV_BEAUTY[k]) b += SERV_BEAUTY[k]; }); b += Math.min(60, Object.keys(S.city.roads).length * 0.1); return (S.feteB || 0) > now() ? b * 1.05 : b; } /* une fête embellit le village pendant une heure */
 const rentMult = () => 1 + Math.min(1.5, beauty() / 150);
 function capOf(it) { if (it.t !== 'h') return 0; const l = it.end > 0 ? (it.l || 1) - 1 : it.l || 1; return HOUSE_T[it.m].cap * [0, 1, 1.3, 1.6][l]; } // pendant qu'on l'embellit, elle garde les habitants de son niveau précédent
 function capTotal() { if (!links) computeLinks(); return S.city.items.reduce((a, it, i) => a + (links[i] ? capOf(it) : 0), 0); }
@@ -4206,7 +4213,7 @@ function renderBuild() {
     it.querySelector('.ic').textContent = ic; it.querySelector('b').textContent = n; rich(it.querySelector('span'), s); const bt = it.querySelector('button'); if (why) { bt.textContent = '🔒'; bt.disabled = true; rich(it.querySelector('span'), s + ' · ' + why); } else { rich(bt, price); bt.classList.toggle('gold', ok); bt.disabled = !ok; bt.addEventListener('click', fn); } el.appendChild(it); };
   { const vm = villageMul(), nx = PALIERS[palierI() + 1]; if (BTAB !== 'rues' && BTAB !== 'batiments') { const d = document.createElement('div'); d.style.cssText = 'font-size:12px;font-weight:800;opacity:.75;margin:0 2px 8px;line-height:1.3'; d.textContent = '📌 Prix fixes : acheter ne fait pas monter le suivant.' + (vm > 1 ? ' Palier du village × ' + String(vm).replace('.', ',') + '.' : '') + (nx ? ' Au prochain palier (' + nx[0] + ' habitants), les prix passeront à × ' + String(nx[1]).replace('.', ',') + '.' : ''); el.appendChild(d); } }
   if (BTAB === 'logements') { let teaser = false; Object.keys(HOUSE_T).sort((a, b) => HOUSE_T[a].lvl - HOUSE_T[b].lvl).forEach((k) => { const T = HOUSE_T[k]; if (T.hide || (T.glb && !GLB_OK[k])) return; /* hide : les maisons régionales, gardées pour les futurs villages de région (Romain, 23/11/2026) ; celles déjà posées restent */ if (lv < T.lvl) { if (teaser) return; teaser = true; } const c = housePrice(k); row(T.ic, T.n, T.cap + ' habitants · chantier ' + longT(dur(T.t * 60000 * timeMul())), c + ' ' + C, S.coins >= c, lv < T.lvl ? 'niveau ' + T.lvl : '', () => startPlace({ t: 'h', m: k })); }); }
-  else if (BTAB === 'rues') { ROAD_T.map((T, i) => i).sort((a, b) => ROAD_T[a].o - ROAD_T[b].o).forEach((i) => { const T = ROAD_T[i]; row(T.ic, T.n, T.g + ' · ' + T.d + ' · ' + T.c + ' ' + C + ' la case de 2 m', T.c + ' ' + C, S.coins >= T.c, lv < (T.lvl || 1) ? 'niveau ' + T.lvl : '', () => startRoad(i)); });
+  else if (BTAB === 'rues') { ROAD_T.map((T, i) => i).sort((a, b) => ROAD_T[a].o - ROAD_T[b].o).forEach((i) => { const T = ROAD_T[i]; row(T.ic, T.n, T.g + ' · ' + T.d + ' · ' + T.c + ' ' + C + (T.route ? ' les 6 m (pont : ' + PONT_C + ' ' + C + ')' : ' la case de 2 m'), T.c + ' ' + C, S.coins >= T.c, lv < (T.lvl || 1) ? 'niveau ' + T.lvl : '', () => startRoad(i)); });
     row('🧽', 'Gomme', 'Retire des cases de rue (remboursées à moitié)', 'Gommer', true, '', () => { $('build').hidden = true; openSheet('Êtes-vous sûr ?', 'La gomme efface les cases de rue que tu touches ou glisses. Chaque case est remboursée à moitié, on ne peut pas revenir en arrière.', [
       { t: '🧽 Oui, gommer des rues', s: 'Touche ou glisse sur une rue pour l’effacer.', btn: 'Gommer', ok: true, run: () => { closeSheet(); startRoad(-1); } },
       { t: 'Non, annuler', s: 'Ne rien effacer.', btn: 'Annuler', ok: true, run: closeSheet } ]); }); }
@@ -4259,15 +4266,17 @@ function confirmPlace() { const s = PLC; if (!s || !plFree()) return; const cost
 function startMoveProd(k) { enterBuild(); const M = MOV[k]; PLC = { t: 'mp', k, x: M.x, z: M.z, r: M.r }; showPlace(); }
 
 // ---- roads ----
-function startRoad(t) { enterBuild(); ROADM = { t }; $('placebar').hidden = false; $('pl-t').textContent = t < 0 ? '🧽 Touche ou glisse sur une rue pour la gommer' : ROAD_T[t].ic + ' ' + ROAD_T[t].n + ' · touche ou glisse pour tracer'; rich($('pl-ok'), 'Terminer'); $('pl-ok').disabled = false; TRACE = null; trShow([]); $('pl-rot').disabled = t < 0; $('pl-rot').textContent = t < 0 ? '↻' : '📏 Tracer'; }
+function startRoad(t) { enterBuild(); ROADM = { t }; $('placebar').hidden = false; $('pl-t').textContent = t < 0 ? '🧽 Touche ou glisse sur une rue ou une route pour la gommer' : trIdle(); rich($('pl-ok'), 'Terminer'); $('pl-ok').disabled = false; TRACE = null; trShow([]); $('pl-rot').disabled = t < 0; $('pl-rot').textContent = t < 0 ? '↻' : '📏 Tracer'; }
 function roadEnd() { ROADM = null; if (TRACE) trStop(); $('pl-rot').textContent = '↻'; $('placebar').hidden = true; }
 function paintRoad(x, z) { const ix = tileOf(x), iz = tileOf(z), k = tileKey(ix, iz), R = S.city.roads, cx = ix * TILE + TILE / 2, cz = iz * TILE + TILE / 2;
-  if (ROADM.t < 0) { if (R[k] !== undefined) { const V = S.city.vr || {}; if (V[k]) vrErase(ix, iz); else { S.coins += Math.floor(ROAD_T[R[k]].c / 2); delete R[k]; } dirty = true; links = null; drawRoads(); grid = null; } return; }
+  if (ROADM.t < 0) { if (R[k] !== undefined) { if (R[k] === RT) S.coins += rtErase(ix, iz); else { S.coins += Math.floor(((ROAD_T[R[k]] || {}).c || 0) / 2); delete R[k]; } dirty = true; links = null; drawRoads(); grid = null; } return; }
+  if (ROADM.t === RT) return rtPaint(x, z);
+  if (R[k] === RT) { if (now() > (paintRoad.warn || 0)) { paintRoad.warn = now() + 4000; toast('🛣️ C’est une route', 'Gomme d’abord ce tronçon de route pour y poser une rue.'); } return; }
   if (R[k] === ROADM.t) return; if (S.coins < ROAD_T[ROADM.t].c) { if (now() > (paintRoad.warn || 0)) { paintRoad.warn = now() + 4000; toast('Il te manque des écus d’or', 'Une case de ' + ROAD_T[ROADM.t].n.toLowerCase() + ' coûte ' + ROAD_T[ROADM.t].c + ' écus d’or.'); } return; }
   for (const c of GCOVER) { if (!c[5]) continue; const dx = cx - c[0], dz = cz - c[1], cs = Math.cos(c[4]), sn = Math.sin(c[4]); if (Math.abs(dx * cs - dz * sn) < c[2] && Math.abs(dx * sn + dz * cs) < c[3]) return; } /* pas de rue sur les chemins et les rampes */
   if (cx < BX0 + 1 || cx > BX1 - 1 || cz < BZ0 + 1 || cz > BZ1 - 1 || (cx > RIVER.x0 - 0.9 && cx < RIVER.x1 + 0.9) || Math.hypot(cx - HILL.x, cz - HILL.z) < HILL.r1 || Math.abs(cz) < 2.3 || !landOwned(cx, cz)) return;
   for (const [a, b] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6], [0, 0]]) if (blocked(cx + a, cz + b, 0)) return;
-  led('🧱 Rues', -ROAD_T[ROADM.t].c); S.coins -= ROAD_T[ROADM.t].c; R[k] = ROADM.t; if (S.city.vr) delete S.city.vr[k]; dirty = true; links = null; drawRoads(); }
+  led('🧱 Rues', -ROAD_T[ROADM.t].c); S.coins -= ROAD_T[ROADM.t].c; R[k] = ROADM.t; dirty = true; links = null; drawRoads(); }
 
 // ---- selection of an existing thing in build mode ----
 const KIND2MOV = { shop: 'shop', oven: 'oven', mill: 'mill', plot: 'champ', market: 'market', garden: 'potager', cake: 'cake', bq: 'bq', mairie: 'mairie', parking: 'parking', church: 'church', bistrot: 'bistrot', fontaine: 'fontaine', ferme: 'ferme', hangar: 'hangar', chapelle: 'chapelle', cathedrale: 'cathedrale', chezmoi: 'chezmoi', reserve: 'reserve' };
@@ -4669,7 +4678,7 @@ function openQuartier(Q) { if (!S.started) return; const lk = qLock(Q), cost = T
   openSheet('Ouvrir un quartier', qName(Q) + ' · ' + Q.ilots.length + ' terrains · ouvre ' + Q.ch, [{ t: '🗝️ Ouvrir ce quartier', s: 'Le premier terrain est offert. Choisis son nom maintenant, tu pourras le changer.', btn: cost + ' ' + C, ok: S.coins >= cost,
     run: () => { if (S.coins < cost || qOpen(Q)) return; led('🪧 Terrains', -cost); S.coins -= cost; const L = landS(); L.open[Q.id] = 1; L.names[Q.id] = cleanName(pre.querySelector('input').value, Q.n);
       let best = null, bd = 1e9; Q.ilots.forEach((I) => { ILOTS.forEach((o) => { if (!L.own[o.key]) return; const d = Math.hypot(o.cx - I.cx, o.cz - I.cz); if (d < bd) { bd = d; best = I; } }); }); L.own[(best || Q.ilots[0]).key] = 1;
-      closeSheet(); landChanged(); toast(Q.ic + ' ' + qName(Q) + ' est ouvert', ''); SFX.done(); setTimeout(() => vrRefresh(true), 2500); } }], null, pre); }
+      closeSheet(); landChanged(); toast(Q.ic + ' ' + qName(Q) + ' est ouvert', ''); SFX.done(); } }], null, pre); }
 
 /* ================= le style de chaque quartier : façades, mobilier, arbre d'alignement ================= */
 // Un style ne change pas les modèles : il remplace les couleurs des murs et des toits des maisons du quartier, celle de la fonte du mobilier, et l'essence de l'arbre d'alignement.
@@ -4758,22 +4767,19 @@ function villageSheet() { if (!S.started) return; const v = Object.assign({}, vi
   redraw();
   openSheet('Mon village', 'Son nom, son blason et sa devise : ils s\'affichent à l\'entrée du village.' + (S.renom ? ' Renommée : ' + fmt(S.renom) + ' ⭐ (' + (S.fetes || 0) + ' fête' + ((S.fetes || 0) > 1 ? 's' : '') + ' donnée' + ((S.fetes || 0) > 1 ? 's' : '') + ').' : ''), [{ t: '💾 Enregistrer', s: 'Tu pourras tout changer plus tard, gratuitement.', btn: 'Valider', ok: true,
     run: () => { v.n = cleanName(w.querySelector('[data-k=n]').value, 'Petite France').slice(0, 22); v.dv = (w.querySelector('[data-k=dv]').value || '').replace(/[<>]/g, '').trim().slice(0, 40); S.village = v; { const bv = (w.querySelector('[data-k=bourg]').value || '').replace(/[<>]/g, '').trim().slice(0, 22); if (bv) landS().names.bourg = bv; else delete landS().names.bourg; try { landRefresh(); } catch (e) {} } dirty = true; closeSheet(); villageApply(); toast('🛡️ ' + v.n, ''); } }], null, w); }
-/* ================= les routes du village et l'outil « tracer une route » (Romain, 22/11/2026 : « on a besoin d'autres voies de circulation entre les quartiers ») =================
-   A. Les routes du village : trois axes nord-sud (la Campagne, le Bourg, entre le Parvis et le Faubourg) et deux routes transversales (au nord par les Prés, au sud par le Val),
-      qui passent la rivière sur les deux petits ponts (PONTS, 2-monde.js). Chaque morceau se pose tout seul, gratuitement, quand son quartier est ouvert :
-      en terre à la campagne, en pavés en ville. Il contourne ce qui est déjà posé, sans rien déplacer.
-      Sauvegarde : les cases vont dans S.city.roads comme les autres ; S.city.vq note les quartiers déjà servis, S.city.vr les cases offertes
-      (la gomme ne les rembourse pas, elles ne comptent pas dans la beauté). Une case gommée ne revient pas.
-   B. Tracer une route : en mode rue, « 📏 Tracer » ; on touche le départ puis l'arrivée, le jeu propose le chemin (en évitant les maisons), on confirme.
-      Prix : celui de la case, −25 % à partir de 10 cases neuves. */
-// 23/11/2026 (Romain : « toutes les routes entre les quartiers doivent être comme la route originale ») : des tronçons continus de 4 m, sur une grille de 4 m,
-// pavés avec trottoirs et bordures en ville, en terre battue à la campagne, comme la grand-route. Les cases de 2 m restent dessous (S.city.roads / vr) pour la marche et la pose.
-const VR_AXES = [[[-70, -62], [-70, 46]], [[-6, -62], [-6, 46]], [[42, -62], [42, 46]], [[-70, -62], [42, -62]], [[-70, 46], [42, 46]]];
-const VR_RUSTIC = { campagne: 1, bois: 1, pres: 1, val: 1, vergers: 1, plateau: 1, hauts: 1, vignes: 1, bief: 1, rives: 1 };
-const RC = 4, cellOf = (x) => Math.floor(x / RC), cellKey = (cx, cz) => cx + ':' + cz;
-const vrS = () => { const c = S.city; if (!c.vq) c.vq = {}; if (!c.vr) c.vr = {}; if (!c.vc) c.vc = {}; return c; };
+/* ================= la Route et l'outil « tracer » (Romain, 24/11/2026 : « on s'y est mal pris… une option supplémentaire "route", plus large, avec trottoir intégré ») =================
+   Les routes automatiques entre les quartiers (22-23/11/2026) sont retirées : c'est le joueur qui pose ses routes.
+   La Route : 6 m de large, posée sur une grille de 6 m (3 × 3 cases de 2 m), une chaussée pavée continue, un trottoir et ses bordures de chaque côté,
+      qui s'ouvrent tout seuls là où la route rejoint une autre route, une rue ou la grand-route. Quand elle traverse la rivière, un pont de pierre se construit.
+   Sauvegarde : S.city.rt { "cx:cz": 1 } les cellules de route ; leurs cases vont dans S.city.roads avec le type RT (pour la marche et la pose) ;
+      S.city.ponts [z] les ponts construits par le joueur. S.city.vv = 3 : les anciennes routes offertes (S.city.vr) sont retirées, les rues payées restent.
+   Tracer : en mode rue ou route, « 📏 Tracer » ; on touche le départ puis l'arrivée, le jeu propose le chemin (en évitant les maisons), on confirme.
+      Prix des rues : −25 % à partir de 10 cases ; des routes : −25 % à partir de 5 tronçons. */
+const RT = 15, RC = 6, RSW = 0.8, PONT_C = 600, cellOf = (x) => Math.floor(x / RC), cellKey = (cx, cz) => cx + ':' + cz;
+const rtS = () => { const c = S.city; if (!c.rt) c.rt = {}; if (!c.ponts) c.ponts = []; return c; };
+const ROUTE_C = () => ROAD_T[RT].c;
 
-// ce qu'est une case pour une route : 0 interdite, 1 libre (on peut paver), 2 on passe sans paver (grand-route, pont, allée), 3 déjà une rue
+// ce qu'est une case pour une rue : 0 interdite, 1 libre (on peut paver), 2 on passe sans paver (grand-route, pont, allée), 3 déjà une rue
 function occTiles() { const o = new Set(); S.city.items.forEach((it) => { const [w, d] = itemFp(it); for (let ix = tileOf(it.x - w / 2 + 0.05); ix <= tileOf(it.x + w / 2 - 0.05); ix++) for (let iz = tileOf(it.z - d / 2 + 0.05); iz <= tileOf(it.z + d / 2 - 0.05); iz++) o.add(tileKey(ix, iz)); }); return o; }
 function tileState(ix, iz, occ, own) { const k = tileKey(ix, iz), cx = ix * TILE + TILE / 2, cz = iz * TILE + TILE / 2;
   if (cx < BX0 + 1 || cx > BX1 - 1 || cz < BZ0 + 1 || cz > BZ1 - 1) return 0;
@@ -4786,8 +4792,6 @@ function tileState(ix, iz, occ, own) { const k = tileKey(ix, iz), cx = ix * TILE
   for (const [a, b] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6], [0, 0]]) if (blocked(cx + a, cz + b, 0)) return 0;
   if (own && !landOwned(cx, cz)) return 0;
   return 1; }
-// une cellule de 4 m (quatre cases) : interdite si une case l'est ; « on passe » si toutes sont déjà de la route ; sinon on la pave
-function cellState(cx, cz, occ) { let pass = 0; for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { const s = tileState(cx * 2 + i, cz * 2 + j, occ, false); if (!s) return 0; if (s >= 2) pass++; } return pass === 4 ? 2 : 1; }
 // le plus court chemin de case en case, qui préfère aller droit et réutiliser les rues existantes
 function routeFind(a, b, bx, st, turn) { const TURN = turn || 0.7; const W = bx[1] - bx[0] + 1, H = bx[3] - bx[2] + 1, N = W * H; if (N > 60000) return null;
   const idx = (ix, iz) => (iz - bx[2]) * W + (ix - bx[0]), S2 = new Int8Array(N).fill(-1), sAt = (ix, iz) => { const i = idx(ix, iz); if (S2[i] < 0) S2[i] = st(ix, iz); return S2[i]; };
@@ -4806,67 +4810,94 @@ function routeFind(a, b, bx, st, turn) { const TURN = turn || 0.7; const W = bx[
   if (end < 0) return null; const out = []; for (let n = end; n >= 0; n = prev[n]) { const c = n >> 2, ix = bx[0] + c % W, iz = bx[2] + ((c / W) | 0); out.push([ix, iz, sAt(ix, iz)]); if (g[n] === 0) break; }
   return out.reverse(); }
 
-// A. les morceaux de route d'un quartier qui vient d'être servi
-function vrPieces(Q) { const P = []; VR_AXES.forEach(([p, q]) => { if (p[0] === q[0]) { const X = p[0]; if (X < Q.x0 || X >= Q.x1) return; const a = Math.max(p[1], Q.z0), b = Math.min(q[1], Q.z1 - 0.01); if (b > a) P.push([[X, a], [X, b]]); }
-  else { const Z = p[1]; if (Z < Q.z0 || Z >= Q.z1) return; const a = Math.max(p[0], Q.x0), b = Math.min(q[0], Q.x1 - 0.01); if (b > a) P.push([[a, Z], [b, Z]]); } }); return P; }
-function vrBuild(Q, occ) { const C = vrS(), t = VR_RUSTIC[Q.id] ? 1 : 0, bx = [cellOf(Q.x0) - 1, cellOf(Q.x1 - 0.01) + 1, cellOf(Q.z0) - 1, cellOf(Q.z1 - 0.01) + 1]; let n = 0;
-  vrPieces(Q).forEach(([p, q]) => { const st = (cx, cz) => cellState(cx, cz, occ), a = [cellOf(p[0]), cellOf(p[1])], b = [cellOf(q[0]), cellOf(q[1])];
-    let path = routeFind(a, b, bx, st, 5); /* de longues lignes droites, peu de virages : pas d'escaliers */
-    if (!path) { path = []; const L = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])); for (let k = 0; k <= L; k++) { const cx = a[0] + Math.sign(b[0] - a[0]) * k, cz = a[1] + Math.sign(b[1] - a[1]) * k; path.push([cx, cz, st(cx, cz)]); } }
-    path.forEach(([cx, cz, s]) => { if (s !== 1) return; const ck = cellKey(cx, cz); if (C.vc[ck] !== undefined) return; C.vc[ck] = t; n++;
-      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { const ix = cx * 2 + i, iz = cz * 2 + j, k = tileKey(ix, iz); if (tileState(ix, iz, occ, false) === 1) { S.city.roads[k] = t; C.vr[k] = 1; } } }); });
-  C.vq[Q.id] = 1; return n; }
-// à chaque ouverture de quartier, et au démarrage pour les parties en cours : les quartiers ouverts qui n'ont pas encore leurs routes les reçoivent.
-// Les parties qui avaient les routes en cases de 2 m (22/11/2026) les reçoivent refaites en 4 m : les cases offertes sont retirées, celles que le joueur a payées restent.
-function vrRefresh(say) { if (!S.city || !S.city.roads) return; const C = vrS();
-  if (C.vv !== 2) { Object.keys(C.vr).forEach((k) => { delete S.city.roads[k]; }); C.vr = {}; C.vq = {}; C.vc = {}; C.vv = 2; dirty = true; }
-  const todo = QUARTIERS.filter((Q) => qOpen(Q) && !C.vq[Q.id]); if (!todo.length) return;
-  const occ = occTiles(); let n = 0; todo.forEach((Q) => { n += vrBuild(Q, occ); });
-  dirty = true; links = null; grid = null; drawRoads(); if (say && n) toast('🛣️ Nouvelle route du village', n * RC + ' m de route posés, offerts par le département.'); }
-// la gomme sur une route du village efface toute sa cellule de 4 m
-function vrErase(ix, iz) { const C = vrS(), cx = Math.floor(ix / 2), cz = Math.floor(iz / 2); delete C.vc[cellKey(cx, cz)];
-  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { const k = tileKey(cx * 2 + i, cz * 2 + j); if (C.vr[k]) { delete C.vr[k]; delete S.city.roads[k]; } } }
-// le dessin : un pavage continu (ou de la terre battue), des trottoirs et des bordures là où la route s'arrête, comme sur la grand-route
+// ---- la Route ----
+
+const rtTiles = (cx, cz) => { const o = []; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) o.push([cx * 3 + i, cz * 3 + j]); return o; };
+const inRiver = (ix) => { const x = ix * TILE + TILE / 2; return x > RIVER.x0 - 0.9 && x < RIVER.x1 + 0.9; };
+const rtRiver = (cx) => inRiver(cx * 3) || inRiver(cx * 3 + 1) || inRiver(cx * 3 + 2);
+// une cellule de 6 m : 0 interdite, 1 à paver, 2 déjà une route (ou la grand-route), 4 à paver avec un pont
+function rtCell(cx, cz, occ) { const C = rtS(); if (C.rt[cellKey(cx, cz)]) return 2; const zm = cz * RC + RC / 2;
+  let main = 0; for (const [ix, iz] of rtTiles(cx, cz)) { if (inRiver(ix)) continue; const s = tileState(ix, iz, occ, true); if (!s) return 0; if (s === 2) main++; }
+  if (rtRiver(cx)) { if (Math.abs(zm) < 8) return 0; const p = PONTS.find((q) => Math.abs(zm - q) < 6.5); if (p === undefined) return 4; return Math.abs(zm - p) < 3.5 ? 1 : 0; }
+  return main === 9 ? 2 : 1; }
+// poser une cellule : ses cases deviennent de la route (une rue qui était là est remboursée à moitié, comme à la gomme)
+function rtLay(cx, cz, s) { const C = rtS(); let back = 0; C.rt[cellKey(cx, cz)] = 1;
+  rtTiles(cx, cz).forEach(([ix, iz]) => { const k = tileKey(ix, iz), z = iz * TILE + TILE / 2; if (Math.abs(z) < 2.3 && !inRiver(ix)) return; const o = S.city.roads[k]; if (o !== undefined && o !== RT && ROAD_T[o]) back += Math.floor(ROAD_T[o].c / 2); S.city.roads[k] = RT; });
+  if (s === 4) { const zm = cz * RC + RC / 2; C.ponts.push(zm); pontAdd(zm, RC); }
+  return back; }
+function rtErase(ix, iz) { const C = rtS(), cx = Math.floor(ix / 3), cz = Math.floor(iz / 3), ck = cellKey(cx, cz); if (!C.rt[ck]) { delete S.city.roads[tileKey(ix, iz)]; return 0; }
+  delete C.rt[ck]; rtTiles(cx, cz).forEach(([a, b]) => { const k = tileKey(a, b); if (S.city.roads[k] === RT) delete S.city.roads[k]; }); return Math.floor(ROUTE_C() / 2); } // le pont, lui, reste
+const rtChanged = () => { dirty = true; links = null; grid = null; drawRoads(); };
+function rtPaint(x, z) { const cx = cellOf(x), cz = cellOf(z), s = rtCell(cx, cz, occTiles()); if (s === 0 || s === 2) return;
+  const cost = ROUTE_C() + (s === 4 ? PONT_C : 0); if (S.coins < cost) { if (now() > (rtPaint.warn || 0)) { rtPaint.warn = now() + 4000; toast('Il te manque des écus d’or', s === 4 ? 'Ce tronçon avec son pont coûte ' + cost + ' écus d’or.' : 'Un tronçon de route coûte ' + cost + ' écus d’or.'); } return; }
+  if (s === 4 && rtPaint.bridge !== cellKey(cx, cz)) { rtPaint.bridge = cellKey(cx, cz); return toast('🌉 Un pont sur la rivière', 'Ce tronçon traverse l’eau : il faut un pont de pierre (' + PONT_C + ' écus d’or en plus). Touche encore pour le construire.'); }
+  rtPaint.bridge = null; const back = rtLay(cx, cz, s); led('🛣️ Routes', -cost + back); S.coins += back - cost; rtChanged(); if (s === 4) { SFX.done(); toast('🌉 Pont construit', 'La route passe la rivière.'); } }
+
+// le dessin : une chaussée pavée continue, un trottoir et deux bordures sur chaque bord qui ne rejoint rien, comme sur la grand-route
 const VRD = (() => { const pl = (w, d) => new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), mk = (geo, mat, n) => { const m = new THREE.InstancedMesh(geo, mat, n); m.count = 0; m.receiveShadow = true; m.userData.dyn = true; m.frustumCulled = false; m.raycast = () => {}; scene.add(m); return m; };
-  return { pave: mk(pl(RC, RC), new THREE.MeshLambertMaterial({ map: paveTex(RC / 2, RC / 2) }), 900), dirt: mk(pl(RC, RC), new THREE.MeshLambertMaterial({ color: '#E3D6BC' }), 900),
-    walk: mk(new THREE.BoxGeometry(RC, 0.03, 0.56), new THREE.MeshLambertMaterial({ color: '#E4DAC6' }), 1600), curb: mk(new THREE.BoxGeometry(RC, 0.07, 0.1), new THREE.MeshLambertMaterial({ color: '#C7BCA6' }), 3200) }; })();
-function drawVillage() { const C = S.city && S.city.vc ? S.city : null; const n = { pave: 0, dirt: 0, walk: 0, curb: 0 };
-  const put = (m, x, y, z, ry, sx, sz) => { tmpQ.setFromAxisAngle(UPV, ry || 0); tmpM.compose(tmpP.set(x, y, z), tmpQ, tmpS.set(sx || 1, 1, sz || 1)); VRD[m].setMatrixAt(n[m]++, tmpM); };
-  if (C) { const V = C.vr, has = (cx, cz) => { const t = C.vc[cellKey(cx, cz)]; return t === undefined ? -1 : t; };
-    Object.keys(C.vc).forEach((ck) => { const [cx, cz] = ck.split(':').map(Number), t = C.vc[ck];
-      if (![0, 1].some((i) => [0, 1].some((j) => V[tileKey(cx * 2 + i, cz * 2 + j)]))) return; // la gomme a tout effacé
-      let z0 = cz * RC, z1 = z0 + RC; const x0 = cx * RC, x1 = x0 + RC; if (z0 < 2.5 && z1 > -2.5) { if (z0 < -2.5) z1 = -2.5; else z0 = 2.5; } if (z1 - z0 < 0.2) return; // elle s'arrête au bord de la grand-route
-      const x = (x0 + x1) / 2, z = (z0 + z1) / 2, y = groundY(x, z) + (t ? 0.04 : 0.065);
-      if (n.pave >= 900 || n.walk > 1590 || n.curb > 3190) return;
-      put(t ? 'dirt' : 'pave', x, y, z, 0, 1, (z1 - z0) / RC);
-      if (t) return; // en terre battue, pas de trottoirs
-      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dz]) => { const nb = has(cx + dx, cz + dz); if (nb === 0) return; const ncz = cz + dz, ncx = cx + dx, nz0 = ncz * RC, nz1 = nz0 + RC;
-        if (dz && nz0 < 2.5 && nz1 > -2.5) return; // ouverte sur la grand-route
-        if (Math.abs((ncx * RC + 2) - RMID) < 3 && PONTS.some((p) => Math.abs(z - p) < 3)) return; // ouverte sur un pont
-        if (dx) { const ex = dx > 0 ? x1 : x0, L = z1 - z0; put('walk', ex - dx * 0.33, y + 0.015, z, Math.PI / 2, L / RC, 1); put('curb', ex - dx * 0.64, y + 0.02, z, Math.PI / 2, L / RC, 1); put('curb', ex - dx * 0.03, y + 0.02, z, Math.PI / 2, L / RC, 1); }
-        else { const ez = dz > 0 ? z1 : z0; put('walk', x, y + 0.015, ez - dz * 0.33, 0); put('curb', x, y + 0.02, ez - dz * 0.64, 0); put('curb', x, y + 0.02, ez - dz * 0.03, 0); } }); }); }
+  return { pave: mk(pl(RC, RC), new THREE.MeshLambertMaterial({ map: paveTex(RC / 2, RC / 2) }), 1200),
+    walk: mk(new THREE.BoxGeometry(TILE, 0.05, RSW), new THREE.MeshLambertMaterial({ color: '#E4DAC6' }), 6000), curb: mk(new THREE.BoxGeometry(TILE, 0.09, 0.12), new THREE.MeshLambertMaterial({ color: '#C7BCA6' }), 12000) }; })();
+const PONT_X1 = RMID + (RW + 1.6) / 2 - 0.05, PONT_X0 = RMID - (RW + 1.6) / 2 + 0.05;
+// le bord d'une cellule est-il ouvert (pas de trottoir) sur ce morceau de 2 m ? oui s'il rejoint une route, une rue, la grand-route ou un pont
+function rtOpen(cx, cz, dx, dz, k) { const C = S.city; if (C.rt[cellKey(cx + dx, cz + dz)]) return true;
+  const ix = dx ? (dx > 0 ? cx * 3 + 3 : cx * 3 - 1) : cx * 3 + k, iz = dz ? (dz > 0 ? cz * 3 + 3 : cz * 3 - 1) : cz * 3 + k, t = C.roads[tileKey(ix, iz)];
+  if (t !== undefined && t !== RT) return true; const z = iz * TILE + TILE / 2; if (Math.abs(z) < 2.5) return true;
+  if (dx && rtRiver(cx + dx)) return PONTS.some((p) => Math.abs(z - p) < 3.2); return false; }
+function drawVillage() { const n = { pave: 0, walk: 0, curb: 0 }, C = S.city;
+  const put = (m, x, y, z, ry, sx, sz) => { if (n[m] >= VRD[m].instanceMatrix.count) return; tmpQ.setFromAxisAngle(UPV, ry || 0); tmpM.compose(tmpP.set(x, y, z), tmpQ, tmpS.set(sx || 1, 1, sz || 1)); VRD[m].setMatrixAt(n[m]++, tmpM); };
+  if (C && C.rt) Object.keys(C.rt).forEach((ck) => { const [cx, cz] = ck.split(':').map(Number);
+    let x0 = cx * RC, x1 = x0 + RC, z0 = cz * RC, z1 = z0 + RC; if (z0 < 2.5 && z1 > -2.5) { if (z0 + RC / 2 < 0) z1 = -2.5; else z0 = 2.5; } // elle s'arrête au bord de la grand-route
+    if (rtRiver(cx)) x0 = Math.max(x0, PONT_X1); // sur la rivière, c'est le pont
+    if (x1 - x0 < 0.2 || z1 - z0 < 0.2) return;
+    const x = (x0 + x1) / 2, z = (z0 + z1) / 2, y = groundY(x, z) + 0.075;
+    put('pave', x, y, z, 0, (x1 - x0) / RC, (z1 - z0) / RC);
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { if (rtRiver(cx) && dx) continue;
+      for (let k = 0; k < 3; k++) { if (rtOpen(cx, cz, dx, dz, k)) continue;
+        if (dx) { const a = Math.max(z0, cz * RC + k * TILE), b = Math.min(z1, cz * RC + k * TILE + TILE); if (b - a < 0.1) continue; const ex = dx > 0 ? x1 : x0, sz = (b + a) / 2, yy = groundY(ex - dx * 0.4, sz) + 0.075, L = (b - a) / TILE;
+          put('walk', ex - dx * RSW / 2, yy + 0.025, sz, Math.PI / 2, L, 1); put('curb', ex - dx * (RSW + 0.03), yy + 0.03, sz, Math.PI / 2, L, 1); put('curb', ex - dx * 0.05, yy + 0.03, sz, Math.PI / 2, L, 1); }
+        else { const a = Math.max(x0, cx * RC + k * TILE), b = Math.min(x1, cx * RC + k * TILE + TILE); if (b - a < 0.1) continue; const ez = dz > 0 ? z1 : z0; if (ez > -2.6 && ez < 2.6) continue; const sx = (a + b) / 2, yy = groundY(sx, ez - dz * 0.4) + 0.075, L = (b - a) / TILE;
+          put('walk', sx, yy + 0.027, ez - dz * RSW / 2, 0, L, 1); put('curb', sx, yy + 0.032, ez - dz * (RSW + 0.03), 0, L, 1); put('curb', sx, yy + 0.032, ez - dz * 0.05, 0, L, 1); } } } });
   Object.keys(VRD).forEach((k) => { VRD[k].count = n[k]; VRD[k].instanceMatrix.needsUpdate = true; }); }
-// B. tracer une route d'un point à un autre
-let TRACE = null; // { a: [ix, iz], path, n, cost }
-const trMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(TILE * 0.92, TILE * 0.92).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#FFA800', transparent: true, opacity: 0.85, depthWrite: false }), 600);
+// les piétons marchent sur les trottoirs de la route, et ne traversent la chaussée que quand il le faut
+function rtWalk(x, z) { const C = S.city, cx = cellOf(x), cz = cellOf(z); if (!C.rt || !C.rt[cellKey(cx, cz)] || rtRiver(cx)) return true; const lx = x - cx * RC, lz = z - cz * RC, m = RSW + 0.3;
+  return (lx < m && !C.rt[cellKey(cx - 1, cz)]) || (lx > RC - m && !C.rt[cellKey(cx + 1, cz)]) || (lz < m && !C.rt[cellKey(cx, cz - 1)]) || (lz > RC - m && !C.rt[cellKey(cx, cz + 1)]); }
+
+// au démarrage : on retire les routes offertes d'avant (une seule fois), on reconstruit les ponts du joueur
+function vrRefresh() { if (!S.city || !S.city.roads) return; const C = S.city;
+  if (C.vv !== 3) { if (C.vr) Object.keys(C.vr).forEach((k) => { delete C.roads[k]; }); delete C.vr; delete C.vq; delete C.vc; C.vv = 3; dirty = true; }
+  rtS().ponts.forEach((pz) => pontAdd(pz, RC)); rtChanged(); }
+
+// ---- tracer une rue ou une route d'un point à un autre ----
+let TRACE = null; // { a: [ix, iz], path }
+const trMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(TILE * 0.92, TILE * 0.92).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#FFA800', transparent: true, opacity: 0.85, depthWrite: false }), 2000);
 trMesh.count = 0; trMesh.frustumCulled = false; trMesh.renderOrder = 3; trMesh.userData.dyn = true; trMesh.raycast = () => {}; scene.add(trMesh);
-function trShow(tiles) { let n = 0; tiles.forEach(([ix, iz]) => { if (n >= 600) return; const cx = ix * TILE + TILE / 2, cz = iz * TILE + TILE / 2; tmpM.compose(tmpP.set(cx, groundY(cx, cz) + 0.24, cz), tmpQ.identity(), tmpS.set(1, 1, 1)); trMesh.setMatrixAt(n++, tmpM); }); trMesh.count = n; trMesh.instanceMatrix.needsUpdate = true; }
-const trPrice = (n, t) => Math.ceil(n * ROAD_T[t].c * (n >= 10 ? 0.75 : 1));
+function trShow(tiles) { let n = 0; tiles.forEach(([ix, iz]) => { if (n >= 2000) return; const cx = ix * TILE + TILE / 2, cz = iz * TILE + TILE / 2; tmpM.compose(tmpP.set(cx, groundY(cx, cz) + 0.24, cz), tmpQ.identity(), tmpS.set(1, 1, 1)); trMesh.setMatrixAt(n++, tmpM); }); trMesh.count = n; trMesh.instanceMatrix.needsUpdate = true; }
+const trCells = (cells) => [].concat(...cells.map((q) => rtTiles(q[0], q[1])));
+const trPrice = (n, t) => Math.ceil(n * ROAD_T[t].c * (n >= (t === RT ? 5 : 10) ? 0.75 : 1));
+const trIdle = () => ROAD_T[ROADM.t].ic + ' ' + ROAD_T[ROADM.t].n + (ROADM.t === RT ? ' · touche ou glisse pour poser (6 m)' : ' · touche ou glisse pour tracer');
 function trStart() { if (!ROADM || ROADM.t < 0) return; TRACE = { a: null }; trShow([]); $('pl-t').textContent = '📏 ' + ROAD_T[ROADM.t].n + ' · touche le point de départ'; rich($('pl-rot'), '✏️ Case par case'); }
-function trStop() { TRACE = null; trShow([]); if (ROADM && ROADM.t >= 0) { $('pl-t').textContent = ROAD_T[ROADM.t].ic + ' ' + ROAD_T[ROADM.t].n + ' · touche ou glisse pour tracer'; rich($('pl-rot'), '📏 Tracer'); } }
-function trTap(x, z) { const p = [tileOf(x), tileOf(z)];
-  if (!TRACE.a || TRACE.path) { if (tileState(p[0], p[1], null, true) === 0) return toast('📏 Pas ici', 'Choisis un départ sur un terrain à toi, hors des maisons.'); TRACE = { a: p }; trShow([p]); $('pl-t').textContent = '📏 Touche maintenant le point d’arrivée'; return; }
-  const a = TRACE.a, M = 14, bx = [Math.max(tileOf(BX0), Math.min(a[0], p[0]) - M), Math.min(tileOf(BX1), Math.max(a[0], p[0]) + M), Math.max(tileOf(BZ0), Math.min(a[1], p[1]) - M), Math.min(tileOf(BZ1), Math.max(a[1], p[1]) + M)];
-  const occ = occTiles(), path = routeFind(a, p, bx, (ix, iz) => tileState(ix, iz, occ, true));
-  if (!path) { TRACE = { a: null }; trShow([]); $('pl-t').textContent = '📏 Touche le point de départ'; return toast('📏 Pas de passage', 'Aucun chemin libre entre ces deux points (maisons, rivière ou terrain pas encore acheté). Essaie un autre tracé.'); }
-  const t = ROADM.t, cases = path.filter((q) => q[2] === 1), cost = trPrice(cases.length, t);
-  TRACE.path = path; trShow(cases.length ? cases : path);
+function trStop() { TRACE = null; trShow([]); if (ROADM && ROADM.t >= 0) { $('pl-t').textContent = trIdle(); rich($('pl-rot'), '📏 Tracer'); } }
+function trReset(msg) { TRACE = { a: null }; trShow([]); $('pl-t').textContent = msg || '📏 Touche le point de départ'; }
+function trTap(x, z) { const t = ROADM.t, R = t === RT, p = R ? [cellOf(x), cellOf(z)] : [tileOf(x), tileOf(z)];
+  if (!TRACE.a || TRACE.path) { if ((R ? rtCell(p[0], p[1], null) : tileState(p[0], p[1], null, true)) === 0) return toast('📏 Pas ici', 'Choisis un départ sur un terrain à toi, hors des maisons.'); TRACE = { a: p }; trShow(R ? trCells([p]) : [p]); $('pl-t').textContent = '📏 Touche maintenant le point d’arrivée'; return; }
+  const a = TRACE.a, occ = occTiles(); let path, cases, bridges = 0, cost;
+  if (R) { const M = 5, bx = [Math.max(cellOf(BX0), Math.min(a[0], p[0]) - M), Math.min(cellOf(BX1), Math.max(a[0], p[0]) + M), Math.max(cellOf(BZ0), Math.min(a[1], p[1]) - M), Math.min(cellOf(BZ1), Math.max(a[1], p[1]) + M)];
+    path = routeFind(a, p, bx, (cx, cz) => { const s = rtCell(cx, cz, occ); return s === 2 ? 3 : s === 4 ? 2 : s; }, 4);
+    if (path) { path = path.map((q) => [q[0], q[1], rtCell(q[0], q[1], occ)]);
+      for (let i = 0; i < path.length; i++) if (rtRiver(path[i][0]) && path[i][2] !== 2) { const pv = path[i - 1], nx = path[i + 1]; if ((pv && pv[1] !== path[i][1]) || (nx && nx[1] !== path[i][1])) { trReset(); return toast('📏 Pas de pont en biais', 'La route doit traverser la rivière tout droit, d’ouest en est. Essaie un départ et une arrivée de part et d’autre de l’eau, à la même hauteur.'); } }
+      cases = path.filter((q) => q[2] === 1 || q[2] === 4); bridges = cases.filter((q) => q[2] === 4).length; cost = trPrice(cases.length, t) + bridges * PONT_C; } }
+  else { const M = 14, bx = [Math.max(tileOf(BX0), Math.min(a[0], p[0]) - M), Math.min(tileOf(BX1), Math.max(a[0], p[0]) + M), Math.max(tileOf(BZ0), Math.min(a[1], p[1]) - M), Math.min(tileOf(BZ1), Math.max(a[1], p[1]) + M)];
+    path = routeFind(a, p, bx, (ix, iz) => { const s = tileState(ix, iz, occ, true); return s === 3 && S.city.roads[tileKey(ix, iz)] === RT ? 0 : s; }); if (path) { cases = path.filter((q) => q[2] === 1); cost = trPrice(cases.length, t); } }
+  if (!path) { trReset(); return toast('📏 Pas de passage', 'Aucun chemin libre entre ces deux points (maisons, rivière ou terrain pas encore acheté). Essaie un autre tracé.'); }
+  TRACE.path = path; trShow(R ? trCells(cases.length ? cases : path) : (cases.length ? cases : path));
   if (!cases.length) { $('pl-t').textContent = '📏 Ce chemin existe déjà · touche un nouveau départ'; return; }
-  $('pl-t').textContent = '📏 ' + cases.length + ' cases · ' + cost + ' ' + C;
-  openSheet('📏 Tracer cette route ?', ROAD_T[t].ic + ' ' + ROAD_T[t].n + ' · ' + cases.length + ' cases neuves (' + cases.length * TILE + ' m)' + (cases.length >= 10 ? ' · −25 % pour une longue route' : '') + '. Les rues déjà là sont gardées telles quelles.', [
-    { t: '✅ Poser la route', s: 'Le chemin en jaune, en évitant les maisons.', btn: cost + ' ' + C, ok: S.coins >= cost, run: () => { if (S.coins < cost) return; closeSheet(); led('🧱 Rues', -cost); S.coins -= cost; const V = vrS().vr;
-      cases.forEach((q) => { const k = tileKey(q[0], q[1]); S.city.roads[k] = t; delete V[k]; }); dirty = true; links = null; grid = null; drawRoads(); SFX.done(); TRACE = { a: null }; trShow([]); $('pl-t').textContent = '📏 Route posée · touche un nouveau départ'; } },
-    { t: 'Non, annuler', s: 'Rien n’est posé.', btn: 'Annuler', ok: true, run: () => { closeSheet(); TRACE = { a: null }; trShow([]); $('pl-t').textContent = '📏 Touche le point de départ'; } }]); }
+  const what = R ? cases.length + ' tronçon' + (cases.length > 1 ? 's' : '') + ' de route (' + cases.length * RC + ' m)' + (bridges ? ' et ' + bridges + ' pont' + (bridges > 1 ? 's' : '') + ' de pierre (' + PONT_C + ' ' + C + ' chacun)' : '') : cases.length + ' cases neuves (' + cases.length * TILE + ' m)';
+  $('pl-t').textContent = '📏 ' + (R ? cases.length * RC + ' m' : cases.length + ' cases') + ' · ' + cost + ' ' + C;
+  openSheet('📏 Tracer cette ' + (R ? 'route' : 'rue') + ' ?', ROAD_T[t].ic + ' ' + ROAD_T[t].n + ' · ' + what + (cases.length >= (R ? 5 : 10) ? ' · −25 % pour une longue ' + (R ? 'route' : 'rue') : '') + '. Ce qui est déjà là est gardé tel quel.', [
+    { t: '✅ Poser', s: 'Le chemin en jaune, en évitant les maisons.', btn: cost + ' ' + C, ok: S.coins >= cost, run: () => { if (S.coins < cost) return; closeSheet(); let back = 0;
+      if (R) cases.forEach((q) => { back += rtLay(q[0], q[1], q[2]); }); else cases.forEach((q) => { S.city.roads[tileKey(q[0], q[1])] = t; });
+      led(R ? '🛣️ Routes' : '🧱 Rues', back - cost); S.coins += back - cost; rtChanged(); SFX.done(); trReset('📏 ' + (R ? 'Route posée' : 'Rue posée') + ' · touche un nouveau départ'); } },
+    { t: 'Non, annuler', s: 'Rien n’est posé.', btn: 'Annuler', ok: true, run: () => { closeSheet(); trReset(); } }]); }
 
 /* ================= les missions de quartier (18/11/2026) =================
    Chaque quartier a son personnage, qui se tient dans le quartier. Il confie trois missions (retrouver un objet perdu, apporter du pain,
