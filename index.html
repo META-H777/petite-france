@@ -4699,7 +4699,7 @@ const qOpen = (Q) => !!landS().open[Q.id], qName = (Q) => landS().names[Q.id] ||
 const ilotPrice = (I) => Math.round(ILOT_BASE[I.q.tier] * 1.6 * villageMul() / 10) * 10;
 // what still stands between the player and a quarter ('' = it can be opened)
 function qLock(Q) { const pop = Math.floor(S.pop || 0); if (pop < TIER_POP[Q.tier]) return TIER_POP[Q.tier] + ' habitants';
-  const sib = QUARTIERS.some((o) => o.tier === Q.tier && o !== Q && qOpen(o)); if (sib && pop < (TIER_POP[Q.tier + 1] || 1e9)) return TIER_POP[Q.tier + 1] + ' habitants'; return ''; }
+  const sib = QUARTIERS.some((o) => o.tier === Q.tier && o !== Q && qOpen(o)); const nx = TIER_POP[Q.tier + 1]; if (sib && nx !== undefined && pop < nx) return nx + ' habitants'; return ''; } /* le dernier palier n'a pas de suivant : plus de « undefined habitants » (24/11/2026) */
 const ilotNear = (I) => ILOTS.some((o) => landS().own[o.key] && o !== I && Math.abs(o.cx - I.cx) < (o.x1 - o.x0 + I.x1 - I.x0) / 2 + 1 && Math.abs(o.cz - I.cz) < (o.z1 - o.z0 + I.z1 - I.z0) / 2 + 1);
 // everything already built keeps its ground: those terrains are given
 function landGrant() { const L = landS(); L.open.bourg = 1; const C = [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]], g = (x, z) => { const I = ilotAt(x, z); if (I && !L.own[I.key]) { L.own[I.key] = 1; dirty = true; } };
