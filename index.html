@@ -235,12 +235,18 @@
   #stick, #dirs, #zone { display:none !important; }
   .res button { display:none; } .cause { display:none; }
   .side { top:auto; right:auto; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 10px); transform:translateX(-50%); flex-direction:row; gap:10px; }
-  #b-map, #b-shop, #b-ad, #b-up, #b-od, #b-build { display:none !important; } body.building .side { display:none; } /* un seul bouton : tout passe par le Menu (Romain, 18/11/2026) */
-  #b-menu { width:72px; height:72px; border-radius:24px; background:var(--gold); font-size:12px; } #b-menu span { font-size:30px; }
+  /* cinq boutons en bas, au pouce, au lieu d'un menu de 16 entrées (PA, 24/11/2026) : Village, Quêtes, Construire au milieu, Améliorer, Plus.
+     Une pastille seulement là où quelque chose attend vraiment : Améliorer (ce qu'on peut s'offrir), Quêtes (missions et commandes prêtes). */
+  #b-map, #b-shop, #b-ad, #b-od { display:none !important; } body.building .side { display:none; }
+  .side { gap:7px; padding:6px 8px; background:rgba(255,253,248,.94); border:2.5px solid var(--ink); border-radius:24px; box-shadow:0 3px 0 var(--ink); align-items:flex-end; }
+  .side .rb { width:62px; height:58px; border-radius:17px; font-size:10.5px; box-shadow:0 2px 0 var(--ink); } .side .rb span { font-size:23px; }
+  #b-village { order:1; } #b-quests { order:2; } #b-build { order:3; width:70px; height:66px; border-radius:20px; font-size:11.5px; } #b-build span { font-size:28px; } #b-up { order:4; } #b-menu { order:5; background:var(--white); }
+  #b-up.gold { background:var(--white); } #b-build.gold { background:var(--gold); }
+  @media (max-width: 380px) { .side { gap:5px; padding:5px 6px; } .side .rb { width:56px; height:54px; font-size:9.5px; } #b-build { width:62px; height:60px; } }
   .quest { bottom:auto; top:calc(env(safe-area-inset-top,0px) + 96px); left:calc(env(safe-area-inset-left,0px) + 10px); right:auto; max-width:min(320px, 72vw); padding:5px 10px 5px 6px; border-radius:999px; box-shadow:0 2px 0 var(--ink); gap:7px; }
   .quest .av { width:26px; height:26px; font-size:12px; } .quest b { display:none; } .quest p { font-size:12px; margin:0; } .quest:not(.open) p { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; } .quest.open { border-radius:16px; } .quest .btn { padding:5px 9px; font-size:11px; white-space:nowrap; }
   .toast { top:calc(env(safe-area-inset-top,0px) + 56px); width:auto; max-width:min(330px, 88vw); padding:6px 14px; border-radius:999px; box-shadow:0 2px 0 var(--ink); } .toast b { font-size:12.5px; } .toast span { display:none; }
-  .camctl { bottom:calc(env(safe-area-inset-bottom,0px) + 86px); }
+  .camctl { bottom:calc(env(safe-area-inset-bottom,0px) + 100px); }
   /* une petite étiquette dit à quoi sert chaque bouton de caméra (Eugénie, 22/11/2026) */
   .camctl button { position:relative; } .camctl button::after { content:attr(data-cap); position:absolute; left:48px; top:50%; transform:translateY(-50%); white-space:nowrap; font:800 11px Nunito, sans-serif; color:var(--ink); background:rgba(255,253,248,.92); border:2px solid var(--ink); border-radius:10px; padding:2px 7px; pointer-events:none; }
   body.lefty .camctl button::after { left:auto; right:48px; }
@@ -282,12 +288,14 @@
   <button class="rb" id="b-shop" type="button"><span>🛒</span>Boutique</button>
   <button class="rb gold" id="b-build" type="button"><span>🏗️</span>Construire</button>
   <button class="rb" id="b-ad" type="button"><span>▶️</span>+20</button>
-  <button class="rb" id="b-menu" type="button"><span>☰</span>Menu<i class="n" id="menu-n" hidden></i></button>
+  <button class="rb" id="b-village" type="button"><span>🏘️</span>Village</button>
+  <button class="rb" id="b-quests" type="button"><span>📜</span>Quêtes<i class="n" id="q-n" hidden></i></button>
+  <button class="rb" id="b-menu" type="button"><span>☰</span>Plus<i class="n" id="menu-n" hidden></i></button>
 </div>
 <div id="talk" hidden><div class="av" id="tk-av">O</div><div class="tx"><b id="tk-who"></b><p id="tk-say"></p></div></div>
 <div class="quest" id="quest"><div class="av" id="q-av">★</div><div class="tx"><b id="q-who">Objectif</b><p id="q-text"></p></div><button class="btn gold" id="q-btn" type="button" hidden></button></div>
 <div class="toast" id="toast" hidden><b id="toast-t"></b><span id="toast-s"></span></div>
-<div class="nosave" id="nosave" hidden>Partie enregistrée sur cet appareil · Menu → Sauvegarde</div>
+<div class="nosave" id="nosave" hidden>Partie enregistrée sur cet appareil · ☰ Plus → Sauvegarde</div>
 
 <div class="sheet" id="sheet" hidden><button class="x" id="sheet-x" type="button" aria-label="Fermer">×</button><h3 id="sh-t"></h3><p class="sub" id="sh-s"></p><div id="sh-body"></div></div>
 
@@ -1632,7 +1640,7 @@ const DAILY = [
 ];
 const BASKET = { coins: 15, ble: 4, farine: 1 };
 function tapMairie() {
-  ensureDay(); const l = level(), lt = LETTERS[(S.day.letter - 1) % LETTERS.length];
+  if (!S.mairieVu) { S.mairieVu = 1; dirty = true; } /* la quête « passe me voir » : même si la mairie a été bâtie avant (PA, 24/11/2026) */ ensureDay(); const l = level(), lt = LETTERS[(S.day.letter - 1) % LETTERS.length];
   const pre = document.createElement('div'); pre.className = 'letter'; pre.innerHTML = '<i></i><span></span>'; pre.querySelector('i').textContent = 'Lettre du jour · ' + lt[0]; pre.querySelector('span').textContent = lt[1];
   const opts = [];
   opts.push({ t: S.day.basket ? 'Panier du jour · déjà ouvert' : '🧺 Panier du jour', s: '+' + BASKET.coins + ' écus d’or, ' + BASKET.ble + ' blés, ' + BASKET.farine + ' sac de farine. Revient demain.', btn: S.day.basket ? 'Pris' : 'Ouvrir', ok: !S.day.basket, run: () => { S.day.basket = true; S.coins += BASKET.coins; S.ble += BASKET.ble; S.farine += BASKET.farine; dirty = true; SFX.coin(); buzz(20); toast('Panier du jour', '+' + BASKET.coins + ' écus d’or, ' + BASKET.ble + ' blés, 1 farine'); tapMairie(); } });
@@ -1988,10 +1996,10 @@ const Q = [
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Embauche Léo : il récoltera le champ à ta place.', say: 'Salut ! Moi c\'est Léo. Je fauche, je sème, je parle aux vaches. Enfin surtout je fauche. Tu m\'embauches ?', up: 1, goal: () => S.hired.leo, xp: 10, coins: 10 },
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Achète une nouvelle parcelle.', say: 'Plus de champ, plus de blé, plus de pain. C\'est pas compliqué, l\'agriculture. Enfin, si. Mais là non.', up: 1, goal: () => S.unlocked >= 5, xp: 10, coins: 15 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Vends 15 baguettes sans faire attendre les clients.', say: 'Un client qui attend trop s\'en va chez le voisin. Et le voisin, c\'est à 14 kilomètres. Alors il revient fâché.', goal: () => S.vendus >= 15, xp: 12, coins: 20 },
-  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis la mairie, puis passe me voir.', say: 'Je travaille actuellement depuis le banc de la place. C\'est très bien pour le teint, mais pas pour les dossiers. Une mairie, vite !', build: 1, at: () => [STN.mairie[0], STN.mairie[1], 1.4], goal: () => !!(S.day && S.day.id && S.day.basket), xp: 10, coins: 10 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis la mairie, puis touche-la pour passer me voir.', say: 'Je travaille actuellement depuis le banc de la place. C\'est très bien pour le teint, mais pas pour les dossiers. Une mairie, vite !', build: 1, at: () => [STN.mairie[0], STN.mairie[1], 1.4], goal: () => !!(MOV.mairie && MOV.mairie.placed && (S.mairieVu || (S.day && S.day.basket))), xp: 10, coins: 10 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Embauche Jules, le meunier.', say: 'Le petit Jules, je l\'ai connu haut comme une miche. Il fait tourner un moulin comme personne.', up: 1, goal: () => S.hired.jules, xp: 12, coins: 20 },
   { who: 'Gégé, du bistrot', av: 'G', c: '#C0703A', t: 'Touche « Visiter » pour faire un tour du village.', say: 'Gégé, du bistrot ! Enfin, du futur bistrot. Fais donc un tour dans les rues, à hauteur d\'homme. Tu verras, c\'est pas pareil vu d\'en bas.', visit: 1, skip: 240, goal: () => (S.visited || 0) >= 1, xp: 12, coins: 20 },
-  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Livre une commande du village : bouton 📋 Commandes.', say: 'L\'école, la cantine, les pompiers : tout le monde réclame du pain ! Je promets tout, vous livrez. C\'est ça, la politique.', goal: () => (S.livrees || 0) >= 1, xp: 14, coins: 20 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Livre une commande du village : 📜 Quêtes › Commandes.', say: 'L\'école, la cantine, les pompiers : tout le monde réclame du pain ! Je promets tout, vous livrez. C\'est ça, la politique.', goal: () => (S.livrees || 0) >= 1, xp: 14, coins: 20 },
   { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Au niveau 3, lance la première étape du château.', say: 'Hortense de Rocheval. Ce château est à ma famille depuis 1612, et il tombe en ruine depuis 1613. Aidez-moi à lui rendre son éclat.', at: () => (level() >= 3 && !S.cbuild ? [GATEP[0], GATEP[1], 1.5] : null), goal: () => S.cst >= 1 || S.cbuild > 0, xp: 0, coins: 30 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis le marché, sur une place de 16 m sur 6.', say: 'Un marché le dimanche matin, voilà ce qui fait une vraie commune ! Et des électeurs de bonne humeur.', build: 1, goal: () => S.lv.mk >= 1, xp: 14, coins: 30 },
   { who: 'Léo, le fermier', av: 'L', c: '#6E9E43', t: 'Construis le potager, récolte-le et garnis l\'étal.', say: 'Des carottes, des tomates, des fraises… Tout pousse ici. Sauf les cheveux du maire.', at: () => (S.vcarry.length ? [STN.market[0], STN.market[1], 1.6] : [GPOS[0][0], GPOS[0][1], 1.2]), goal: () => S.mtill > 0 || S.stall.length > 0, xp: 14, coins: 30 },
@@ -4185,7 +4193,7 @@ function cellFree(px, pz) {
   if (px > RIVER.x0 - 0.9 && px < RIVER.x1 + 0.9) return false;
   if (PLC && PLC.t !== 'd' && !(PLC.t === 'mi' && S.city.items[PLC.i] && S.city.items[PLC.i].t === 'd') && S.city.voie && S.city.voie[tileKey(tileOf(px), tileOf(pz))]) return false; // pas de maison ni de bâtiment sur une rue ou une route (un banc, un lampadaire, oui)
   if (!(PLC && PLC.k === 'parking') && parkHit(px, pz, 1)) return false;
-  if (Math.abs(pz) < 2.6) return false; for (const c of GCOVER) { if (!c[5]) continue; const dx = px - c[0], dz = pz - c[1]; if (Math.abs(dx) + Math.abs(dz) > c[2] + c[3] + 1) continue; const cs = Math.cos(c[4]), sn = Math.sin(c[4]); if (Math.abs(dx * cs - dz * sn) < c[2] && Math.abs(dx * sn + dz * cs) < c[3]) return false; } if (Math.hypot(px - HILL.x, pz - HILL.z) < HILL.r1 + 1) return false; if (roadAt(px, pz)) return false; if (blocked(px, pz, 0.05)) return false;
+  if (Math.abs(pz) < 2.6) return false; for (const c of GCOVER) { if (!c[5]) continue; const dx = px - c[0], dz = pz - c[1]; if (Math.abs(dx) + Math.abs(dz) > c[2] + c[3] + 1) continue; const cs = Math.cos(c[4]), sn = Math.sin(c[4]); if (Math.abs(dx * cs - dz * sn) < c[2] && Math.abs(dx * sn + dz * cs) < c[3]) return false; } if (Math.hypot(px - HILL.x, pz - HILL.z) < HILL.r1 + 1) return false; if (roadAt(px, pz) && S.city.roads[tileKey(tileOf(px), tileOf(pz))] === RT && !(PLC && PLC.t === 'd')) return false; /* sur une ruelle pavée on pose tout (PA, 24/11/2026) : une déco par-dessus, une maison à la place des pavés */ if (blocked(px, pz, 0.05)) return false;
   return true; }
 const CELLS = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false }), 800);
 CELLS.count = 0; CELLS.frustumCulled = false; CELLS.renderOrder = 3; CELLS.userData.dyn = true; scene.add(CELLS);
@@ -4263,7 +4271,11 @@ function cancelPlace() { const s = PLC; if (!s) return; if (s.g && (s.t === 'h' 
   if (s.t === 'mp') { const p = S.city.prods[s.k]; moveTo(MOV[s.k], p[0], p[1], p[2]); }
   if (s.t === 'mi') { const it = S.city.items[s.i]; s.g.position.set(it.x, groundY(it.x, it.z), it.z); s.g.rotation.y = it.r || 0; }
   PLC = null; ghostBox.visible = false; CELLS.count = 0; $('placebar').hidden = true; }
+// une maison ou un bâtiment posé sur des pavés : les cases dessous sont retirées, remboursées à moitié
+function clearRuelles(x, z, w, d) { let back = 0; for (let ix = tileOf(x - w / 2 + 0.3); ix <= tileOf(x + w / 2 - 0.3); ix++) for (let iz = tileOf(z - d / 2 + 0.3); iz <= tileOf(z + d / 2 - 0.3); iz++) { const k = tileKey(ix, iz), t = S.city.roads[k]; if (t === undefined || t === RT) continue; back += Math.floor(((ROAD_T[t] || {}).c || 0) / 2); delete S.city.roads[k]; }
+  if (back) { S.coins += back; links = null; grid = null; drawRoads(); } return back; }
 function confirmPlace() { const s = PLC; if (!s || !plFree()) return; const cost = plCost(); if (S.coins < cost) return;
+  if (s.t === 'h' || s.t === 'p' || s.t === 'mp' || (s.t === 'mi' && S.city.items[s.i] && S.city.items[s.i].t === 'h')) { const [w, d] = plSize(s.r); clearRuelles(s.x, s.z, w, d); }
   { const mid = s.mon || (s.t === 'mi' && S.city.items[s.i] ? S.city.items[s.i].mon : null); if (mid) { const Q = quartierAt(s.x, s.z); if (!Q || Q.id !== mid) return toast('🗿 Ce monument appartient à un autre quartier', 'Pose-le dans ' + qName(QUARTIERS.find((q) => q.id === mid)) + '.'); } }
   if (s.t === 'h') { if (busyMasons() >= S.masons) return toast('Tes maçons sont occupés', 'Attends la fin du chantier, ou embauche une équipe dans « Améliorer ».');
     led('🏠 Maisons', -cost); S.coins -= cost; dropGhost(s.g); S.city.items.push({ t: 'h', m: s.m, x: s.x, z: s.z, r: s.r, l: 1, end: now() + dur(HOUSE_T[s.m].t * 60000 * timeMul()), rent: 0, tt: now() }); gain(Math.ceil(cost / 10)); }
@@ -4438,21 +4450,22 @@ function tickVisit(dt) { const V = VISIT; if (!V.on) return; const fin = () => {
   villagers.forEach((g) => { g.visible = Math.hypot(g.position.x - V.pos.x, g.position.z - V.pos.z) > 2; }); /* pas de tête collée à l'objectif */
   target.set(V.pos.x, 0, V.pos.z); }
 $('v-quit').addEventListener('click', () => endVisit(false)); $('v-build').addEventListener('click', () => endVisit(true));
-$('b-menu').addEventListener('click', () => { if (!S.started || VISIT.on) return; const na = ups().filter((u) => u.cost !== null && !u.wait && S.coins >= u.cost).length, nd = S.orders.filter(canDeliver).length, nm = missionsReady(); openSheet('Menu', 'Village de ' + vil().n, [
-  { t: '📘 Guide du village', s: 'Le but du jeu et comment tout fonctionne, en huit pages illustrées.', btn: 'Lire', ok: true, run: () => { closeSheet(); guideOpen(0); } },
+// la barre du bas (PA, 24/11/2026) : Village, Quêtes, Construire, Améliorer, Plus — chaque bouton ouvre peu de choses, toutes au même thème
+const barOk = () => S.started && !VISIT.on;
+$('b-village').addEventListener('click', () => { if (!barOk()) return; openSheet('🏘️ ' + vil().n, 'Voir ton village, le visiter, s’y amuser.', [
   { t: '📊 Tableau de bord', s: 'Ce qui rentre, ce qui sort, ce qu’il reste à ramasser et qui s’occupe de quoi.', btn: 'Voir', ok: true, run: () => { closeSheet(); tableau(); } },
-  { t: '🏗️ Construire', s: 'Maisons, rues, bâtiments, jardins et décor.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openBuild(); } },
-  { t: '✋ Aménager', s: 'Déplace, tourne ou démolis tout ce que tu as posé.', btn: 'Aménager', ok: true, run: () => { closeSheet(); amenager(); } },
-  { t: '🔨 Améliorer' + (na ? ' · ' + na + ' possible' + (na > 1 ? 's' : '') : ''), s: 'Employés, ateliers, réserves, maisons à embellir, fête du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } },
-  { t: '📜 Missions' + (nm ? ' · ' + nm + ' à faire' : ''), s: 'Les habitants de chaque quartier ont besoin de toi.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); missionsSheet(); } },
-  { t: '📋 Commandes' + (nd ? ' · ' + nd + ' prête' + (nd > 1 ? 's' : '') : ''), s: 'Ce que le village te commande.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-od').click(); } },
-  { t: '📖 Carnet du village', s: 'Les histoires des habitants, le secret des Rocheval, les clins d’œil trouvés.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); carnetSheet(); } },
+  { t: '🗺️ Carte des quartiers', s: 'Les quartiers ouverts, ceux à ouvrir, et leurs terrains.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-map').click(); } },
+  { t: '🚶 Visiter le village', s: 'La caméra descend dans les rues et se promène de maison en maison, comme un habitant.', btn: 'Visiter', ok: true, run: () => { closeSheet(); startVisit(); } },
   { t: '🎲 Jeux du village', s: 'Pétanque, pêche, champignons, chamboule-tout : des écus et des cadeaux.', btn: 'Jouer', ok: true, run: () => { closeSheet(); jeuxSheet(); } },
+  { t: '🛡️ Nom et blason', s: 'Le nom, le blason et la devise de ton village.', btn: 'Modifier', ok: true, run: () => { closeSheet(); villageSheet(); } } ]); });
+$('b-quests').addEventListener('click', () => { if (!barOk()) return; const nd = S.orders.filter(canDeliver).length, nm = missionsReady(); openSheet('📜 Quêtes', 'Ce que les habitants attendent de toi.', [
+  { t: '📜 Missions des quartiers' + (nm ? ' · ' + nm + ' à faire' : ''), s: 'Les habitants de chaque quartier ont besoin de toi.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); missionsSheet(); } },
+  { t: '📋 Commandes' + (nd ? ' · ' + nd + ' prête' + (nd > 1 ? 's' : '') + ' à livrer' : ''), s: 'Ce que le village te commande.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-od').click(); } },
+  { t: '📖 Carnet du village', s: 'Les histoires des habitants, le secret des Rocheval, les clins d’œil trouvés.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); carnetSheet(); } } ]); });
+$('b-menu').addEventListener('click', () => { if (!barOk()) return; openSheet('☰ Plus', 'Le guide, les réglages, ta sauvegarde.', [
+  { t: '📘 Guide du village', s: 'Le but du jeu et comment tout fonctionne, en huit pages illustrées.', btn: 'Lire', ok: true, run: () => { closeSheet(); guideOpen(0); } },
   { t: '🎵 Son et musique' + (SND.mute ? ' · coupée' : ''), s: 'Couper la musique, régler son volume, choisir : selon le quartier, selon l’heure, ou toujours la même.', btn: 'Régler', ok: true, run: () => { closeSheet(); sonSheet(); } },
   { t: '💾 Sauvegarde', s: 'Ta partie s’enregistre toute seule. Copie un code pour la reprendre sur un autre appareil.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); saveSheet(); } },
-  { t: '🛡️ Mon village', s: 'Le nom, le blason et la devise de ton village.', btn: 'Modifier', ok: true, run: () => { closeSheet(); villageSheet(); } },
-  { t: '🚶 Visiter le village', s: 'La caméra descend dans les rues et se promène de maison en maison, comme un habitant.', btn: 'Visiter', ok: true, run: () => { closeSheet(); startVisit(); } },
-  { t: '🗺️ Carte', s: 'Voir les quartiers du village.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-map').click(); } },
   { t: '🛒 Boutique', s: 'Pass de saison et offres.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-shop').click(); } },
   { t: '▶️ +20 écus d’or', s: 'Regarder une publicité (démo).', btn: 'Voir', ok: true, run: () => { closeSheet(); $('b-ad').click(); } } ]); });
 
@@ -5105,7 +5118,9 @@ const NPCG = {}, NPCL = {}, FINDG = {}, FINDL = {};
 /* une place libre près du centre du quartier ; si un grand bâtiment (corps de ferme, manoir…) la recouvre, on cherche plus loin, en cercles serrés,
    sans sortir du quartier (Romain, 22/11/2026 : Lili avait disparu sous un corps de ferme) */
 function npcHome(Q) { const I = Q.ilots.reduce((b, i) => (!b || Math.hypot(i.cx, i.cz) < Math.hypot(b.cx, b.cz) ? i : b), null);
-  const ok = (x, z) => !blocked(x, z, 0.6) && !roadAt(x, z) && Math.abs(z) >= 3 && (!Q.x1 || (x > Q.x0 + 1 && x < Q.x1 - 1 && z > Q.z0 + 1 && z < Q.z1 - 1));
+  // pas sur le lieu de travail du boulanger : le champ de blé et les postes (PA, 24/11/2026 : Firmin gênait la récolte)
+  const busy = (x, z) => { try { const M = MOV.champ, h = Math.max(M.fp[0], M.fp[1]) / 2 + 3; if (M && M.placed !== false && Math.abs(x - M.x) < h && Math.abs(z - M.z) < h) return true; } catch (e) {} for (const k in STN) { const p = STN[k]; if (p && Math.hypot(x - p[0], z - p[1]) < 4) return true; } return false; };
+  const ok = (x, z) => !blocked(x, z, 0.6) && !roadAt(x, z) && !busy(x, z) && Math.abs(z) >= 3 && (!Q.x1 || (x > Q.x0 + 1 && x < Q.x1 - 1 && z > Q.z0 + 1 && z < Q.z1 - 1));
   if (ok(I.cx, I.cz)) return [I.cx, I.cz];
   for (let r = 1.5; r <= 40; r += 1.5) { const n = Math.max(8, Math.round(r * 2.5)); for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2 + r, x = I.cx + Math.cos(a) * r, z = I.cz + Math.sin(a) * r; if (ok(x, z)) return [x, z]; } }
   return [I.cx, I.cz]; }
@@ -5547,16 +5562,16 @@ const GUIDE = [ // 23/11/2026 : des dioramas du jeu (banc/diorama.js) au lieu de
   { ic: '🎯', t: 'Faire grandir le village', img: 'd2', lead: 'Les habitants viennent quand il y a <b>des maisons</b> et un village <b>agréable</b>.',
     pts: [['🏠', 'Construis des maisons : chaque style a son charme et sa place.'], ['🪜', 'À chaque palier (150, 250, 400… habitants), de nouveaux quartiers s’ouvrent.'], ['📈', 'Les prix montent un peu à chaque palier, toujours annoncé à l’avance.']] },
   { ic: '🌾', t: 'Le pain, le cœur du village', img: 'd3', lead: '<b>Blé</b> → <b>moulin</b> → <b>four</b> → <b>vitrine</b>.',
-    pts: [['👩‍🍳', 'Embauche Léo, Jules, Inès et Margot (Menu → Améliorer) : tout tourne seul.'], ['🧺', 'Garde du pain en vitrine : les restaurants du village en achètent aussi.']] },
+    pts: [['👩‍🍳', 'Embauche Léo, Jules, Inès et Margot (bouton 🔨 Améliorer, en bas) : tout tourne seul.'], ['🧺', 'Garde du pain en vitrine : les restaurants du village en achètent aussi.']] },
   { ic: '🪙', t: 'Gagner des écus d’or', img: 'd4', lead: 'La caisse de la boulangerie, les <b>loyers</b> et les <b>commerces</b> rapportent.',
     pts: [['👆', 'Touche une pastille 🪙 : le boulanger y va <b>à pied</b> et encaisse en arrivant.'], ['⏳', 'Une caisse se remplit pendant quelques heures puis s’arrête : reviens la vider.']] },
-  { ic: '🏗️', t: 'Construire et aménager', img: 'd5', lead: '<b>Menu → Construire</b> : maisons, rues, bâtiments et décors.',
+  { ic: '🏗️', t: 'Construire et aménager', img: 'd5', lead: '<b>Bouton 🏗️ Construire</b>, au milieu en bas : maisons, rues, bâtiments et décors.',
     pts: [['🌷', 'Plus le village est <b>beau</b> (fleurs, arbres, fontaines), plus les maisons se remplissent.'], ['📏', 'Rues : trace case par case, ou d’un point à un autre avec « Tracer ».'], ['↻', '<b>Aménager</b> : touche ce que tu as posé pour le déplacer, le tourner ou le démolir.']] },
   { ic: '🍽️', t: 'Des commerces bien pensés', img: 'd6', lead: '<b>Un de chaque</b> vaut mieux que plusieurs pareils.',
     pts: [['🥖', 'Les restaurants achètent leur pain chez toi : sans pain, ils vendent peu.'], ['🎡', 'Les attractions ont des frais d’entretien.'], ['🧾', 'Touche un commerce pour voir ce qu’il rapporte et choisir son prix.']] },
   { ic: '💬', t: 'Les habitants et leurs secrets', img: 'd7', lead: 'Chaque quartier a son habitant : Firmin, Ginette, Yvon…',
     pts: [['❗', 'Un ❗ au-dessus de sa tête : une mission pour toi. Après trois, il raconte son histoire.'], ['🎲', 'Défie-le aux jeux du village : pétanque en 13 points, pêche, chamboule-tout…'], ['📖', 'Lettres de la comtesse et clins d’œil cachés : tout est noté dans le Carnet.']] },
-  { ic: '⚙️', t: 'Les bons réflexes', img: 'd8', lead: 'Quelques boutons utiles, dans le Menu.',
+  { ic: '⚙️', t: 'Les bons réflexes', img: 'd8', lead: 'Cinq boutons en bas : Village, Quêtes, Construire, Améliorer et Plus.',
     pts: [['💾', '<b>Sauvegarde</b> : automatique. Copie ton code de temps en temps.'], ['🎵', '<b>Son et musique</b> : couper, régler, choisir la musique.'], ['🔭', '<b>Vue du village</b> puis <b>Retour au boulanger</b>.'], ['📊', '<b>Tableau de bord</b> : ce qui rentre, ce qui sort, ce qui attend.']] },
 ];
 let gdI = 0;
@@ -6243,7 +6258,7 @@ function step() {
     { const nd = DAILY.filter((d, i) => S.day.done.indexOf(i) < 0 && canDeliver(d.mk(level()))).length; chip('c-mairie', !S.day.basket ? 'Panier du jour !' : nd + ' commande' + (nd > 1 ? 's' : '') + ' du jour prête' + (nd > 1 ? 's' : ''), S.q >= 10 && (!S.day.basket || nd > 0)); }
     { const nd = S.orders.filter(canDeliver).length; $('od-n').hidden = !S.orders.length; $('od-n').textContent = nd || S.orders.length; $('od-n').style.background = nd ? '#5E8F3E' : '#6E6578'; }
     $('freq').textContent = Math.round(S.freq); $('freqbar').style.width = S.freq + '%'; $('freqbar').style.background = S.freq < 25 ? '#C9573F' : S.freq < 50 ? '#E3A73C' : '#5E8F3E';
-    const na = ups().filter((u) => u.cost !== null && !u.wait && S.coins >= u.cost).length; $('up-n').hidden = !na; $('up-n').textContent = na; { const nd2 = S.orders.filter(canDeliver).length, nm = typeof missionsReady === 'function' ? missionsReady() : 0, tot = na + nd2 + nm; $('menu-n').hidden = !tot; $('menu-n').textContent = tot; }
+    const na = ups().filter((u) => u.cost !== null && !u.wait && S.coins >= u.cost).length; $('up-n').hidden = !na; $('up-n').textContent = na; { const nd2 = S.orders.filter(canDeliver).length, nm = typeof missionsReady === 'function' ? missionsReady() : 0, qn = nd2 + nm; $('q-n').hidden = !qn; $('q-n').textContent = qn; $('menu-n').hidden = true; }
   }
   questTick();
   tickVisit(dt);
@@ -6333,7 +6348,7 @@ $('b-restore').addEventListener('click', saveSheet);
 // un petit rappel : un code toutes les 2 heures de jeu environ, à partir de 50 habitants
 let codeRemT = 0;
 function tickCodeReminder(dt) { if (!S.started || (S.pop || 0) < 50) return; if ((codeRemT += dt) < 60) return; codeRemT = 0;
-  if (now() - (S.codeAt || 0) > 2 * 3600000 && now() - (S.codeRem || 0) > 2 * 3600000) { S.codeRem = now(); dirty = true; toast('💾 Pense à ton code de sauvegarde', 'Menu → Sauvegarde → Copier mon code. Pour reprendre ta partie partout.'); } }
+  if (now() - (S.codeAt || 0) > 2 * 3600000 && now() - (S.codeRem || 0) > 2 * 3600000) { S.codeRem = now(); dirty = true; toast('💾 Pense à ton code de sauvegarde', '☰ Plus → Sauvegarde → Copier mon code. Pour reprendre ta partie partout.'); } }
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ S: JSON.parse(JSON.stringify(Object.assign({}, S, { px: player.position.x, pz: player.position.z, lastSeen: now() }))), playing: !!S.started, fast, t: now() })); } catch (e) {}
 
 /* ---------------- le boulanger ne se perd jamais (Romain, 22/11/2026 : « j'ai perdu le boulanger ») ----------------
