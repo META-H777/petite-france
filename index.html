@@ -6094,6 +6094,68 @@ function ambBoot() {
   if (window.__pf) window.__pf.amb = { AMB, SEASON, BIRDS, TREEPOS, AMBU, CHIM, birdBoxes, roadPath, isRoad, camTo, groundY, startVisit, VISIT, GCOVER, solids, rects, set(o) { AMB.force = o || {}; ambSlow = 9; for (let k = 0; k < 4; k++) ambRefresh(60); AMBU.uSnow.value = SEASON[AMB.season].snow; return AMB; } };
 }
 
+/* ================= la vie des commerces (Romain, 25/11/2026 : « j'ai mis 3 guinguettes, elles produisent de l'argent mais il n'y a personne… il faut que ce soit immersif ») =================
+   Chaque commerce qui rapporte a son vendeur au comptoir et ses clients : ils arrivent à pied, s'attablent ou font la queue, restent un moment, repartent, d'autres arrivent.
+   Plus le commerce rapporte, plus il y a de monde ; la nuit, les terrasses se vident. Les kiosques à journaux ont leur marchand.
+   Seulement autour de ce que l'on regarde (40 m), avec une réserve de personnages réutilisés : rien ne s'enregistre, rien ne coûte. */
+const LIFE = { sites: new Map(), pool: [], vpool: {}, t: 0 };
+// où se tiennent le vendeur et les clients, dans le repère de la déco (l'avant regarde +z). s : assis ; k : enfant ; r : orientation
+const LIFE_LAY = {
+  guinguette_quai: { v: [-0.5, -0.25, 0], c: [[-1.5, 0.75, Math.PI / 2, 's'], [-0.5, 0.75, -Math.PI / 2, 's'], [0.5, 0.75, Math.PI / 2, 's'], [1.5, 0.75, -Math.PI / 2, 's'], [0.45, -0.05, Math.PI]], look: ['#FFFDF8', '#C9573F', null, '#2B2535'], night: true },
+  cafe_parc: { v: [0, 0.4, 0], c: [[-1.55, 1.2, Math.PI / 2, 's'], [-0.65, 1.2, -Math.PI / 2, 's'], [0.65, 1.3, Math.PI / 2, 's'], [1.55, 1.3, -Math.PI / 2, 's'], [0.4, 0.6, Math.PI]], look: ['#3F6B4E', '#FFFDF8', null, '#6B4A2E'], night: true },
+  guignol: { v: [1.45, 0.55, -0.4], c: [[-0.6, 1.5, Math.PI, 'sk'], [0, 1.5, Math.PI, 'sk'], [0.6, 1.5, Math.PI, 'sk'], [-0.5, 2.2, Math.PI, 'sk'], [0.4, 2.2, Math.PI, 'sk'], [-1.3, 2.6, Math.PI]], look: ['#7A1F2B', '#E3A73C', 'beret', '#2B2535'] },
+  grande_roue: { v: [2.3, 2.25, 0], c: [[2.3, 3.1, Math.PI], [2.3, 3.8, Math.PI], [1.6, 4.3, Math.PI, 'k'], [2.9, 4.4, Math.PI], [-0.8, 2.6, Math.PI / 4]], look: ['#2F6B8C', '#FFFDF8', 'cap'] },
+  etang_barques: { v: [2.7, 3.7, -Math.PI / 2], c: [[3.5, 4.5, -2.2], [3.9, 3.9, -Math.PI / 2], [3.3, 2.9, -0.9, 'k']], look: ['#2F4B7C', '#FFFDF8', 'beret', '#6B4A2E'] },
+  kiosque_journaux: { v: [0, 0.75, 0], c: [[0, 1.7, Math.PI], [0.8, 1.5, -2.6]], look: ['#4E5D78', '#D9CDB4', 'beret', '#2B2535'], few: true },
+  kiosque: { v: [0, 0.75, 0], c: [[0, 1.7, Math.PI], [0.8, 1.5, -2.6]], look: ['#4E5D78', '#D9CDB4', 'beret', '#2B2535'], few: true } };
+// les bâtiments qui rapportent : le vendeur à la porte, les clients devant
+const LIFE_BLD = { bistrot: { look: ['#FFFDF8', '#2B2535', null, '#2B2535'], open: () => MOV.bistrot && MOV.bistrot.placed, rate: () => bistroRate(), night: true },
+  superette: { look: ['#3E6B45', '#FFFDF8', null, '#B9B0A0'], open: () => superOpen(), rate: () => superRate() },
+  garage: { look: ['#5E6E7E', '#2B2535', 'cap'], open: () => garageOpen(), rate: () => garageRate() },
+  ecole: { look: ['#B5546B', '#FFFDF8', null, '#6B4A2E'], open: () => ecoleOpen(), rate: () => ecoleRate(), kids: true } };
+function lifeLooks() { const H = [null, null, 'beret', 'cap'], HAIR = ['#2B2535', '#6B4A2E', '#B9804A', '#D9CDB4', '#8A5A30']; return [VCOLS[Math.floor(Math.random() * VCOLS.length)], null, H[Math.floor(Math.random() * H.length)], HAIR[Math.floor(Math.random() * HAIR.length)]]; }
+function lifeGet() { let g = LIFE.pool.pop(); if (!g) { const L = lifeLooks(); g = person(L[0], L[1], L[2], L[3]); } g.visible = true; g.scale.setScalar(1); return g; }
+function lifeFree(g) { if (!g) return; g.visible = false; if (g.userData.vendor) { (LIFE.vpool[g.userData.vendor] = LIFE.vpool[g.userData.vendor] || []).push(g); return; } if (LIFE.pool.length < 60) LIFE.pool.push(g); else scene.remove(g); }
+function lifeVendor(key, look) { const p = LIFE.vpool[key]; let g = p && p.pop(); if (!g) { g = person(look[0], look[1], look[2], look[3]); g.userData.vendor = key; } g.visible = true; g.scale.setScalar(1); return g; }
+const lifeNight = () => AMB.hour >= 22.5 || AMB.hour < 7;
+// la liste des lieux vivants autour de la caméra : position, orientation, places, nombre de clients voulu
+function lifeSites() { const out = [], R = 42;
+  if (S.city) S.city.items.forEach((it, i) => { if (it.t !== 'd') return; const L = LIFE_LAY[it.k]; if (!L || Math.hypot(it.x - target.x, it.z - target.z) > R) return;
+    const r = BIZ[it.k] ? bizRate(it) : 0, night = lifeNight(); let n = L.few ? 1 + (Math.random() < 0.3 ? 1 : 0) : r > 0 ? Math.min(L.c.length, 1 + Math.floor(r / 45)) : 0;
+    if (night) n = L.night ? Math.min(n, 2) : 0; out.push({ key: 'd' + i + ':' + it.k, x: it.x, z: it.z, r: it.r || 0, L, n, vendor: !night || L.night, vk: it.k }); });
+  Object.keys(LIFE_BLD).forEach((k) => { const B = LIFE_BLD[k], M = MOV[k], st = STN[k]; if (!M || !st || !B.open() || Math.hypot(st[0] - target.x, st[1] - target.z) > R) return;
+    let fx = st[0] - M.x, fz = st[1] - M.z; const d = Math.hypot(fx, fz) || 1; fx /= d; fz /= d; const ry = Math.atan2(fx, fz), night = lifeNight();
+    const v = [st[0] - fx * 0.7, st[1] - fz * 0.7], cs = B.kids ? [[1.6, 1.2], [-1.4, 1.6], [0.4, 2.6], [-0.6, 3.2], [1.9, 3.0]] : [[1.1, 1.3], [-1.1, 1.5], [0.2, 2.3], [-1.6, 2.6]];
+    const pts = cs.map(([a, b]) => [st[0] + fx * b + fz * a, st[1] + fz * b - fx * a, ry + Math.PI + (Math.random() - 0.5) * 0.6, B.kids ? 'k' : '']);
+    const rr = B.rate(); let n = Math.min(pts.length, 1 + Math.floor(rr / 220)); if (night) n = B.night ? Math.min(n, 2) : 0;
+    out.push({ key: 'b:' + k, world: true, x: v[0], z: v[1], r: ry, L: { v: [0, 0, 0], c: pts, look: B.look }, n, vendor: !night || B.night, vk: k }); });
+  return out; }
+const lifeW = (s, p) => { if (s.world) return [p[0], p[1]]; const c = Math.cos(s.r), sn = Math.sin(s.r); return [s.x + p[0] * c + p[1] * sn, s.z - p[0] * sn + p[1] * c]; };
+const lifeR = (s, a) => (s.world ? a : s.r + a);
+function lifePlace(g, x, z, ry, sit) { g.position.set(x, groundY(x, z) - (sit ? 0.22 : 0), z); g.rotation.y = ry; }
+function tickLife(dt) { if (!S.started || FPV.on) return; LIFE.t -= dt;
+  if (LIFE.t <= 0) { LIFE.t = 1.2; const want = lifeSites(), keep = new Set();
+    want.forEach((w) => { keep.add(w.key); let A = LIFE.sites.get(w.key); if (!A) { A = { cl: [] }; LIFE.sites.set(w.key, A); } A.s = w;
+      if (w.vendor && !A.v) { A.v = lifeVendor(w.vk, w.L.look); const p = lifeW(w, w.L.v); lifePlace(A.v, p[0], p[1], lifeR(w, w.L.v[2] || 0)); A.vr = A.v.rotation.y; }
+      else if (!w.vendor && A.v) { lifeFree(A.v); A.v = null; }
+      if (A.v) { const p = lifeW(w, w.L.v); lifePlace(A.v, p[0], p[1], A.v.rotation.y); } // le commerce a pu être déplacé
+      // il manque du monde : un client arrive à une place libre
+      const busy = new Set(A.cl.map((c) => c.i)), free = w.L.c.map((_, i) => i).filter((i) => !busy.has(i));
+      if (A.cl.filter((c) => c.ph !== 'out').length < w.n && free.length && Math.random() < 0.55) { const i = free[Math.floor(Math.random() * free.length)], P = w.L.c[i], to = lifeW(w, P), a = Math.random() * Math.PI * 2, g = lifeGet();
+        const kid = (P[3] || '').indexOf('k') >= 0; g.scale.setScalar(kid ? 0.72 : 1); const from = [to[0] + Math.cos(a) * 7, to[1] + Math.sin(a) * 7]; lifePlace(g, from[0], from[1], 0);
+        A.cl.push({ g, i, to, from, ph: 'in', t: 0, sit: (P[3] || '').indexOf('s') >= 0, ry: lifeR(w, P[2] || 0), stay: 12 + Math.random() * 26 }); }
+      if (A.cl.filter((c) => c.ph !== 'out').length > w.n) { const c = A.cl.find((q) => q.ph === 'stay'); if (c) c.ph = 'out'; } });
+    for (const [k, A] of LIFE.sites) if (!keep.has(k)) { if (A.v) lifeFree(A.v); A.cl.forEach((c) => lifeFree(c.g)); LIFE.sites.delete(k); } }
+  // chaque client : il marche jusqu'à sa place, reste, puis repart ; le vendeur se tourne de temps en temps vers ses clients
+  const tt = performance.now() / 1000;
+  for (const [, A] of LIFE.sites) { if (A.v) { const v = A.v; v.userData.body.position.y = Math.abs(Math.sin(tt * 1.3 + v.id)) * 0.02; v.rotation.y = A.vr + Math.sin(tt * 0.4 + v.id) * 0.35; }
+    for (let k = A.cl.length - 1; k >= 0; k--) { const c = A.cl[k], g = c.g; c.t += dt;
+      if (c.ph === 'in' || c.ph === 'out') { const tg = c.ph === 'in' ? c.to : c.from, dx = tg[0] - g.position.x, dz = tg[1] - g.position.z, d = Math.hypot(dx, dz);
+        if (d < 0.08) { if (c.ph === 'in') { c.ph = 'stay'; c.t = 0; lifePlace(g, c.to[0], c.to[1], c.ry, c.sit); } else { lifeFree(g); A.cl.splice(k, 1); } continue; }
+        const s = Math.min(d, 1.5 * dt); g.position.x += dx / d * s; g.position.z += dz / d * s; g.position.y = groundY(g.position.x, g.position.z); g.rotation.y = Math.atan2(dx, dz); g.userData.body.position.y = Math.abs(Math.sin(c.t * 11)) * 0.07;
+        if (c.ph === 'out' && c.t > 9) { lifeFree(g); A.cl.splice(k, 1); } }
+      else { g.userData.body.position.y = 0; g.rotation.y = c.ry + Math.sin(tt * 0.6 + g.id) * 0.12; if (c.t > c.stay) { c.ph = 'out'; c.t = 0; } } } } }
+
 /* ---------------- the loop ---------------- */
 const clockT = new THREE.Clock(); let lastCoins = -1, guideEl = null, hudT = 1, saveT = 0, loadT = 0, zoneId = '', zoneT = 0;
 L.mairie.dy = 11.8; L.church.dy = 15.6; L.mill.dy = 9.4;
@@ -6278,7 +6340,7 @@ function step() {
     carT -= dt;
     if (carT <= 0) { carT = Math.max(5, Math.min(45, 3.5 / (D * 0.4))) * (0.7 + Math.random() * 0.6) * (S.pain > 0 ? 1 : 1.6) * (garageOpen() ? 0.7 : 1); /* le garage attire les voitures */ if (MOV.parking.placed && queue.length < 8 && Math.random() < Math.min(1, 0.3 + (S.pop || 0) / ECO.carPop)) spawnCar(); /* pas de parking, pas de voitures */ }
   }
-  tickCars(dt); try { tickVCars(dt); } catch (e) {}
+  tickCars(dt); try { tickVCars(dt); } catch (e) {} try { tickLife(dt); } catch (e) { if (!tickLife.err) { tickLife.err = 1; console.warn('vie des commerces', e); } }
   const serveGap = S.hired.margot && !S.tasks.margot ? 220 : 480; let worst = 0;
   for (let i = villagers.length - 1; i >= 0; i--) {
     const v = villagers[i], d = v.userData.v; d.walk += dt * 12; let moving = true;
