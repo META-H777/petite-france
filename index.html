@@ -33,6 +33,11 @@
   .lb.ready { background:var(--gold); animation:bob 1s ease-in-out infinite; }
   .lb.lock { background:#E9E2D2; color:var(--mute); }
   .lb.coin { background:var(--gold); font-size:13px; animation:bob 1s ease-in-out infinite; }
+  .lb.coin[data-cm="mini"], .lb.coin[data-cm="full"] { width:24px; height:24px; padding:0; display:grid; place-items:center; font-size:13px; border-radius:50%; animation:none; box-shadow:0 1px 0 var(--ink); border-width:1.5px; }
+  .lb.coin[data-cm="full"] { width:28px; height:28px; font-size:15px; animation:coinpulse 1.4s ease-in-out infinite; }
+  .lb.coin[data-cm="mini"]::after, .lb.coin[data-cm="full"]::after { content:''; position:absolute; inset:-10px; border-radius:50%; } /* petite à l'œil, mais facile à toucher */
+  .lb.coin[data-cm="group"] { font-size:12px; padding:4px 9px; animation:none; }
+  @keyframes coinpulse { 0%,100% { box-shadow:0 0 0 0 rgba(243,207,122,.95), 0 1px 0 var(--ink); } 50% { box-shadow:0 0 0 7px rgba(243,207,122,0), 0 1px 0 var(--ink); } }
   .lb.coin.big { font-size:16px; padding:7px 12px; box-shadow:0 0 0 3px rgba(243,207,122,.6), 0 3px 0 var(--ink); }
   .dir.gold { background:var(--gold); color:var(--ink); } .dir.gold i { color:var(--ink); }
   .lb.timer { background:var(--blue); color:var(--white); }
@@ -1696,11 +1701,11 @@ $('c-mairie').addEventListener('click', () => { if (S.started) stationGo('mairie
 /* ---------------- labels ---------------- */
 const labelsEl = $('labels');
 const labels = [];
-function label(obj, dy, cls) { const el = document.createElement('div'); el.className = 'lb ' + (cls || ''); labelsEl.appendChild(el); const l = { obj, dy, el, txt: '', cls: cls || '', act: null }; el.addEventListener('click', () => { if (l.act && S.started) { try { window.focus(); } catch (e) {} l.act(); } }); labels.push(l); return l; }
+function label(obj, dy, cls) { const el = document.createElement('div'); el.className = 'lb ' + (cls || ''); labelsEl.appendChild(el); const l = { obj, dy, el, txt: '', cls: cls || '', act: null }; el.addEventListener('click', () => { const f = l.gAct || l.act; if (f && S.started) { try { window.focus(); } catch (e) {} f(); } }); labels.push(l); return l; }
 /* sur les ateliers, l'étiquette se réduit à l'icône et au chiffre : l'écran reste dégagé (Romain, 18/11/2026) */
 const PICT = /\p{Extended_Pictographic}|[0-9+×✓]/u;
 function compactTxt(t, ic) { if (!t) return t; const tk = (x) => x.split(/\s+/).filter((w) => PICT.test(w)).join(' ').trim(); let r = tk(t.split(' · ')[0]); if (!/[0-9✓]/.test(r) && t.indexOf(' · ') > 0) r = tk(t); if (!/\p{Extended_Pictographic}/u.test(r) && ic) r = ic + ' ' + r; return r.trim(); }
-function setLabel(l, txt, cls) { if (l.st && GOD) txt = compactTxt(txt, l.ic); if (l.txt !== txt) { rich(l.el, txt); l.txt = txt; l.far = false; } const c = 'lb ' + (cls || ''); if (l.el.className !== c) l.el.className = c; const d = txt ? '' : 'none'; if (l.el.style.display !== d) l.el.style.display = d; }
+function setLabel(l, txt, cls) { if (l.st && GOD) txt = compactTxt(txt, l.ic); if (l.txt !== txt) { rich(l.el, txt); l.txt = txt; l.far = false; l.disp = null; } const c = 'lb ' + (cls || ''); if (l.el.className !== c) l.el.className = c; const d = txt ? '' : 'none'; if (l.el.style.display !== d) l.el.style.display = d; }
 const fieldAnchor = new THREE.Object3D(); fieldAnchor.position.set(-72, 0, 4.2); scene.add(fieldAnchor);
 const L = {
   plots: plotMeshes.map((p) => { const l = label(p, 0.9); l.plot = true; return l; }), field: label(fieldAnchor, 1.6), mill: label(mill, 8.4), oven: label(oven, 3.9), shop: label(shop, 7.2),
@@ -1715,18 +1720,31 @@ const vtmp = new THREE.Vector3();
 let CAMGO = null;
 function questLook(force) { try { if (!S.started || BUILD || VISIT.on) return; const t = questAt(); if (!t) return; vtmp.set(t[0], groundY(t[0], t[1]), t[1]).project(cam);
   if (force || Math.abs(vtmp.x) > 0.62 || vtmp.y > 0.55 || vtmp.y < -0.6) CAMGO = { x: t[0], z: t[1] + (window.innerHeight > window.innerWidth ? 1.5 : 0) }; } catch (e) {} }
+/* l'argent au-dessus des commerces, en petit (Romain, 24/11/2026 : « ça prend trop de place ») : une petite pièce ; elle pulse quand la caisse est pleine
+   (le montant ne monte plus depuis 90 s) ; le montant seulement de près ; en vue d'ensemble, une bulle par quartier (🪙 ×5), qu'on touche pour s'approcher */
+const COIN_FULL_MS = 90000;
+function coinGroups() { const far = zoom > 34, groups = {}; for (const l of labels) { l.hideG = false; l.grp = 0; l.gAct = null; }
+  if (!far) return; for (const l of labels) { if (l.el.style.display === 'none' || !/\bcoin\b/.test(l.el.className)) continue; l.obj.getWorldPosition(vtmp); const Q = typeof quartierAt === 'function' ? quartierAt(vtmp.x, vtmp.z) : null, id = Q ? Q.id : 'x';
+    const g = groups[id]; if (!g) { groups[id] = l; l.grp = 1; const x = vtmp.x, z = vtmp.z; l.gAct = () => { CAMGO = { x, z }; zoom = 22; resize(); }; } else { g.grp++; l.hideG = true; } } }
+function coinShow(l, near) { const v = parseInt(((l.txt || '').match(/\d[\d\s\u202f]*/) || ['0'])[0].replace(/\D/g, ''), 10) || 0, n = now();
+  if (v > (l.cv || 0) || !l.cvT) l.cvT = n; else if (v < (l.cv || 0)) l.cvT = n; l.cv = v;
+  const full = v > 0 && n - l.cvT > COIN_FULL_MS, close = zoom < 17 && near < 10;
+  let disp, cm; if (l.grp > 1) { disp = '🪙 ×' + l.grp; cm = 'group'; } else if (close) { disp = l.txt; cm = full ? 'fullbig' : ''; } else { disp = '🪙'; cm = full ? 'full' : 'mini'; }
+  if (l.disp !== disp) { l.disp = disp; rich(l.el, disp); } if (l.el.dataset.cm !== cm) l.el.dataset.cm = cm; }
 function placeLabels() {
-  const w = window.innerWidth, h = window.innerHeight;
+  const w = window.innerWidth, h = window.innerHeight; coinGroups();
   for (const l of labels) {
     if (l.el.style.display === 'none') continue;
     l.obj.getWorldPosition(vtmp);
     const k = l.el.className, near = Math.hypot(vtmp.x - target.x, vtmp.z - target.z); let show;
     if (/warn|coin|qn|land/.test(k)) show = true; else if (l.plot && /mini/.test(k)) show = false; else if (/ready|mini/.test(k)) show = near < 40; else show = near < (/timer/.test(k) ? 10 : 7);
+    if (l.hideG) show = false;
     if (show && (S.q || 0) < 6 && /lock/.test(k + (l.txt && l.txt.indexOf('🔒') >= 0 ? ' lock' : ''))) show = false; /* les premières minutes : pas de cadenas ni de prix partout, seulement ce qu'on fait */
     if (show) { vtmp.y += l.dy; vtmp.project(cam); if (vtmp.x < -1.15 || vtmp.x > 1.15 || vtmp.y < -1.15 || vtmp.y > 1.2) show = false; }
     const vis = show ? '' : 'hidden'; if (l.vis !== vis) { l.vis = vis; l.el.style.visibility = vis; } if (!show) continue;
     // far from where you look, a label shrinks to its icon: the village stays visible
-    { const far = near > 13 && !/name|qn|land/.test(k) && !BUILD; if (far !== !!l.far) { l.far = far; const w = l.txt.split(' '), sh = w[0] + (w[1] && /^[+×x\d]/.test(w[1]) ? ' ' + w[1] : ''); rich(l.el, far && /[^\w\sÀ-ÿ]/.test(w[0]) ? sh : l.txt); } }
+    if (/\bcoin\b/.test(k)) coinShow(l, near); else if (l.el.dataset.cm) { delete l.el.dataset.cm; l.disp = null; rich(l.el, l.txt); }
+    if (!/\bcoin\b/.test(k)) { const far = near > 13 && !/name|qn|land/.test(k) && !BUILD; if (far !== !!l.far) { l.far = far; const w = l.txt.split(' '), sh = w[0] + (w[1] && /^[+×x\d]/.test(w[1]) ? ' ' + w[1] : ''); rich(l.el, far && /[^\w\sÀ-ÿ]/.test(w[0]) ? sh : l.txt); } }
     l.sx = (vtmp.x * 0.5 + 0.5) * w; l.sy = (-vtmp.y * 0.5 + 0.5) * h;
     l.el.style.transform = 'translate(' + l.sx.toFixed(1) + 'px,' + l.sy.toFixed(1) + 'px) translate(-50%,-100%)';
   }
