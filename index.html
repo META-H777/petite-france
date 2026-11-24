@@ -6133,6 +6133,7 @@ function lifeSites() { const out = [], R = 42;
 const lifeW = (s, p) => { if (s.world) return [p[0], p[1]]; const c = Math.cos(s.r), sn = Math.sin(s.r); return [s.x + p[0] * c + p[1] * sn, s.z - p[0] * sn + p[1] * c]; };
 const lifeR = (s, a) => (s.world ? a : s.r + a);
 function lifePlace(g, x, z, ry, sit) { g.position.set(x, groundY(x, z) - (sit ? 0.22 : 0), z); g.rotation.y = ry; }
+function lifeLeave(c) { const back = c.path.slice(0, -1).reverse(); back.push(c.from); c.path = back; c.pi = 0; c.ph = 'out'; c.t = 0; }
 function tickLife(dt) { if (!S.started || FPV.on) return; LIFE.t -= dt;
   if (LIFE.t <= 0) { LIFE.t = 1.2; const want = lifeSites(), keep = new Set();
     want.forEach((w) => { keep.add(w.key); let A = LIFE.sites.get(w.key); if (!A) { A = { cl: [] }; LIFE.sites.set(w.key, A); } A.s = w;
@@ -6142,19 +6143,24 @@ function tickLife(dt) { if (!S.started || FPV.on) return; LIFE.t -= dt;
       // il manque du monde : un client arrive à une place libre
       const busy = new Set(A.cl.map((c) => c.i)), free = w.L.c.map((_, i) => i).filter((i) => !busy.has(i));
       if (A.cl.filter((c) => c.ph !== 'out').length < w.n && free.length && Math.random() < 0.55) { const i = free[Math.floor(Math.random() * free.length)], P = w.L.c[i], to = lifeW(w, P), a = Math.random() * Math.PI * 2, g = lifeGet();
-        const kid = (P[3] || '').indexOf('k') >= 0; g.scale.setScalar(kid ? 0.72 : 1); const from = [to[0] + Math.cos(a) * 7, to[1] + Math.sin(a) * 7]; lifePlace(g, from[0], from[1], 0);
-        A.cl.push({ g, i, to, from, ph: 'in', t: 0, sit: (P[3] || '').indexOf('s') >= 0, ry: lifeR(w, P[2] || 0), stay: 12 + Math.random() * 26 }); }
-      if (A.cl.filter((c) => c.ph !== 'out').length > w.n) { const c = A.cl.find((q) => q.ph === 'stay'); if (c) c.ph = 'out'; } });
+        const kid = (P[3] || '').indexOf('k') >= 0; g.scale.setScalar(kid ? 0.72 : 1);
+        // ils viennent d'une rue ou d'un chemin proche, du même côté de l'eau, et suivent un vrai trajet à pied (ponts compris) : plus personne ne marche sur la rivière (Romain, 25/11/2026)
+        let from = null; for (let t = 0; t < 10 && !from; t++) { const aa = a + t * 0.9, rr = 8 + Math.random() * 6, x = to[0] + Math.cos(aa) * rr, z = to[1] + Math.sin(aa) * rr; if (!blocked(x, z, 0.4) && isRoad(x, z) && !(x > RIVER.x0 - 1.2 && x < RIVER.x1 + 1.2)) from = [x, z]; }
+        if (!from) for (let t = 0; t < 10 && !from; t++) { const aa = a + t * 0.9, x = to[0] + Math.cos(aa) * 7, z = to[1] + Math.sin(aa) * 7; if (!blocked(x, z, 0.4) && !(x > RIVER.x0 - 1.2 && x < RIVER.x1 + 1.2)) from = [x, z]; }
+        let path = from ? findPath(from[0], from[1], to[0], to[1], 7) : []; if (!from || !path.length) { lifeFree(g); return; }
+        lifePlace(g, from[0], from[1], 0);
+        A.cl.push({ g, i, to, from, path, pi: 0, ph: 'in', t: 0, sit: (P[3] || '').indexOf('s') >= 0, ry: lifeR(w, P[2] || 0), stay: 12 + Math.random() * 26 }); }
+      if (A.cl.filter((c) => c.ph !== 'out').length > w.n) { const c = A.cl.find((q) => q.ph === 'stay'); if (c) lifeLeave(c); } });
     for (const [k, A] of LIFE.sites) if (!keep.has(k)) { if (A.v) lifeFree(A.v); A.cl.forEach((c) => lifeFree(c.g)); LIFE.sites.delete(k); } }
   // chaque client : il marche jusqu'à sa place, reste, puis repart ; le vendeur se tourne de temps en temps vers ses clients
   const tt = performance.now() / 1000;
   for (const [, A] of LIFE.sites) { if (A.v) { const v = A.v; v.userData.body.position.y = Math.abs(Math.sin(tt * 1.3 + v.id)) * 0.02; v.rotation.y = A.vr + Math.sin(tt * 0.4 + v.id) * 0.35; }
     for (let k = A.cl.length - 1; k >= 0; k--) { const c = A.cl[k], g = c.g; c.t += dt;
-      if (c.ph === 'in' || c.ph === 'out') { const tg = c.ph === 'in' ? c.to : c.from, dx = tg[0] - g.position.x, dz = tg[1] - g.position.z, d = Math.hypot(dx, dz);
-        if (d < 0.08) { if (c.ph === 'in') { c.ph = 'stay'; c.t = 0; lifePlace(g, c.to[0], c.to[1], c.ry, c.sit); } else { lifeFree(g); A.cl.splice(k, 1); } continue; }
+      if (c.ph === 'in' || c.ph === 'out') { const tg = c.path[c.pi] || (c.ph === 'in' ? c.to : c.from), dx = tg[0] - g.position.x, dz = tg[1] - g.position.z, d = Math.hypot(dx, dz);
+        if (d < 0.08) { if (c.pi < c.path.length - 1) { c.pi++; continue; } if (c.ph === 'in') { c.ph = 'stay'; c.t = 0; lifePlace(g, c.to[0], c.to[1], c.ry, c.sit); } else { lifeFree(g); A.cl.splice(k, 1); } continue; }
         const s = Math.min(d, 1.5 * dt); g.position.x += dx / d * s; g.position.z += dz / d * s; g.position.y = groundY(g.position.x, g.position.z); g.rotation.y = Math.atan2(dx, dz); g.userData.body.position.y = Math.abs(Math.sin(c.t * 11)) * 0.07;
-        if (c.ph === 'out' && c.t > 9) { lifeFree(g); A.cl.splice(k, 1); } }
-      else { g.userData.body.position.y = 0; g.rotation.y = c.ry + Math.sin(tt * 0.6 + g.id) * 0.12; if (c.t > c.stay) { c.ph = 'out'; c.t = 0; } } } } }
+        if (c.ph === 'out' && c.t > 40) { lifeFree(g); A.cl.splice(k, 1); } }
+      else { g.userData.body.position.y = 0; g.rotation.y = c.ry + Math.sin(tt * 0.6 + g.id) * 0.12; if (c.t > c.stay) lifeLeave(c); } } } }
 
 /* ---------------- the loop ---------------- */
 const clockT = new THREE.Clock(); let lastCoins = -1, guideEl = null, hudT = 1, saveT = 0, loadT = 0, zoneId = '', zoneT = 0;
