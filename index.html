@@ -2327,12 +2327,14 @@ function plotGo(i) { const p = S.plots[i], pp = PLOT_POS[i];
   if (p.s === 'growing') return goTo(pp[0], pp[1], 0.9, () => { if (S.plots[i].s === 'growing' && !plotRipe(S.plots[i])) tapPlot(i); });
 }
 function stationGo(kind) {
-  const s = STN[kind];
-  const act = { mill: tapMill, oven: tapOven, shop: tapShop, chateau: tapChateau, market: tapMarket, cake: tapCake, bq: tapBq, mairie: tapMairie,
+  const s = STN[kind]; if (!s) return;
+  const actK = { mill: tapMill, oven: tapOven, shop: tapShop, chateau: tapChateau, market: tapMarket, cake: tapCake, bq: tapBq, mairie: tapMairie,
     gate: () => toast('Bienvenue à ' + vil().n, 'La campagne derrière toi, le marché et le centre-ville devant.'),
     church: () => toast('L\'église · saison 4', 'Bientôt : restaure les vitraux et fais sonner les cloches.'),
     bistrot: () => (!MOV.bistrot.placed ? toast('Le bistrot · à bâtir', 'Construis-le (Construire › Bâtiments) : café, pastis et jambon-beurre, il rapporte des écus d’or.') : (S.bitill || 0) >= 1 ? collectBistro() : gerer('bistrot')) }[kind];
-  const helper = { mill: 'jules', oven: 'ines', shop: 'margot', market: 'paul', cake: 'camille' }[kind], menu = /^(chateau|mairie|gate|church|bistrot)$/.test(kind);
+  // les autres lieux (supérette, garage, école, réserve…) : à bâtir, on ouvre Construire ; bâtis, on ouvre leur fenêtre Gérer (sinon « act is not a function », 25/11/2026)
+  const act = actK || (() => { try { if (MOV[kind] && !MOV[kind].placed) return openBuildAt(kind); if (GERE[kind]) return gerer(kind); } catch (e) {} });
+  const helper = { mill: 'jules', oven: 'ines', shop: 'margot', market: 'paul', cake: 'camille' }[kind], menu = !actK || /^(chateau|mairie|gate|church|bistrot)$/.test(kind);
   const money = { shop: S.shop > 0, market: S.mtill > 0, bq: S.btill > 0, chateau: S.gate > 0, bistrot: (S.bitill || 0) >= 1 }[kind]; // de l'argent à ramasser : on y va d'abord
   if (GOD && money) { cd[kind] = now() + 60000; return walkCollect(s[0], s[1], () => { cd[kind] = now() + 900; act(); }, s[2]); }
   if (GOD && (menu || (helper && S.hired[helper]))) { cd[kind] = now() + 900; act(); goTo(S.carry > 0 ? SH[0] : s[0], S.carry > 0 ? SH[1] : s[1], S.carry > 0 ? 1.6 : s[2], null); return; } // touched = done; the baker strolls over by himself (and carries the loaves to the shop)
