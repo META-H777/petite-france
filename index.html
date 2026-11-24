@@ -1516,6 +1516,7 @@ function ups() {
   if (!S.hired.marcel && (S.popMax || S.pop || 0) >= FARM_POP) a.push({ ic: '🚜', t: 'Embaucher Marcel, l’agriculteur, et son tracteur', s: 'Il cultive au tracteur les six grandes parcelles derrière la ferme : tournesol et lavande pour la coopérative, blé payé et versé au grenier. Rapporte gros, et ' + FARM_BONUS + ' habitants s’installent au village.', cost: FARM_COST, buy: () => { S.hired.marcel = true; farmStart(); } });
   if (MOV.ecole && MOV.ecole.placed && !S.hired.rose) a.push({ ic: '👩‍🏫', t: 'Embaucher Mlle Rose, l’institutrice', s: 'L’école ouvre : la cantine rapporte, et les familles s’installent (+8 % d’habitants dans les maisons).', cost: 1200, buy: () => { S.hired.rose = true; } });
   if (MOV.garage && MOV.garage.placed && !S.hired.lucien) a.push({ ic: '🧑‍🔧', t: 'Embaucher Lucien, le mécano', s: 'Le garage ouvre : réparations et pleins rapportent, plus de voitures viennent, et 40 habitants s’installent.', cost: 900, buy: () => { S.hired.lucien = true; } });
+  if (MOV.superette && MOV.superette.placed && !S.hired.huguette) a.push({ ic: '👩‍🦳', t: 'Embaucher Huguette, l’épicière', s: 'La supérette ouvre : elle vend ton pain et les produits du village, et 30 habitants s’installent.', cost: 1000, buy: () => { S.hired.huguette = true; } });
   if (reserveOn() && !S.garde) a.push({ ic: '🧑‍🌾', t: 'Gaspard, le garde forestier', s: 'Il veille sur la réserve naturelle : plus aucun animal ne s\'en échappe.', cost: 1500, buy: () => { S.garde = true; } });
   if ((S.popMax || S.pop || 0) >= 60) { const nf = S.fetes || 0, fc = feteCost(nf); a.push({ ic: '🎉', t: 'Fête du village' + (nf ? ' · ' + nf + ' donnée' + (nf > 1 ? 's' : '') : ''), s: 'Bal, lampions et grande tablée sur la place. +' + feteRenom(fc) + ' de renommée, et +5 % de beauté pendant une heure. Une fête toutes les 20 minutes au plus.', cost: fc, wait: (S.feteNext || 0) > now() ? 'Dans ' + Math.ceil((S.feteNext - now()) / 60000) + ' min' : '', buy: () => { S.feteNext = now() + 1200000; S.feteB = now() + 3600000; S.fetes = nf + 1; S.renom = (S.renom || 0) + feteRenom(fc); S.feteUntil = now() + 240000; toast('🎉 Fête du village', 'Renommée : ' + fmt(S.renom) + ' ⭐'); }, noXp: true }); }
   { const o = nextHouseUp(), nf = S.city ? S.city.items.filter((it) => it.t === 'h' && it.l >= 1 && it.l < 3 && !(it.end > 0)).length : 0; if (o) a.push({ ic: '🌷', t: 'Embellir les maisons · ' + nf + ' à embellir', s: (o.it.l === 1 ? 'Fleurir' : 'Faire une maison de maître de') + ' « ' + HOUSE_T[o.it.m].n + ' » : +' + Math.round(HOUSE_T[o.it.m].cap * 0.3) + ' habitants et de la beauté.' + (busyMasons() >= S.masons ? ' Maçons occupés.' : ''), cost: o.c, wait: busyMasons() >= S.masons ? 'Maçons occupés' : '', buy: () => upHouse(o), noXp: true }); }
@@ -1710,6 +1711,10 @@ const PL = {}; PKEYS.forEach((k) => { PL[k] = label(PEN[k].g, 3.1); PL[k].act = 
 ['field', 'mill', 'oven', 'shop', 'chateau', 'market', 'cake', 'bq', 'mairie', 'church', 'bistrot'].forEach((k) => { if (L[k]) L[k].st = true; }); L.field.ic = '🌾'; PKEYS.forEach((k) => { PL[k].st = true; });
 const GL = gardens.map((g, k) => { const l = label(g, 1.25); l.act = () => gardenGo(k); return l; });
 const vtmp = new THREE.Vector3();
+// montrer l'objectif : la caméra glisse jusqu'à lui s'il est hors de l'écran (ou toujours, quand on touche l'objectif)
+let CAMGO = null;
+function questLook(force) { try { if (!S.started || BUILD || VISIT.on) return; const t = questAt(); if (!t) return; vtmp.set(t[0], groundY(t[0], t[1]), t[1]).project(cam);
+  if (force || Math.abs(vtmp.x) > 0.62 || vtmp.y > 0.55 || vtmp.y < -0.6) CAMGO = { x: t[0], z: t[1] + (window.innerHeight > window.innerWidth ? 1.5 : 0) }; } catch (e) {} }
 function placeLabels() {
   const w = window.innerWidth, h = window.innerHeight;
   for (const l of labels) {
@@ -1717,6 +1722,7 @@ function placeLabels() {
     l.obj.getWorldPosition(vtmp);
     const k = l.el.className, near = Math.hypot(vtmp.x - target.x, vtmp.z - target.z); let show;
     if (/warn|coin|qn|land/.test(k)) show = true; else if (l.plot && /mini/.test(k)) show = false; else if (/ready|mini/.test(k)) show = near < 40; else show = near < (/timer/.test(k) ? 10 : 7);
+    if (show && (S.q || 0) < 6 && /lock/.test(k + (l.txt && l.txt.indexOf('🔒') >= 0 ? ' lock' : ''))) show = false; /* les premières minutes : pas de cadenas ni de prix partout, seulement ce qu'on fait */
     if (show) { vtmp.y += l.dy; vtmp.project(cam); if (vtmp.x < -1.15 || vtmp.x > 1.15 || vtmp.y < -1.15 || vtmp.y > 1.2) show = false; }
     const vis = show ? '' : 'hidden'; if (l.vis !== vis) { l.vis = vis; l.el.style.visibility = vis; } if (!show) continue;
     // far from where you look, a label shrinks to its icon: the village stays visible
@@ -2017,6 +2023,8 @@ const Q = [
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Construis la grande fontaine de la place (Construire › Bâtiments).', say: 'Une fontaine sur la place ! Les enfants y jetteront des écus. Que je récupérerai pour le budget.', build: 1, goal: () => !!MOV.fontaine.placed, xp: 30, coins: 80 },
   { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Lance la deuxième étape du château.', say: 'Les tours tiennent debout. La plupart. Il est temps de s\'occuper des remparts.', goal: () => (S.cst >= 2 || (S.cst === 1 && S.cbuild > 0)), xp: 30, coins: 0 },
   { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Atteins 300 habitants.', say: 'Trois cents âmes ! J\'en connais déjà la moitié par leur prénom, et l\'autre moitié par leurs péchés.', build: 1, goal: () => (S.pop || 0) >= 300, xp: 30, coins: 100 },
+  { who: 'Huguette, l’épicière', av: 'É', c: '#3E6B45', t: 'Construis la supérette (Construire › Bâtiments).', say: 'Huguette ! Trente ans derrière le comptoir de mon épicerie, en ville. Ici je vendrai ton pain, les œufs, le lait et les carottes de Léo. Et je saurai tout sur tout le monde.', build: 1, goal: () => !!MOV.superette.placed, xp: 30, coins: 100 },
+  { who: 'Huguette, l’épicière', av: 'É', c: '#3E6B45', t: 'Embauche Huguette pour ouvrir la supérette.', say: 'Les cagettes sont prêtes, le store est déplié. Il ne manque plus que moi derrière la caisse. Mon salaire, c’est pas cher payé pour tous les potins du village !', up: 1, goal: () => !!S.hired.huguette, xp: 30, coins: 100 },
   { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Construis l\'église.', say: 'Une église, mon enfant. Pas pour moi, hein. Enfin si, un peu pour moi.', build: 1, goal: () => !!MOV.church.placed, xp: 40, coins: 120 },
   { who: 'Mamie Odette', av: 'O', c: '#B5546B', t: 'Pose un monument dans un deuxième quartier.', say: 'Chaque quartier mérite sa fierté. Dans mon temps, c\'était le lavoir. On y apprenait tout.', build: 1, goal: () => S.city.items.filter((it) => it.mon).length >= 2, xp: 30, coins: 100 },
   { who: 'Gégé, du bistrot', av: 'G', c: '#C0703A', t: 'Atteins 500 habitants.', say: 'Cinq cents ! À ce rythme, il me faudra une deuxième terrasse. Et un deuxième Gégé.', build: 1, goal: () => (S.pop || 0) >= 500, xp: 36, coins: 150 },
@@ -2035,19 +2043,30 @@ const Q = [
   { who: 'Le père Anselme', av: 'A', c: '#6A6A72', t: 'Atteins 2 500 habitants.', say: 'Deux mille cinq cents. Les cloches sonnent tous les dimanches, et même le mardi par erreur.', build: 1, goal: () => (S.pop || 0) >= 2500, xp: 100, coins: 1000 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Dernière ligne droite : 3 000 habitants.', say: 'Trois mille ! On parlera de nous jusqu\'à la préfecture. Peut-être même au journal de 13 heures !', build: 1, goal: () => (S.pop || 0) >= 3000, xp: 200, coins: 2000 },
   { who: 'La comtesse de Rocheval', av: 'H', c: '#7B5EA7', t: 'Termine les 5 étapes du château.', say: 'Mes ancêtres vous regardent depuis leurs portraits. Ils ont l\'air sévères, mais ils sont ravis. Enfin je crois.', goal: () => S.cst >= 5, xp: 0, coins: 200 },
+  { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'La grande fête : 3 000 habitants et le château restauré.', say: 'Mes amis, le jury du concours national vient dimanche ! Trois mille habitants, un château comme neuf… Préparez les lampions, je prépare mon discours.', build: 1, goal: () => { if ((S.pop || 0) >= 3000 && S.cst >= 5) { if (!S.finale) finaleShow(); return true; } return false; }, xp: 300, coins: 3000 },
   { who: 'M. Bonnefoy, le maire', av: 'B', c: '#4E5D78', t: 'Continue d\'embellir le village : la prochaine région arrive bientôt.', say: 'Mes amis, notre village est sauvé. Je vais pouvoir prendre ma retraite. Non, je plaisante, je me représente.', goal: () => false, xp: 0, coins: 0 },
 ];
+/* la fin de l'histoire (Romain, 24/11/2026) : à 3 000 habitants et le château restauré, la grande fête, et le titre de plus beau village de France */
+function finaleShow() { S.finale = now(); dirty = true; SFX.done();
+  const cols = [['#E3A73C', '#F3CF7A', '#FFFDF8'], ['#C9573F', '#F0A6B8', '#FFFDF8'], ['#2F4B7C', '#7FB5C9', '#FFFDF8']];
+  for (let k = 0; k < 14; k++) setTimeout(() => { try { burst(target.x + (Math.random() - 0.5) * 18, 10 + Math.random() * 5, target.z + (Math.random() - 0.5) * 12, cols[k % 3], 26, 7); SFX.coin(); } catch (e) {} }, 400 + k * 520);
+  const nm = (typeof vil === 'function' ? vil().n : 'Petite France'), maisons = S.city ? S.city.items.filter((it) => it.t === 'h').length : 0;
+  setTimeout(() => openSheet('🏆 ' + nm + ', plus beau village de France', 'Les cloches du père Anselme sonnent à toute volée, la fanfare joue sur la place. Le jury du concours national a parlé : ' + nm + ' est élu plus beau village de France.', [
+    { t: '👥 ' + fmt(S.pop || 0) + ' habitants, ' + maisons + ' maisons', s: 'Il y a quelques semaines, il n’y avait qu’une boulangerie, un champ et dix habitants.', btn: '🎉', ok: true, run: () => {} },
+    { t: '🏰 Le château de Rocheval restauré', s: 'La comtesse ouvre ses jardins à tout le village. Elle a même retrouvé le dentier de l’arrière-grand-oncle.', btn: '🎉', ok: true, run: () => {} },
+    { t: '🥖 Mamie Odette', s: '« Cinquante ans que j’attendais de revoir le village comme ça. Tu peux être fier, petit. »', btn: '🎉', ok: true, run: () => {} },
+    { t: 'Continuer à embellir', s: 'Le village reste à toi : les saisons et les villages de région arrivent bientôt.', btn: 'Merci !', ok: true, run: closeSheet } ]), 7800); }
 function questAt() { const bb = boars.find((x) => x.phase !== 'flee'); if (bb) return [bb.g.position.x, bb.g.position.z, 1.1]; const q = Q[Math.min(S.q, Q.length - 1)]; if (q.at === undefined) return flowAt(); return typeof q.at === 'function' ? q.at() : q.at; }
 /* the villagers speak: a portrait, a name, one line, as in the best village games */
 let talkT = 0;
 function talk(q) { const el = $('talk'); if (!el || !q || !q.say) return; $('tk-av').textContent = q.av; $('tk-av').style.background = q.c; $('tk-who').textContent = q.who; $('tk-say').textContent = q.say; el.hidden = false; el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); clearTimeout(talkT); talkT = setTimeout(() => { el.hidden = true; }, 11000); }
 function questTick() {
   if (S.qmig !== 1) { if ((S.q || 0) >= 26) S.q = 26; S.qmig = 1; } /* objectifs ajoutés le 18/11/2026 */
-  if (S.qIdx !== S.q) { S.qIdx = S.q; S.qAt = now(); }
+  if (S.qIdx !== S.q) { const first = S.qIdx === undefined; S.qIdx = S.q; S.qAt = now(); if (!first) setTimeout(questLook, 700); }
   const q = Q[Math.min(S.q, Q.length - 1)];
   if (q.goal() || (q.skip && now() - (S.qAt || now()) > q.skip * 1000)) { S.q++; gain(q.xp, q.coins); SFX.done(); if (q.coins) toast('Objectif réussi', '+' + q.coins + ' écus d’or'); dirty = true; return questTick(); }
   $('q-who').textContent = q.who; $('q-av').textContent = q.av; $('q-av').style.background = q.c;
-  if (q.say && S.said !== S.q && S.started) { S.said = S.q; dirty = true; talk(q); }
+  if (q.say && S.said !== S.q && S.started && !(() => { try { return !gdEl.hidden; } catch (e) { return false; } })()) { S.said = S.q; dirty = true; talk(q); } /* pas de bulle sous le guide : elle vient quand on le ferme */
   if ($('q-text').textContent !== q.t) $('q-text').textContent = q.t;
   const b = $('q-btn');
   if (q.up) { b.hidden = false; b.textContent = '🔨 Améliorer'; b.onclick = openUp; }
@@ -2159,7 +2178,7 @@ stickEl.addEventListener('pointermove', (e) => { if (stick.on && e.pointerId ===
 stickEl.addEventListener('pointerup', stickUp); stickEl.addEventListener('pointercancel', stickUp);
 function setLefty(v) { document.body.classList.toggle('lefty', !!v); $('lefty').checked = !!v; try { localStorage.setItem('pf-lefty', v ? '1' : '0'); } catch (e) {} }
 { let l = false; try { l = localStorage.getItem('pf-lefty') === '1'; } catch (e) {} setLefty(l); $('lefty').addEventListener('change', () => setLefty($('lefty').checked)); }
-$('quest').addEventListener('click', (e) => { if (e.target.closest('button')) return; $('quest').classList.toggle('open'); const q = Q[Math.min(S.q, Q.length - 1)]; if (q && q.say) talk(q); }); $('talk').addEventListener('click', () => { $('talk').hidden = true; }); // on a phone the objective is two lines; a tap unfolds it
+$('quest').addEventListener('click', (e) => { if (e.target.closest('button')) return; questLook(true); $('quest').classList.toggle('open'); const q = Q[Math.min(S.q, Q.length - 1)]; if (q && q.say) talk(q); }); $('talk').addEventListener('click', () => { $('talk').hidden = true; }); // on a phone the objective is two lines; a tap unfolds it
 function joyOff() { joy.on = false; joy.id = -1; joy.x = joy.y = 0; joyEl.hidden = true; }
 canvas.addEventListener('pointerdown', (e) => {
   try { canvas.setPointerCapture(e.pointerId); window.focus(); } catch (err) {}
@@ -3946,6 +3965,14 @@ STN.ecole = [ECOLEP[0] - 0.9, ECOLEP[1] + 1.6, 1.6]; STN.garage = [GARAGEP[0] - 
 movable('ecole', { n: 'L’école communale', ic: '🏫', pivot: [ECOLEP[0], ECOLEP[1]], objs: [ecoleG], fp: [10, 8], pts: [ptA(ECOLEP), ptA(STN.ecole)], cols: [ecoleRect], c: 6000, need: () => ((S.pop || 0) < 400 ? '400 habitants' : ''), desc: 'La classe unique, la cour et le préau. Embauche Mlle Rose, l’institutrice (Améliorer) : la cantine rapporte, et les familles s’installent (+8 % d’habitants). +20 beauté.' });
 movable('garage', { n: 'Le garage du village', ic: '🔧', pivot: [GARAGEP[0], GARAGEP[1]], objs: [garageG], fp: [8, 8], pts: [ptA(GARAGEP), ptA(STN.garage)], cols: [garageRect], c: 4500, need: () => ((S.pop || 0) < 250 ? '250 habitants' : ''), desc: 'L’atelier et sa pompe à essence. Embauche Lucien, le mécano (Améliorer) : réparations et pleins rapportent, plus de voitures viennent au village, et 40 habitants s’installent.' });
 const ecoleLab = label(ecoleG, 6.2), garageLab = label(garageG, 5.6);
+/* la supérette (Romain, 24/11/2026) : l'épicerie du village. Même mécanique que le garage (Huguette, l'épicière, à embaucher ; une caisse ; des habitants en plus),
+   et elle relie la chaîne : elle achète une baguette toutes les 3 minutes à la boulangerie, et vend mieux les œufs, le lait et les légumes du village s'ils existent. */
+const SUPERP = [4, 34];
+const superG = group(SUPERP[0], SUPERP[1], 0, 'superette', 'superette');
+{ const fb = slot('superette', superG, 2); box(7, 3.4, 4.6, '#F1E6D0', 0, 0, -1.5, fb); const s = sign('ÉPICERIE', 2.6, 0.5, '#3E6B45', '#FFFDF8', 60); s.position.set(0, 3.0, 0.85); fb.add(s); }
+const superRect = [SUPERP[0], SUPERP[1] - 1.5, 3.6, 2.4]; rects.push(superRect); STN.superette = [SUPERP[0], SUPERP[1] + 2.2, 1.6];
+movable('superette', { n: 'La supérette', ic: '🧺', pivot: [SUPERP[0], SUPERP[1]], objs: [superG], fp: [8, 8], pts: [ptA(SUPERP), ptA(STN.superette)], cols: [superRect], c: 3000, need: () => ((S.pop || 0) < 150 ? '150 habitants' : ''), desc: 'L’épicerie du village, ses cagettes et son store vert. Embauche Huguette, l’épicière (Améliorer) : elle vend le pain de ta boulangerie, les œufs, le lait et les légumes du village, et 30 habitants s’installent.' });
+const superLab = label(superG, 5.6);
 /* la ferme et le hangar du tracteur se déplacent eux aussi (Eugénie, 22/11/2026) ; ils restent gratuits et toujours posés */
 movable('ferme', { n: 'Corps de ferme', ic: '🏡', pivot: [FERMEP[0], FERMEP[1]], objs: [FERME_G], fp: [14, 8], pts: [ptA(FERMEP)], cols: [findRect(FERMEP[0], FERMEP[1])], desc: 'La ferme de Léo.' }).free = true;
 movable('hangar', { n: 'Hangar du tracteur', ic: '🚜', pivot: [HANGAR[0], HANGAR[1]], objs: [HANGAR_G], fp: [10, 8], pts: [ptA(HANGAR)], cols: [findRect(HANGAR[0], HANGAR[1]), ...[0, 1, 2, 3].map((k) => findSolid(HANGAR[0] + 3.6, HANGAR[1] - 2 + k * 1.3))], desc: 'Le hangar de Marcel et de son tracteur.' }).free = true;
@@ -3953,7 +3980,7 @@ const PROD_KEYS = Object.keys(MOV);
 // l'ordre du menu Bâtiments : ma maison d'abord, la chapelle juste avant l'église, la cathédrale juste après
 function batOrder() { const L = PROD_KEYS.filter((k) => k !== 'chezmoi' && k !== 'chapelle' && k !== 'cathedrale'), i = L.indexOf('church'); L.splice(i, 0, 'chapelle'); L.splice(i + 2, 0, 'cathedrale'); return ['chezmoi'].concat(L); }
 const START_LAYOUT = { shop: [3, -10.2, 0], oven: [10, -9.5, 0], mill: [-12, -10, 0], champ: [6, 12.3, 0] }; // tout le départ tient dans quatre terrains du Bourg
-const SERV_BEAUTY = { ecole: 20, garage: 5, chezmoi: 10, fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve: 35, chapelle: 12, cathedrale: 120 };
+const SERV_BEAUTY = { ecole: 20, garage: 5, superette: 10, chezmoi: 10, fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve: 35, chapelle: 12, cathedrale: 120 };
 // population ceilings: without this service, the village cannot grow past n
 const SERV = [[60, 'market', 'un marché'], [150, 'mairie', 'une mairie'], [400, 'fontaine', 'la grande fontaine'], [600, 'church', 'une église'], [1000, 'bistrot', 'un bistrot'], [1600, 'cake', 'une pâtisserie'], [2200, 'bq', 'une boutique de vêtements'], [2800, 'chateau', 'le château (étape 3)']];
 
@@ -4125,7 +4152,7 @@ const rentMult = () => 1 + Math.min(1.5, beauty() / 150);
 function capOf(it) { if (it.t !== 'h') return 0; const l = it.end > 0 ? (it.l || 1) - 1 : it.l || 1; return HOUSE_T[it.m].cap * [0, 1, 1.3, 1.6][l]; } // pendant qu'on l'embellit, elle garde les habitants de son niveau précédent
 function capTotal() { if (!links) computeLinks(); return S.city.items.reduce((a, it, i) => a + (links[i] ? capOf(it) : 0), 0); }
 function servCap() { for (const [n, k, lb] of SERV) { const ok = k === 'chateau' ? S.cst >= 3 : MOV[k].placed; if (!ok) return [n, k, lb]; } return [Infinity, null, '']; }
-function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.4 + 0.6 * Math.min(1, b / (cap + 1)); return Math.min(Math.max(10, 10 + cap * fill), servCap()[0]) + (S.hired && S.hired.marcel ? 80 : 0) + (ecoleOpen() ? Math.round(0.08 * cap * fill) : 0) + (garageOpen() ? 40 : 0); } /* + les familles de l'école, + le garage */ /* + les familles de la ferme de Marcel, l'agriculteur */ /* les dix anciens du village n'ont pas besoin de maison */
+function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.4 + 0.6 * Math.min(1, b / (cap + 1)); return Math.min(Math.max(10, 10 + cap * fill), servCap()[0]) + (S.hired && S.hired.marcel ? 80 : 0) + (ecoleOpen() ? Math.round(0.08 * cap * fill) : 0) + (garageOpen() ? 40 : 0) + (superOpen() ? 30 : 0); } /* + les familles de l'école, + le garage */ /* + les familles de la ferme de Marcel, l'agriculteur */ /* les dix anciens du village n'ont pas besoin de maison */
 function cityBoost() { return 0.7 + Math.min(3, (S.pop || 0) / 150); }
 const busyMasons = () => S.city.items.filter((it) => it.end > 0).length;
 // équilibrage 16/11 (beta14/equilibrage/simu.py) : le prix suit la taille du village, la durée grandit doucement et plafonne
@@ -4512,7 +4539,7 @@ function tableau() { if (!S.started || VISIT.on) return; ledB(); const el = docu
     + '<h4>À ramasser</h4>' + (wait.length ? wait.map((w) => '<div class="ln"><span>' + w[0] + '<small>' + w[2] + '</small></span><b>' + fmt(w[1]) + '</b></div>').join('') : '<div class="ln none"><span>Tout est ramassé.</span></div>')
     + '<h4>Qui s’occupe de quoi</h4>' + teamH + '<h4>Tes commerces</h4>';
   el.querySelectorAll('.span button').forEach((b) => b.addEventListener('click', () => { TDB_SPAN = +b.dataset.s; tableau(); }));
-  const shops = [['shop', '🥖 La boulangerie'], ['oven', '🔥 Le four'], ['mill', '⚙️ Le moulin'], ['market', '🥕 Le marché'], ['bq', '👕 La boutique de vêtements'], ['cake', '🧁 La pâtisserie'], ['bistrot', '☕ Le bistrot'], ['ecole', '🏫 L’école'], ['garage', '🔧 Le garage'], ['reserve', '🦌 La réserve naturelle'], ['mairie', '🏛️ La mairie']].filter(([k]) => MOV[k] && MOV[k].placed && STN[k]);
+  const shops = [['shop', '🥖 La boulangerie'], ['oven', '🔥 Le four'], ['mill', '⚙️ Le moulin'], ['market', '🥕 Le marché'], ['bq', '👕 La boutique de vêtements'], ['cake', '🧁 La pâtisserie'], ['bistrot', '☕ Le bistrot'], ['ecole', '🏫 L’école'], ['garage', '🔧 Le garage'], ['superette', '🧺 La supérette'], ['reserve', '🦌 La réserve naturelle'], ['mairie', '🏛️ La mairie']].filter(([k]) => MOV[k] && MOV[k].placed && STN[k]);
   const opts = [{ t: '🔨 Embaucher et améliorer', s: 'Employés, ateliers, réserves, maisons à embellir.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); openUp(); } }]
     .concat(shops.map(([k, n]) => GERE[k] && (!GERE[k].on || GERE[k].on()) ? { t: n, s: 'Caisse ' + fmt(GERE[k].till()) + ' ' + C + ' · prix ' + PRIX[prixI(k)].n.toLowerCase() + ' · ' + GERE[k].unit(), btn: 'Gérer', ok: true, run: () => gerer(k) } : { t: n, s: 'Y aller et voir ce qu’on peut y faire.', btn: 'Y aller', ok: true, run: () => { closeSheet(); stationGo(k); } }))
     .concat(bizOpen().map((i) => { const it = S.city.items[i], B2 = BIZ[it.k]; return { t: B2.ic + ' ' + B2.n, s: 'Caisse ' + fmt(Math.floor(it.till || 0)) + ' ' + C + ' · environ ' + fmt(Math.round(bizRate(it))) + ' ' + C + '/h · prix ' + PRIX[prixI(it.k)].n.toLowerCase(), btn: 'Gérer', ok: true, run: () => gerer(undefined, i) }; }));
@@ -4558,6 +4585,7 @@ let feedT = 0;
 function tickFeed(dt) { if ((feedT += dt) < 2) return; feedT = 0; const n = now(), need = [];
   bizOpen().forEach((i) => { const it = S.city.items[i]; if (FOOD[it.k] && n - (it.fed || 0) >= dur(180000)) need.push({ o: it, k: 'fed' }); });
   if (MOV.bistrot && MOV.bistrot.placed && n - (S.bifed || 0) >= dur(180000)) need.push({ o: S, k: 'bifed' });
+  if (superOpen() && n - (S.sufed || 0) >= dur(180000)) need.push({ o: S, k: 'sufed' }); /* la supérette prend son pain elle aussi */
   need.sort((a, b) => (a.o[a.k] || 0) - (b.o[b.k] || 0)).forEach((q) => { if ((S.pain || 0) < 1) return; S.pain--; S.shop = (S.shop || 0) + breadPrice(); q.o[q.k] = n; dirty = true; }); }
 /* le bistrot de Gégé (Romain, 22/11/2026) : café, pastis, jambon-beurre. Il a enfin une caisse : elle se remplit selon les habitants et le prix choisi,
    et s'il y a du pain en vitrine à la boulangerie, il en achète une baguette toutes les 3 minutes pour ses jambon-beurre (+30 % de ventes). */
@@ -4571,13 +4599,19 @@ function collectReserve() { const v = Math.floor(S.rtill || 0); if (v < 1) retur
 const reserveDoor = () => { const q = rotP(0, RES_HD + 1.5, MOV.reserve.r || 0); return [MOV.reserve.x + q[0], MOV.reserve.z + q[1]]; }; // le porche de la réserve, quelle que soit son orientation
 const walkReserve = () => { const d = reserveDoor(); return walkCollect(d[0], d[1], () => collectReserve(), 1.6); };
 const walkBiz = (i) => { const it = S.city.items[i]; if (!it) return; const f = itemFp(it); return walkCollect(it.x, it.z, () => collectBiz(i), Math.max(f[0], f[1]) / 2 + 0.8); };
-const ECOLE_CAP = 4, GARAGE_CAP = 4;
+const ECOLE_CAP = 4, GARAGE_CAP = 4, SUPER_CAP = 4;
+const superOpen = () => !!(MOV.superette && MOV.superette.placed && S.hired && S.hired.huguette);
+// ce que le village produit et qu'elle met en rayon : chaque produit présent ajoute 10 %
+const superGoods = () => (S.lv.hen > 0 ? 1 : 0) + (S.lv.cow > 0 ? 1 : 0) + (S.lv.mk > 0 ? 1 : 0);
+function superRate() { return superOpen() ? (120 + 0.6 * (S.pop || 0)) * prixM('superette') * (fedOk(S.sufed) ? 1.25 : 0.5) * (1 + 0.1 * superGoods()) : 0; } /* écus d'or par heure */
+function collectSuper() { const v = Math.floor(S.sutill || 0); if (v < 1) return 0; S.sutill -= v; led('🧺 Supérette', v); S.coins += v; dirty = true; SFX.coin(); floatAt(superG, '+' + v + ' ' + C); return v; }
 const ecoleOpen = () => !!(MOV.ecole && MOV.ecole.placed && S.hired && S.hired.rose), garageOpen = () => !!(MOV.garage && MOV.garage.placed && S.hired && S.hired.lucien);
 function ecoleRate() { return ecoleOpen() ? (80 + 0.25 * (S.pop || 0)) * prixM('ecole') : 0; } /* la cantine et la garderie, écus d'or par heure */
 function garageRate() { return garageOpen() ? (150 + 0.7 * (S.pop || 0)) * prixM('garage') : 0; } /* réparations et pleins d'essence */
 function collectEcole() { const v = Math.floor(S.etill || 0); if (v < 1) return 0; S.etill -= v; led('🏫 École', v); S.coins += v; dirty = true; SFX.coin(); floatAt(ecoleG, '+' + v + ' ' + C); return v; }
 function collectGarage() { const v = Math.floor(S.gtill || 0); if (v < 1) return 0; S.gtill -= v; led('🔧 Garage', v); S.coins += v; dirty = true; SFX.coin(); floatAt(garageG, '+' + v + ' ' + C); return v; }
 ecoleLab.act = () => { if (!MOV.ecole.placed) return openBuildAt('ecole'); if ((S.etill || 0) >= 1) walkCollect(STN.ecole[0], STN.ecole[1], () => collectEcole(), 1.6); else gerer('ecole'); };
+superLab.act = () => { if (!MOV.superette.placed) return openBuildAt('superette'); if ((S.sutill || 0) >= 1) walkCollect(STN.superette[0], STN.superette[1], () => collectSuper(), 1.6); else gerer('superette'); };
 garageLab.act = () => { if (!MOV.garage.placed) return openBuildAt('garage'); if ((S.gtill || 0) >= 1) walkCollect(STN.garage[0], STN.garage[1], () => collectGarage(), 1.6); else gerer('garage'); };
 const reserveLab = label(reserveG, 3.2); reserveLab.act = () => { if (!MOV.reserve.placed) return openBuildAt('reserve'); if ((S.rtill || 0) >= 1) walkReserve(); else gerer('reserve'); };
 function bizOpen() { const L = []; if (S.city) S.city.items.forEach((it, i) => { if (it.t === 'd' && BIZ[it.k]) L.push(i); }); return L; }
@@ -4588,12 +4622,14 @@ function tickPrix(dt) { tickSpin(dt); if (!S.started || !S.city) return; tickFee
     setLabel(ecoleLab, !MOV.ecole.placed ? '' : t >= 1 ? '🪙 +' + t + ' · école' : ecoleOpen() ? '🏫 L’école' : '🏫 École · embauche l’institutrice', t >= 1 ? 'coin' : ''); }
   { const r = garageRate(); if (r > 0) { if (!S.gtt) S.gtt = n; S.gtill = Math.min(r * GARAGE_CAP, (S.gtill || 0) + r * (n - S.gtt) / 3600000); } S.gtt = n; const t = Math.floor(S.gtill || 0);
     setLabel(garageLab, !MOV.garage.placed ? '' : t >= 1 ? '🪙 +' + t + ' · garage' : garageOpen() ? '🔧 Le garage' : '🔧 Garage · embauche le mécano', t >= 1 ? 'coin' : ''); }
+  { const r = superRate(); if (r > 0) { if (!S.sutt) S.sutt = n; S.sutill = Math.min(r * SUPER_CAP, (S.sutill || 0) + r * (n - S.sutt) / 3600000); } S.sutt = n; const t = Math.floor(S.sutill || 0);
+    setLabel(superLab, !MOV.superette.placed ? '' : t >= 1 ? '🪙 +' + t + ' · supérette' : superOpen() ? '🧺 La supérette' : '🧺 Supérette · embauche l’épicière', t >= 1 ? 'coin' : ''); }
   if (MOV.reserve && MOV.reserve.placed) { const r = reserveRate(); if (!S.rtt) S.rtt = n; S.rtill = Math.min(r * RES_CAP, (S.rtill || 0) + r * (n - S.rtt) / 3600000); S.rtt = n; const t = Math.floor(S.rtill || 0); setLabel(reserveLab, t >= 1 ? '🪙 +' + t + ' · réserve' : '🦌 La réserve', t >= 1 ? 'coin' : ''); } else { S.rtt = n; setLabel(reserveLab, '', ''); }
   const bo = bizOpen(); bo.forEach((i) => { const it = S.city.items[i], r = bizRate(it); if (!it.tt) it.tt = n; it.till = Math.min(r * BIZ[it.k].cap, (it.till || 0) + r * (n - it.tt) / 3600000); it.tt = n; });
   /* la caisse de chaque commerce posé (guinguette, barques, guignol, café, grande roue) se voit sur la carte (22/11/2026) */
   bo.forEach((i, j) => { let l = BIZLAB[j]; if (!l) { l = BIZLAB[j] = label(scene, 3.2); } const o = cityObjs[i], t = Math.floor(S.city.items[i].till || 0); if (!o) return; l.obj = o; l.dy = S.city.items[i].k === 'grande_roue' ? 8.2 : 3.4; l.act = () => { if (Math.floor((S.city.items[i] || {}).till || 0) >= 1) walkBiz(i); else gerer(undefined, i); }; setLabel(l, t >= 1 ? '🪙 +' + t + ' · ' + BIZ[S.city.items[i].k].ic : '', 'coin'); });
   for (let j = bo.length; j < BIZLAB.length; j++) setLabel(BIZLAB[j], '', '');
-  let f = PRIX[prixI('shop')].f + (S.lv.mk > 0 ? PRIX[prixI('market')].f : 0) + (S.lv.bq > 0 ? PRIX[prixI('bq')].f : 0) + (MOV.bistrot && MOV.bistrot.placed ? PRIX[prixI('bistrot')].f : 0) + (MOV.reserve && MOV.reserve.placed ? PRIX[prixI('reserve')].f : 0) + (ecoleOpen() ? PRIX[prixI('ecole')].f : 0) + (garageOpen() ? PRIX[prixI('garage')].f : 0); bizOpen().forEach((i) => { f += PRIX[prixI(S.city.items[i].k)].f; });
+  let f = PRIX[prixI('shop')].f + (S.lv.mk > 0 ? PRIX[prixI('market')].f : 0) + (S.lv.bq > 0 ? PRIX[prixI('bq')].f : 0) + (MOV.bistrot && MOV.bistrot.placed ? PRIX[prixI('bistrot')].f : 0) + (MOV.reserve && MOV.reserve.placed ? PRIX[prixI('reserve')].f : 0) + (ecoleOpen() ? PRIX[prixI('ecole')].f : 0) + (garageOpen() ? PRIX[prixI('garage')].f : 0) + (superOpen() ? PRIX[prixI('superette')].f : 0); bizOpen().forEach((i) => { f += PRIX[prixI(S.city.items[i].k)].f; });
   if (f) { const v = S.freq + f * dt / 300; S.freq = f > 0 ? Math.min(100, v) : Math.max(Math.min(S.freq, 30), v); } }
 function collectBiz(i) { const it = S.city.items[i]; if (!it) return 0; const v = Math.floor(it.till || 0); if (v < 1) return 0; it.till -= v; led(BIZ[it.k].ic + ' ' + BIZ[it.k].n.replace(/^La |^Le /, ''), v); S.coins += v; dirty = true; SFX.coin(); if (cityObjs[i]) floatAt(cityObjs[i], '+' + v + ' ' + C); return v; }
 function collectShopTill() { if (!(S.shop > 0)) return 0; const v = S.shop; led('🥖 Pain vendu', v); S.coins += v; S.encaisse += v; S.shop = 0; dirty = true; SFX.coin(); return v; }
@@ -4604,6 +4640,7 @@ const GERE = {
   bq: { n: '👕 La boutique de vêtements', sells: 'Des pulls tricotés avec la laine des moutons.', unit: () => Math.round(BQPR[Math.max(1, S.lv.bq)] * prixM('bq')) + ' ' + C + ' le pull', till: () => Math.floor(S.btill || 0), collect: () => (collectBq() ? 1 : 0), cat: '👕 Boutique de vêtements', who: 'lucie', whoY: 'Lucie apporte la laine.', whoN: 'Personne pour la laine : embauche Lucie.', lv: () => S.lv.bq, on: () => S.lv.bq > 0 },
   ecole: { n: '🏫 L’école communale', sells: 'La cantine et la garderie : un repas chaud à midi, le goûter après la classe.', unit: () => 'environ ' + fmt(Math.round(ecoleRate())) + ' ' + C + ' par heure', till: () => Math.floor(S.etill || 0), collect: () => (collectEcole() ? 1 : 0), cat: '🏫 École', who: 'rose', ok: () => !!S.hired.rose, whoY: 'Mlle Rose fait la classe ; les familles s’installent au village (+8 % d’habitants dans les maisons).', whoN: 'Pas d’institutrice : l’école reste fermée. Embauche Mlle Rose dans « Améliorer ».', on: () => MOV.ecole && MOV.ecole.placed },
   garage: { n: '🔧 Le garage du village', sells: 'Réparations, vidanges et pleins d’essence pour les voitures du village et des visiteurs.', unit: () => 'environ ' + fmt(Math.round(garageRate())) + ' ' + C + ' par heure', till: () => Math.floor(S.gtill || 0), collect: () => (collectGarage() ? 1 : 0), cat: '🔧 Garage', who: 'lucien', ok: () => !!S.hired.lucien, whoY: 'Lucien répare et fait le plein ; plus de voitures viennent au village (+40 habitants).', whoN: 'Pas de mécano : le garage reste fermé. Embauche Lucien dans « Améliorer ».', on: () => MOV.garage && MOV.garage.placed },
+  superette: { n: '🧺 La supérette', sells: 'Le pain de ta boulangerie, les œufs, le lait et les légumes du village, l’épicerie de tous les jours.', unit: () => 'environ ' + fmt(Math.round(superRate())) + ' ' + C + ' par heure' + (fedOk(S.sufed) ? ' (pain frais livré)' : ' · sans pain frais, elle vend moitié moins') + (superGoods() ? ' · ' + superGoods() + ' produit' + (superGoods() > 1 ? 's' : '') + ' du village en rayon (+' + 10 * superGoods() + ' %)' : ' · œufs, lait, légumes : +10 % chacun'), till: () => Math.floor(S.sutill || 0), collect: () => (collectSuper() ? 1 : 0), cat: '🧺 Supérette', who: 'huguette', ok: () => !!S.hired.huguette, whoY: 'Huguette tient la caisse et garnit les rayons ; 30 habitants de plus s’installent au village.', whoN: 'Pas d’épicière : la supérette reste fermée. Embauche Huguette dans « Améliorer ».', on: () => MOV.superette && MOV.superette.placed },
   bistrot: { n: '☕ Le bistrot de Gégé', sells: 'Café, pastis et jambon-beurre au comptoir et en terrasse. Il achète son pain à ta boulangerie.', unit: () => 'environ ' + fmt(Math.round(bistroRate())) + ' ' + C + ' par heure' + (fedOk(S.bifed) ? ' (pain frais livré)' : ' · sans pain frais, il vend peu'), till: () => Math.floor(S.bitill || 0), collect: () => (collectBistro() ? 1 : 0), cat: '☕ Bistrot', who: 'gege', auto: true, whoY: 'Gégé tient le comptoir. Sa caisse se remplit sur ' + BISTRO_CAP + ' heures au plus.', whoN: '', on: () => MOV.bistrot && MOV.bistrot.placed } };
 function gerer(k, idx) { if (!S.started) return; const el = document.createElement('div'); el.className = 'tdb';
   const biz = idx !== undefined ? S.city.items[idx] : null, G = biz ? null : GERE[k]; if (!biz && !G) return; if (biz) k = biz.k; const B2 = biz ? BIZ[k] : null;
@@ -5587,16 +5624,19 @@ function guideShow(i) { gdI = Math.max(0, Math.min(GUIDE.length - 1, i)); const 
   $('gd-k').textContent = 'Guide du village · ' + (gdI + 1) + ' / ' + GUIDE.length; $('gd-t').textContent = g.ic + ' ' + g.t;
   $('gd-p').innerHTML = '<p class="gd-lead">' + g.lead + '</p><ul class="gd-pts">' + g.pts.map((q) => '<li><i>' + q[0] + '</i><span>' + q[1] + '</span></li>').join('') + '</ul>';
   [...$('gd-dots').children].forEach((d, k) => d.classList.toggle('on', k === gdI));
-  $('gd-prev').style.visibility = gdI ? 'visible' : 'hidden'; $('gd-next').textContent = gdI === GUIDE.length - 1 ? 'C’est parti !' : 'Suivant ›';
+  $('gd-prev').style.visibility = gdI ? 'visible' : 'hidden'; $('gd-next').textContent = gdShort || gdI === GUIDE.length - 1 ? 'C’est parti !' : 'Suivant ›'; $('gd-dots').style.display = gdShort ? 'none' : ''; if (gdShort) $('gd-k').textContent = 'Bienvenue au village';
+  if (gdShort) $('gd-p').insertAdjacentHTML('beforeend', '<p class="gd-lead" style="font-size:12px;opacity:.75;margin-top:8px">Le guide complet t’attend dans ☰ Plus.</p>');
   if (gdI + 1 < GUIDE.length) { const pre = new Image(); pre.src = './guide/' + GUIDE[gdI + 1].img + '.webp?v=2'; } }
-function guideOpen(i) { if (typeof closeSheet === 'function') closeSheet(); gdEl.hidden = false; guideShow(i || 0); }
-function guideClose() { gdEl.hidden = true; if (S && !S.guideSeen) { S.guideSeen = true; S.introSeen = true; dirty = true; } }
+// au premier lancement (short), une seule page : bienvenue et le but ; le guide complet reste dans ☰ Plus
+let gdShort = false;
+function guideOpen(i, short) { if (typeof closeSheet === 'function') closeSheet(); gdShort = !!short; gdEl.hidden = false; guideShow(i || 0); }
+function guideClose() { gdEl.hidden = true; const was = gdShort; gdShort = false; if (S && !S.guideSeen) { S.guideSeen = true; S.introSeen = true; dirty = true; } if (was) setTimeout(() => { try { questTick(); questLook(true); } catch (e) {} }, 250); }
 $('gd-x').addEventListener('click', guideClose);
 $('gd-prev').addEventListener('click', () => guideShow(gdI - 1));
-$('gd-next').addEventListener('click', () => (gdI === GUIDE.length - 1 ? guideClose() : guideShow(gdI + 1)));
+$('gd-next').addEventListener('click', () => (gdShort || gdI === GUIDE.length - 1 ? guideClose() : guideShow(gdI + 1)));
 gdEl.addEventListener('click', (e) => { if (e.target === gdEl) guideClose(); });
 // glisser à gauche ou à droite pour tourner les pages
-{ let sx = null; gdEl.addEventListener('pointerdown', (e) => { sx = e.clientX; }); gdEl.addEventListener('pointerup', (e) => { if (sx === null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 60) guideShow(gdI + (dx < 0 ? 1 : -1)); }); }
+{ let sx = null; gdEl.addEventListener('pointerdown', (e) => { sx = e.clientX; }); gdEl.addEventListener('pointerup', (e) => { if (sx === null || gdShort) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 60) guideShow(gdI + (dx < 0 ? 1 : -1)); }); }
 // une petite pastille « ❓ » qui ouvre directement la bonne page
 function guideHelp(page, label) { const b = document.createElement('button'); b.type = 'button'; b.className = 'gd-help'; b.textContent = '❓ ' + (label || 'Comment ça marche ?'); b.addEventListener('click', () => guideOpen(page)); return b; }
 // la première fois (nouvelle partie comme partie en cours), le guide s'ouvre tout seul, une fois
@@ -6092,7 +6132,8 @@ function step() {
     { const a = Math.ceil(S.carry / 4), b = a + S.carryC, c = b + S.vcarry.length, d = c + S.farine, e = d + S.ble;
       for (let i = 0; i < stack.length; i++) { const m = stack[i]; m.visible = i < e; if (m.visible) m.material.color.set(i < a ? '#C98A2E' : i < b ? '#F0A6B8' : i < c ? PROD[S.vcarry[i - b]].c : i < d ? '#FFFDF8' : '#E8B94A'); m.position.y = 0.42 + lift + i * 0.14; } }
     if (wl > 0.01 && (stick.on || keys.KeyW || keys.KeyS || keys.KeyA || keys.KeyD || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight)) camFree = false;
-    if (!camFree && !GOD) { vtmp.set(player.position.x + wx * 1.6, player.position.y * 0.7, player.position.z + wz * 1.6); target.lerp(vtmp, 1 - Math.exp(-dt * 4.5)); } placeCam();
+    if (!camFree && !GOD) { vtmp.set(player.position.x + wx * 1.6, player.position.y * 0.7, player.position.z + wz * 1.6); target.lerp(vtmp, 1 - Math.exp(-dt * 4.5)); }
+    if (CAMGO) { const k = 1 - Math.exp(-dt * 2.6); target.x += (CAMGO.x - target.x) * k; target.z += (CAMGO.z - target.z) * k; if (Math.hypot(CAMGO.x - target.x, CAMGO.z - target.z) < 0.3 || BUILD || VISIT.on) { CAMGO = null; loadNear(); } } /* la caméra glisse vers le nouvel objectif (PA et Romain, 24/11/2026 : les 10 premières minutes) */ placeCam();
     vtmp.set(Math.round(target.x / 2) * 2, 0, Math.round(target.z / 2) * 2); sun.position.copy(vtmp).add(SUN); sun.target.position.copy(vtmp); sun.target.updateMatrixWorld(); { const hs = Math.max(18, Math.min(48, zoom * 0.9)), sc = sun.shadow.camera; if (Math.abs(sc.right - hs) > 1.5) { sc.left = sc.bottom = -hs; sc.right = sc.top = hs; sc.updateProjectionMatrix(); } } /* ombres plus fines quand on zoome */
     // quarters: name on arrival, models load around you
     { const z = zoneOf(player.position.x, player.position.z); if (z.id !== zoneId) { const first = zoneId !== ''; zoneId = z.id; if (first || S.started) { const el = $('zone'); el.textContent = z.ic + ' ' + z.name; el.hidden = false; el.style.opacity = '1'; zoneT = 2.6; } } if (zoneT > 0) { zoneT -= dt; if (zoneT <= 0) $('zone').style.opacity = '0'; } }
@@ -6214,7 +6255,8 @@ function step() {
     spawnT -= dt;
     const D = demand(n), carsOn = S.q >= 10;
     if (spawnT <= 0) { spawnT = Math.max(60 / (clientsPerMin() * (0.55 + 0.6 * S.freq / 100) * (n < S.flyersUntil ? 1.5 : 1)), 0.75, Math.min(10, 1.3 / (D * (carsOn ? 0.6 : 1)))) * (S.pain > 0 ? 1 : 1.5) * (0.7 + Math.random() * 0.6);
-      if (S.lv.mk > 0 && S.stall.length && Math.random() < 0.38) spawnMarket(); else if (queue.length < 8 && villagers.length < 18) spawnVillager(); }
+      const tuto = !(S.fournees > 0) && (S.q || 0) <= 5; /* le tout début : pas de client avant la première fournée, personne ne se fâche à la première minute */
+      if (S.lv.mk > 0 && S.stall.length && Math.random() < 0.38) spawnMarket(); else if (!tuto && queue.length < 8 && villagers.length < 18) spawnVillager(); }
     carT -= dt;
     if (carT <= 0) { carT = Math.max(5, Math.min(45, 3.5 / (D * 0.4))) * (0.7 + Math.random() * 0.6) * (S.pain > 0 ? 1 : 1.6) * (garageOpen() ? 0.7 : 1); /* le garage attire les voitures */ if (MOV.parking.placed && queue.length < 8 && Math.random() < Math.min(1, 0.3 + (S.pop || 0) / ECO.carPop)) spawnCar(); /* pas de parking, pas de voitures */ }
   }
@@ -6258,7 +6300,7 @@ function step() {
     { const nd = DAILY.filter((d, i) => S.day.done.indexOf(i) < 0 && canDeliver(d.mk(level()))).length; chip('c-mairie', !S.day.basket ? 'Panier du jour !' : nd + ' commande' + (nd > 1 ? 's' : '') + ' du jour prête' + (nd > 1 ? 's' : ''), S.q >= 10 && (!S.day.basket || nd > 0)); }
     { const nd = S.orders.filter(canDeliver).length; $('od-n').hidden = !S.orders.length; $('od-n').textContent = nd || S.orders.length; $('od-n').style.background = nd ? '#5E8F3E' : '#6E6578'; }
     $('freq').textContent = Math.round(S.freq); $('freqbar').style.width = S.freq + '%'; $('freqbar').style.background = S.freq < 25 ? '#C9573F' : S.freq < 50 ? '#E3A73C' : '#5E8F3E';
-    const na = ups().filter((u) => u.cost !== null && !u.wait && S.coins >= u.cost).length; $('up-n').hidden = !na; $('up-n').textContent = na; { const nd2 = S.orders.filter(canDeliver).length, nm = typeof missionsReady === 'function' ? missionsReady() : 0, qn = nd2 + nm; $('q-n').hidden = !qn; $('q-n').textContent = qn; $('menu-n').hidden = true; }
+    const na = ups().filter((u) => u.cost !== null && !u.wait && S.coins >= u.cost).length; $('up-n').hidden = !na; $('up-n').textContent = na; { const nd2 = S.orders.filter(canDeliver).length, nm = typeof missionsReady === 'function' ? missionsReady() : 0, qn = (S.q || 0) < 6 ? 0 : nd2 + nm; /* pas de pastille pendant les premiers objectifs */ $('q-n').hidden = !qn; $('q-n').textContent = qn; $('menu-n').hidden = true; }
   }
   questTick();
   tickVisit(dt);
@@ -6277,6 +6319,7 @@ function save() {
   S.inesBag = crew.ines.userData.bag || 0; // the loaves Inès is carrying are not lost if the game closes
   const snap = JSON.parse(JSON.stringify(S));
   try { localStorage.setItem(LSK, JSON.stringify(snap)); } catch (e) {}
+  nativeSave(snap);
   if (!ref) return;
   if (pending) { pending.next = snap; return; }
   pending = { next: null };
@@ -6299,6 +6342,13 @@ function tickSave(dt) { if (!S.started) return;
   if ((bakT += dt) > 120) { bakT = 0; try { const cur = localStorage.getItem(LSK); if (cur && JSON.parse(cur).rid === RID) localStorage.setItem(LSB, cur); } catch (e) {} } }
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
 function readSave(k) { try { const d = JSON.parse(localStorage.getItem(k) || 'null'); return d && d.v === 14 && d.rid === RID ? d : null; } catch (e) { return null; } }
+/* l'app sur les stores (Capacitor) : la partie s'écrit aussi dans le stockage natif du téléphone (Preferences), qu'iOS n'efface pas comme celui d'une page web.
+   Au démarrage, si la copie native est plus récente que celle de la page, on la reprend. Dans un navigateur, rien de tout cela ne s'exécute. */
+const NATIVE = (() => { try { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences; } catch (e) { return null; } })();
+let nativeAt = 0;
+function nativeSave(snap, force) { if (!NATIVE) return; const n = Date.now(); if (!force && n - nativeAt < 8000) return; nativeAt = n; try { NATIVE.set({ key: LSK, value: JSON.stringify(snap || S) }).catch(() => {}); } catch (e) {} }
+if (NATIVE) { document.addEventListener('visibilitychange', () => { if (document.hidden && S.started) nativeSave(S, true); });
+  NATIVE.get({ key: LSK }).then((r) => { try { const d = r && r.value ? JSON.parse(r.value) : null, loc = readSave(LSK); if (d && d.v === 14 && d.rid === RID && (!loc || (d.lastSeen || 0) > (loc.lastSeen || 0) + 2000)) { localStorage.setItem(LSK, r.value); if (!S.started) location.reload(); } } catch (e) {} }).catch(() => {}); }
 function bestLocal() { const a = readSave(LSK), b = readSave(LSB); if (!a) return b; if (!b) return a; return (b.lastSeen || 0) > (a.lastSeen || 0) ? b : a; }
 // le code : JSON compressé (gzip quand le navigateur sait le faire), en base64, préfixé PF1 (compressé) ou PF0 (brut)
 const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -6433,7 +6483,7 @@ function startPlay(mode) {
   try { window.focus(); canvas.focus(); } catch (e) {} dirty = true; loadNear();
   if (GOD && MOV.shop) { target.set(MOV.shop.x, 0, MOV.shop.z + 4); placeCam(); }
   musicTo(musicWant()); // après avoir placé la caméra : on entend tout de suite le quartier de la boulangerie
-  if (!S.guideSeen) setTimeout(() => { if (!S.guideSeen) guideOpen(0); }, 900); // le guide du village remplace l'ancienne introduction, et s'ouvre une fois pour tous (même les parties en cours)
+  if (!S.guideSeen) { guideOpen(0, true); } else setTimeout(questLook, 400); /* au premier lancement, une seule page d'accueil, puis Odette parle et la caméra montre le champ */ // le guide du village remplace l'ancienne introduction, et s'ouvre une fois pour tous (même les parties en cours)
 }
 // home screen: continue, or a brand-new game in one of the two modes
 let hadSave = false;
@@ -6464,7 +6514,7 @@ function boot(loaded, hot) {
     if (!hot) calcOffline(loaded.lastSeen);
     if (loaded.fast) $('fast').checked = true;
     hadSave = true; $('home-cont').hidden = false; $('home-new').hidden = true;
-    $('home-info').textContent = 'Niveau ' + level() + ' · ' + Math.floor(S.pop || 0) + ' habitants · ' + (S.mode === 'comp' ? '🔥 Coup de feu' : '🌿 Douceur de vivre');
+    $('home-info').textContent = 'Niveau ' + level() + ' · ' + Math.floor(S.pop || 0) + ' habitants · ' + (S.mode === 'comp' ? '🔥 Coup de feu' : '🌿 Douceur de vivre') + (S.finale ? ' · 🏆 Plus beau village' : '');
   }
   else if (loaded && loaded.rid && loaded.rid !== RID) { $('home-warn').textContent = 'Le jeu a changé : nouvelles règles, nouvelle économie. Tous les villages repartent de zéro.'; $('home-warn').hidden = false; }
   if (location.hash === '#debug') window.__pf = { get S() { return S; }, set S(v) { S = v; }, player, goTo, travel, tap, level, ups, buyUp, stationGo, findPath, solids, rects, GLB, renderer, cam, scene, get zoom() { return zoom; }, set zoom(v) { zoom = v; resize(); }, get quality() { return quality; }, startRaid, spawnCar, tapMairie, tapMill, tapOven, tapShop, harvest, stockBread, deliver, queue, villagers, crew, setFast: (v) => { fast = v; } };
