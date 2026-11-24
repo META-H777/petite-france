@@ -36,6 +36,9 @@
   .lb.coin[data-cm="mini"], .lb.coin[data-cm="full"] { width:24px; height:24px; padding:0; display:grid; place-items:center; font-size:13px; border-radius:50%; animation:none; box-shadow:0 1px 0 var(--ink); border-width:1.5px; }
   .lb.coin[data-cm="full"] { width:28px; height:28px; font-size:15px; animation:coinpulse 1.4s ease-in-out infinite; }
   .lb.coin[data-cm="mini"]::after, .lb.coin[data-cm="full"]::after { content:''; position:absolute; inset:-10px; border-radius:50%; } /* petite à l'œil, mais facile à toucher */
+  .lb.coin[data-cm="small"], .lb.coin[data-cm="smallfull"] { font-size:10.5px; padding:2px 6px 2px 4px; border-width:1.5px; box-shadow:0 1px 0 var(--ink); animation:none; }
+  .lb.coin[data-cm="smallfull"] { font-size:11.5px; animation:coinpulse 1.4s ease-in-out infinite; }
+  .lb.coin[data-cm="small"]::after, .lb.coin[data-cm="smallfull"]::after { content:''; position:absolute; inset:-8px; } /* facile à toucher */
   .lb.coin[data-cm="group"] { font-size:12px; padding:4px 9px; animation:none; }
   @keyframes coinpulse { 0%,100% { box-shadow:0 0 0 0 rgba(243,207,122,.95), 0 1px 0 var(--ink); } 50% { box-shadow:0 0 0 7px rgba(243,207,122,0), 0 1px 0 var(--ink); } }
   .lb.coin.big { font-size:16px; padding:7px 12px; box-shadow:0 0 0 3px rgba(243,207,122,.6), 0 3px 0 var(--ink); }
@@ -1723,13 +1726,13 @@ function questLook(force) { try { if (!S.started || BUILD || VISIT.on) return; c
 /* l'argent au-dessus des commerces, en petit (Romain, 24/11/2026 : « ça prend trop de place ») : une petite pièce ; elle pulse quand la caisse est pleine
    (le montant ne monte plus depuis 90 s) ; le montant seulement de près ; en vue d'ensemble, une bulle par quartier (🪙 ×5), qu'on touche pour s'approcher */
 const COIN_FULL_MS = 90000;
-function coinGroups() { const far = zoom > 34, groups = {}; for (const l of labels) { l.hideG = false; l.grp = 0; l.gAct = null; }
+function coinGroups() { const far = false && zoom > 34, /* Romain, 25/11/2026 : on revoit toujours le montant (en petit) ; plus de regroupement par quartier */ groups = {}; for (const l of labels) { l.hideG = false; l.grp = 0; l.gAct = null; }
   if (!far) return; for (const l of labels) { if (l.el.style.display === 'none' || !/\bcoin\b/.test(l.el.className)) continue; l.obj.getWorldPosition(vtmp); const Q = typeof quartierAt === 'function' ? quartierAt(vtmp.x, vtmp.z) : null, id = Q ? Q.id : 'x';
     const g = groups[id]; if (!g) { groups[id] = l; l.grp = 1; const x = vtmp.x, z = vtmp.z; l.gAct = () => { CAMGO = { x, z }; zoom = 22; resize(); }; } else { g.grp++; l.hideG = true; } } }
 function coinShow(l, near) { const v = parseInt(((l.txt || '').match(/\d[\d\s\u202f]*/) || ['0'])[0].replace(/\D/g, ''), 10) || 0, n = now();
   if (v > (l.cv || 0) || !l.cvT) l.cvT = n; else if (v < (l.cv || 0)) l.cvT = n; l.cv = v;
   const full = v > 0 && n - l.cvT > COIN_FULL_MS, close = zoom < 17 && near < 10;
-  let disp, cm; if (l.grp > 1) { disp = '🪙 ×' + l.grp; cm = 'group'; } else if (close) { disp = l.txt; cm = full ? 'fullbig' : ''; } else { disp = '🪙'; cm = full ? 'full' : 'mini'; }
+  let disp, cm; if (close) { disp = l.txt; cm = full ? 'fullbig' : ''; } else { disp = (l.txt || '').split(' · ')[0]; cm = full ? 'smallfull' : 'small'; } /* le montant toujours lisible, en petit : « 🪙 +1078 » sans le nom du commerce */
   if (l.disp !== disp) { l.disp = disp; rich(l.el, disp); } if (l.el.dataset.cm !== cm) l.el.dataset.cm = cm; }
 function placeLabels() {
   const w = window.innerWidth, h = window.innerHeight; coinGroups();
