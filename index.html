@@ -46,6 +46,8 @@
   .lb.timer { background:var(--blue); color:var(--white); }
   .lb.mini { font-size:13px; padding:3px 6px; }
   .lb.warn { background:var(--red); color:#fff; }
+  .lb.warn.imp { animation:bob 1s ease-in-out infinite; font-size:13px; } /* les bulles des imprévus */
+  .unl .unl-now { font-weight:900; margin:0 2px 10px; } .unl .unl-l { background:var(--white); border:2px solid var(--ink); border-radius:14px; padding:10px 12px; margin-bottom:8px; } .unl .unl-l b { display:block; font-size:14px; margin-bottom:4px; color:var(--blue); } .unl .unl-l span { display:block; font-size:12.5px; font-weight:800; line-height:1.45; } .unl p { font-weight:800; }
   .lb.zone { background:rgba(47,75,124,.88); color:#fff; font-family:Fraunces, Georgia, serif; font-size:15px; padding:6px 12px; border-color:var(--white); box-shadow:none; }
   @keyframes bob { 0%,100% { margin-top:0; } 50% { margin-top:-5px; } }
   .float { position:fixed; transform:translate(-50%,-50%); font-weight:900; font-size:16px; color:var(--ink); text-shadow:0 0 4px #fff,0 0 4px #fff; pointer-events:none; transition:transform 1s ease-out, opacity 1s ease-out; z-index:5; }
@@ -431,7 +433,7 @@ function rich(el, txt) { if (txt.indexOf(C) < 0) { el.textContent = txt; return;
 
 /* ---------------- state ---------------- */
 const PLOTS = 24;
-const LEVELS = [0,25,55,91,134,186,248,323,413,520,649,804,990,1213,1480,1801,2186,2648,3203,3869,4668,5626,6776,8156,9812,11799,14184,17046,20480,24601,29546,35480,42601,51147,61402,73708,88475,106195,127459,152976]; // 40 niveaux, chacun 20 % plus long que le précédent
+const LEVELS = [0,25,55,91,134,186,248,323,413,520,649,804,990,1213,1480,1801,2186,2648,3203,3869,4668,5626,6776,8156,9812,11799,14184,17046,20480,24601,29546,35480,42601,51147,61402,73708,88475,106195,127459,152976,181045,211920,245883,283243,324338,369543,419269,473967,534134,600319]; // 50 niveaux : jusqu'au 40e, chacun 20 % plus long que le précédent ; du 41e au 50e (25/11/2026), 10 % de plus à chaque fois
 const XPK = 0.35; // l'expérience vient moins vite : un niveau doit rester un événement
 const MILLCAP = [3, 4, 5, 6, 8, 10, 12, 16], OVENCAP = [2, 3, 4, 5, 6, 8, 10, 12], PRICES = [3, 4, 5, 6, 8], PLOTCOST = [8, 10, 15, 20, 28, 35, 45, 55, 68, 80, 95, 110, 130, 150, 175, 200, 230, 260, 300, 350], GROW = 20000;
 const GOAL = 25;
@@ -457,7 +459,7 @@ function gain(xp, coins) {
   S.xp += xp * XPK * (fast ? 3 : 1); if (coins) { led('🎁 Récompenses', coins); S.coins += coins; } dirty = true;
   const after = level();
   if (after > before) { SFX.level(); burst(player.position.x, player.position.y + 1.6, player.position.z, ['#E3A73C', '#2F4B7C', '#C9573F', '#FFFDF8'], 26, 6); buzz(40);
-    toast('Niveau ' + after + ' !', after === 2 ? 'Regarde « Améliorer » : il y a du nouveau.' : after === 3 ? 'Le chemin du château s\'ouvre, sur la colline.' : after === 4 ? 'Les clients viennent plus nombreux.' : 'Continue comme ça.'); }
+    toast('Niveau ' + after + ' !', after === 2 ? 'Regarde « Améliorer » : il y a du nouveau.' : after === 3 ? 'Le chemin du château s\'ouvre, sur la colline.' : after === 4 ? 'Les clients viennent plus nombreux.' : (lvNews(after) || 'Continue comme ça.')); }
 }
 
 /* ---------------- renderer, camera, light ---------------- */
@@ -1526,12 +1528,21 @@ function ups() {
   if (MOV.ecole && MOV.ecole.placed && !S.hired.rose) a.push({ ic: '👩‍🏫', t: 'Embaucher Mlle Rose, l’institutrice', s: 'L’école ouvre : la cantine rapporte, et les familles s’installent (+8 % d’habitants dans les maisons).', cost: 1200, buy: () => { S.hired.rose = true; } });
   if (MOV.garage && MOV.garage.placed && !S.hired.lucien) a.push({ ic: '🧑‍🔧', t: 'Embaucher Lucien, le mécano', s: 'Le garage ouvre : réparations et pleins rapportent, plus de voitures viennent, et 40 habitants s’installent.', cost: 900, buy: () => { S.hired.lucien = true; } });
   if (MOV.superette && MOV.superette.placed && !S.hired.huguette) a.push({ ic: '👩‍🦳', t: 'Embaucher Huguette, l’épicière', s: 'La supérette ouvre : elle vend ton pain et les produits du village, et 30 habitants s’installent.', cost: 1000, buy: () => { S.hired.huguette = true; } });
+  if (MOV.poste && MOV.poste.placed && !S.hired.josette) a.push({ ic: '👩‍🦰', t: 'Embaucher Josette, la factrice', s: 'La Poste ouvre : le guichet rapporte, Josette livre à vélo les colis et les cartes postales, et 20 habitants s’installent.', cost: 700, buy: () => { S.hired.josette = true; toast('📮 La Poste est ouverte', 'Josette enfourche son vélo jaune. Les colis du village arriveront à bon port.'); } });
+  if (MOV.caserne && MOV.caserne.placed && !S.hired.fernand) a.push({ ic: '🧑‍🚒', t: 'Embaucher le capitaine Fernand', s: 'La caserne ouvre : le camion rouge intervient sur les feux, les chats perchés et les nids de guêpes, et 30 habitants s’installent.', cost: 1500, buy: () => { S.hired.fernand = true; toast('🚒 La caserne est ouverte', 'Le capitaine Fernand astique le camion. Au moindre souci, il est là.'); } });
   if (reserveOn() && !S.garde) a.push({ ic: '🧑‍🌾', t: 'Gaspard, le garde forestier', s: 'Il veille sur la réserve naturelle : plus aucun animal ne s\'en échappe.', cost: 1500, buy: () => { S.garde = true; } });
   if ((S.popMax || S.pop || 0) >= 60) { const nf = S.fetes || 0, fc = feteCost(nf); a.push({ ic: '🎉', t: 'Fête du village' + (nf ? ' · ' + nf + ' donnée' + (nf > 1 ? 's' : '') : ''), s: 'Bal, lampions et grande tablée sur la place. +' + feteRenom(fc) + ' de renommée, et +5 % de beauté pendant une heure. Une fête toutes les 20 minutes au plus.', cost: fc, wait: (S.feteNext || 0) > now() ? 'Dans ' + Math.ceil((S.feteNext - now()) / 60000) + ' min' : '', buy: () => { S.feteNext = now() + 1200000; S.feteB = now() + 3600000; S.fetes = nf + 1; S.renom = (S.renom || 0) + feteRenom(fc); S.feteUntil = now() + 240000; toast('🎉 Fête du village', 'Renommée : ' + fmt(S.renom) + ' ⭐'); }, noXp: true }); }
   { const o = nextHouseUp(), nf = S.city ? S.city.items.filter((it) => it.t === 'h' && it.l >= 1 && it.l < 3 && !(it.end > 0)).length : 0; if (o) a.push({ ic: '🌷', t: 'Embellir les maisons · ' + nf + ' à embellir', s: (o.it.l === 1 ? 'Fleurir' : 'Faire une maison de maître de') + ' « ' + HOUSE_T[o.it.m].n + ' » : +' + Math.round(HOUSE_T[o.it.m].cap * 0.3) + ' habitants et de la beauté.' + (busyMasons() >= S.masons ? ' Maçons occupés.' : ''), cost: o.c, wait: busyMasons() >= S.masons ? 'Maçons occupés' : '', buy: () => upHouse(o), noXp: true }); }
   if (!S.dog) a.push({ ic: '🐕', t: 'Médor, le chien du village', s: 'Il fait la tournée des maisons et te rapporte les loyers toutes les 3 minutes.', cost: 150, buy: () => { S.dog = true; dog.position.copy(DOGHOME); } });
+  a.forEach((u) => { const req = upLv(u); if (req && u.cost !== null && !u.wait && level() < req) { u.wait = '🔒 Niveau ' + req; u.s += ' · Se débloque au niveau ' + req + '.'; } }); /* les étapes se débloquent au fil des niveaux (Romain, 25/11/2026) */
   return a.filter(upVisible);
 }
+/* le niveau demandé par l'étape suivante d'une amélioration : les deux premières étapes restent libres (le tutoriel s'en sert) */
+function upLv(u) { const L2 = S.lv, st = (n, k) => (n >= 3 ? k * (n - 2) : 0);
+  switch (u.ic) { case '⚙️': return st(L2.mill + 1, 4); case '🔥': return st(L2.oven + 1, 4); case '🥖': return st(L2.shop + 1, 5); case '🌱': return st(L2.seed + 1, 6); case '👟': return st(L2.team + 1, 6);
+    case '🧱': return [0, 0, 0, 10, 18, 26][(S.masons || 1) + 1] || 0; case '🏚️': return [0, 0, 0, 8, 14, 20, 26][(S.lv.stock || 0) + 2] || 0;
+    case '🧁': return L2.cake > 0 ? ([0, 0, 20, 26, 32][L2.cake + 1] || 0) : 0; case '👕': return L2.bq > 0 ? ([0, 0, 26, 34][L2.bq + 1] || 0) : 0; }
+  return 0; }
 /* La fête du village : une dépense toujours disponible, qui transforme les écus d’or en renommée (la note du village dans le futur classement). */
 const feteCost = (n) => Math.round(300 * Math.pow(1.12, n) / 10) * 10, feteRenom = (c) => Math.max(1, Math.round(c / 50));
 let feteT = 0;
@@ -1748,7 +1759,7 @@ function placeLabels() {
     const vis = show ? '' : 'hidden'; if (l.vis !== vis) { l.vis = vis; l.el.style.visibility = vis; } if (!show) continue;
     // far from where you look, a label shrinks to its icon: the village stays visible
     if (/\bcoin\b/.test(k)) coinShow(l, near); else if (l.el.dataset.cm) { delete l.el.dataset.cm; l.disp = null; rich(l.el, l.txt); }
-    if (!/\bcoin\b/.test(k)) { const far = near > 13 && !/name|qn|land/.test(k) && !BUILD; if (far !== !!l.far) { l.far = far; const w = l.txt.split(' '), sh = w[0] + (w[1] && /^[+×x\d]/.test(w[1]) ? ' ' + w[1] : ''); rich(l.el, far && /[^\w\sÀ-ÿ]/.test(w[0]) ? sh : l.txt); } }
+    if (!/\bcoin\b/.test(k)) { const far = near > 13 && !/name|qn|land|imp/.test(k) && !BUILD; if (far !== !!l.far) { l.far = far; const w = l.txt.split(' '), sh = w[0] + (w[1] && /^[+×x\d]/.test(w[1]) ? ' ' + w[1] : ''); rich(l.el, far && /[^\w\sÀ-ÿ]/.test(w[0]) ? sh : l.txt); } }
     l.sx = (vtmp.x * 0.5 + 0.5) * w; l.sy = (-vtmp.y * 0.5 + 0.5) * h;
     l.el.style.transform = 'translate(' + l.sx.toFixed(1) + 'px,' + l.sy.toFixed(1) + 'px) translate(-50%,-100%)';
   }
@@ -1807,8 +1818,9 @@ function tapMill() {
   if (S.mill) return openSkip('Le moulin', 'Le moulin moud ton blé.', () => S.mill.end, () => { S.mill.end = now(); });
   if (!millStart()) { SFX.no(); if (QUIET) return; if (S.farine >= stockCap() / 3) toast('La réserve de farine est pleine', 'Cuis du pain au four, ou agrandis les réserves dans « Améliorer ».'); else toast('Pas assez de blé', 'Il faut 2 bottes de blé pour un sac de farine.'); }
 }
-function ovenStart() { if (S.pain >= stockCap()) return false; const n = Math.min(OVENCAP[S.lv.oven - 1], S.farine); if (!n) return false; S.farine -= n; S.oven = { end: now() + dur(9000 * Math.pow(0.8, S.lv.oven - 1) * n), out: 4 * n }; dirty = true; SFX.start(); pop(oven); burst(OVENP[0], 1.6, OVENP[1] + 1.6, '#F6A04A', 6); return true; }
+function ovenStart() { if (impOvenFire()) return false; if (S.pain >= stockCap()) return false; const n = Math.min(OVENCAP[S.lv.oven - 1], S.farine); if (!n) return false; S.farine -= n; S.oven = { end: now() + dur(9000 * Math.pow(0.8, S.lv.oven - 1) * n), out: 4 * n }; dirty = true; SFX.start(); pop(oven); burst(OVENP[0], 1.6, OVENP[1] + 1.6, '#F6A04A', 6); return true; }
 function tapOven() {
+  if (impOvenFire()) { const I = IMP.list.find((q) => q.k === 'four' && q.st !== 'done'); if (I) impOpen(I); return; } /* le four fume : on s'en occupe d'abord */
   if (S.oven && now() >= S.oven.end) { if (WORKER) WORKER.bag = (WORKER.bag || 0) + S.oven.out; else if (S.hired.ines && !S.tasks.ines) crew.ines.userData.bag = (crew.ines.userData.bag || 0) + S.oven.out; /* once Inès is hired, every batch is hers to shelve, even one you take out yourself */ else S.carry += S.oven.out; S.fournees++; floatAt(oven, '+' + S.oven.out + ' 🥖'); gain(5 * S.oven.out / 4); S.oven = null; SFX.done(); pop(oven); burst(OVENP[0], 1.8, OVENP[1] + 1.6, ['#E3A73C', '#F3CF7A'], 12); buzz(15); return; }
   if (S.oven) return openSkip('Le four', 'La fournée cuit.', () => S.oven.end, () => { S.oven.end = now(); });
   if (!ovenStart()) { SFX.no(); if (QUIET) return; if (S.pain >= stockCap()) toast('La vitrine est pleine', 'Attends les clients, ou agrandis les réserves dans « Améliorer ».'); else toast('Pas de farine', 'Passe d\'abord par le moulin, dans la campagne.'); }
@@ -3896,6 +3908,7 @@ function movable(key, o) {
   o.pts.forEach((p) => { const [x, z] = p.get(); M.pts.push({ set: p.set, lx: x - M.x, lz: z - M.z }); });
   (o.dirs || []).forEach((D) => M.dirs.push({ D, lx: D[0], lz: D[1] }));
   o.cols.filter(Boolean).forEach((c) => M.cols.push({ c, lx: c[0] - M.x, lz: c[1] - M.z, a: c[2], b: c.length > 3 ? c[3] : null }));
+  if (o.lvl) { const pn = M.need; M.lvl = o.lvl; M.need = () => (level() < o.lvl ? 'le niveau ' + o.lvl : pn()); } /* niveau et habitants : c'est le plus exigeant des deux qui compte (Romain, 25/11/2026) */
   MOV[key] = M; return M;
 }
 function moveTo(M, x, z, r) { grassChanged();
@@ -3937,8 +3950,8 @@ movable('parking', { n: 'Parking', ic: '🅿️', pivot: [-13, 6.4], objs: [park
   pts: [{ get: () => [(PARK.x0 + PARK.x1) / 2, PARK.z], set: (x, z) => { PARK.x0 = x - 6; PARK.x1 = x + 6; PARK.z = z; const r = MOV.parking ? MOV.parking.r || 0 : 0; PARK.r = r; SLOTS.forEach((s, k) => { const q = rotP(-6 + 1.45 + k * 2.3, 0, r); s.x = x + q[0]; s.z = z + q[1]; }); } }],
   desc: 'À poser le long de la grand-rue. Les gens des villages voisins viennent en voiture : +15 % de clients.' });
 movable('fontaine', { n: 'Grande fontaine', ic: '⛲', pivot: [PLACE[0], PLACE[1]], objs: [fountain], fp: [4, 4], pts: [ptA(PLACE)], cols: [findSolid(PLACE[0], PLACE[1])], c: 1500, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'Une grande fontaine de pierre à vasques, au milieu de la place du village. Les habitants la réclament au-delà de 400 habitants. +30 beauté.' });
-movable('church', { n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
-movable('bistrot', { n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 15000, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Le café de Gégé : il rapporte des écus d’or toute la journée et achète son pain à ta boulangerie. Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
+movable('church', { lvl: 20, n: 'Église', ic: '⛪', pivot: [CHURCHP[0], CHURCHP[1]], objs: [church], fp: [7, 12], pts: [ptA(CHURCHP), ptA(STN.church)], cols: [findRect(CHURCHP[0], CHURCHP[1])], c: 6000, need: () => ((S.pop || 0) < 300 ? '300 habitants' : ''), desc: 'Nécessaire au-delà de 600 habitants. +40 beauté.' });
+movable('bistrot', { lvl: 24, n: 'Bistrot', ic: '☕', pivot: [BISTROTP[0], BISTROTP[1]], objs: [bistrot, cat], fp: [8, 8], pts: [ptA(BISTROTP), ptA(STN.bistrot)], cols: [findRect(BISTROTP[0], BISTROTP[1])], c: 15000, need: () => ((S.pop || 0) < 500 ? '500 habitants' : ''), desc: 'Le café de Gégé : il rapporte des écus d’or toute la journée et achète son pain à ta boulangerie. Nécessaire au-delà de 1 000 habitants. +25 beauté.' });
 movable('reserve', { n: 'Réserve naturelle', ic: '🦌', pivot: [RESERVE_P[0], RESERVE_P[1]], objs: [reserveG], fp: [24, 18], pts: [], cols: RESERVE_COLS, c: 3000, need: () => ((S.pop || 0) < 40 ? '40 habitants' : ''), on: () => { WILD.forEach((a) => { a.rs = null; }); }, desc: 'Un grand domaine de nature clos : cerfs, sangliers, renards, hérissons, lapins et aigles y vivent en paix et laissent tes récoltes tranquilles. Les visiteurs paient la visite guidée : la caisse se remplit toute seule. Avec Gaspard, le garde forestier, plus aucun animal ne s\'échappe et les visites rapportent 40 % de plus. +35 beauté.' });
 /* la chapelle, l'église, la cathédrale (Eugénie, 22/11/2026) : une chapelle romane dès 10 habitants, l'église gothique à 300, une cathédrale à 2 000 */
 const CHAPELP = [24, -12], CATHP = [52, -36];
@@ -3965,7 +3978,7 @@ const cathG = group(CATHP[0], CATHP[1], 0, 'cathedrale', 'cathedrale');
   box(13, 0.15, 5, '#DCCFB2', 0, 0, 14.2, g); }
 const cathRect = [CATHP[0], CATHP[1] + 2, 7, 13.5]; rects.push(cathRect);
 movable('chapelle', { n: 'Chapelle romane', ic: '⛪', pivot: [CHAPELP[0], CHAPELP[1]], objs: [chapelG], fp: [6, 10], pts: [ptA(CHAPELP)], cols: [chapelRect], c: 400, need: () => ((S.pop || 0) < 10 ? '10 habitants' : ''), desc: 'Une petite chapelle romane en pierre blonde, son clocher-mur et sa cloche. Le premier lieu de prière du village. +12 beauté.' });
-movable('cathedrale', { n: 'Cathédrale', ic: '🏰', pivot: [CATHP[0], CATHP[1]], objs: [cathG], fp: [14, 30], pts: [ptA(CATHP)], cols: [cathRect], c: 60000, need: () => ((S.pop || 0) < 2000 ? '2 000 habitants' : ''), desc: 'Deux tours de façade, une grande rosace, trois portails sculptés et la nef gothique de l’église en plus grand : le joyau du village, que l’on vient voir de loin. +120 beauté.' });
+movable('cathedrale', { lvl: 33, n: 'Cathédrale', ic: '🏰', pivot: [CATHP[0], CATHP[1]], objs: [cathG], fp: [14, 30], pts: [ptA(CATHP)], cols: [cathRect], c: 60000, need: () => ((S.pop || 0) < 2000 ? '2 000 habitants' : ''), desc: 'Deux tours de façade, une grande rosace, trois portails sculptés et la nef gothique de l’église en plus grand : le joyau du village, que l’on vient voir de loin. +120 beauté.' });
 /* ma maison (Eugénie, 22/11/2026) : la maison du boulanger à vélo, la seule à soi. Les décors posés tout autour (8 m) comptent double en beauté : on la soigne. */
 const MAISONP = [-20, 9];
 const maisonG = group(MAISONP[0], MAISONP[1], 0, 'chezmoi', 'chezmoi');
@@ -3986,8 +3999,8 @@ const ecoleG = group(ECOLEP[0], ECOLEP[1], 0, 'ecole', 'ecole'), garageG = group
 { const fb = slot('garage', garageG, 2); box(6.6, 3.6, 4.6, '#EADBC0', 0, 0, -1.5, fb); box(3.3, 2.75, 0.1, '#5E6E7E', -0.9, 0, 0.85, fb); const s = sign('GARAGE', 2.6, 0.5, '#C9573F', '#FFFDF8', 60); s.position.set(0, 3.2, 0.85); fb.add(s); }
 const ecoleRect = [ECOLEP[0] - 0.9, ECOLEP[1] - 1.7, 3.9, 2.2], garageRect = [GARAGEP[0], GARAGEP[1] - 1.5, 3.4, 2.4]; rects.push(ecoleRect, garageRect);
 STN.ecole = [ECOLEP[0] - 0.9, ECOLEP[1] + 1.6, 1.6]; STN.garage = [GARAGEP[0] - 0.9, GARAGEP[1] + 2.0, 1.6];
-movable('ecole', { n: 'L’école communale', ic: '🏫', pivot: [ECOLEP[0], ECOLEP[1]], objs: [ecoleG], fp: [10, 8], pts: [ptA(ECOLEP), ptA(STN.ecole)], cols: [ecoleRect], c: 6000, need: () => ((S.pop || 0) < 400 ? '400 habitants' : ''), desc: 'La classe unique, la cour et le préau. Embauche Mlle Rose, l’institutrice (Améliorer) : la cantine rapporte, et les familles s’installent (+8 % d’habitants). +20 beauté.' });
-movable('garage', { n: 'Le garage du village', ic: '🔧', pivot: [GARAGEP[0], GARAGEP[1]], objs: [garageG], fp: [8, 8], pts: [ptA(GARAGEP), ptA(STN.garage)], cols: [garageRect], c: 4500, need: () => ((S.pop || 0) < 250 ? '250 habitants' : ''), desc: 'L’atelier et sa pompe à essence. Embauche Lucien, le mécano (Améliorer) : réparations et pleins rapportent, plus de voitures viennent au village, et 40 habitants s’installent.' });
+movable('ecole', { lvl: 22, n: 'L’école communale', ic: '🏫', pivot: [ECOLEP[0], ECOLEP[1]], objs: [ecoleG], fp: [10, 8], pts: [ptA(ECOLEP), ptA(STN.ecole)], cols: [ecoleRect], c: 6000, need: () => ((S.pop || 0) < 400 ? '400 habitants' : ''), desc: 'La classe unique, la cour et le préau. Embauche Mlle Rose, l’institutrice (Améliorer) : la cantine rapporte, et les familles s’installent (+8 % d’habitants). +20 beauté.' });
+movable('garage', { lvl: 18, n: 'Le garage du village', ic: '🔧', pivot: [GARAGEP[0], GARAGEP[1]], objs: [garageG], fp: [8, 8], pts: [ptA(GARAGEP), ptA(STN.garage)], cols: [garageRect], c: 4500, need: () => ((S.pop || 0) < 250 ? '250 habitants' : ''), desc: 'L’atelier et sa pompe à essence. Embauche Lucien, le mécano (Améliorer) : réparations et pleins rapportent, plus de voitures viennent au village, et 40 habitants s’installent.' });
 const ecoleLab = label(ecoleG, 6.2), garageLab = label(garageG, 5.6);
 /* la supérette (Romain, 24/11/2026) : l'épicerie du village. Même mécanique que le garage (Huguette, l'épicière, à embaucher ; une caisse ; des habitants en plus),
    et elle relie la chaîne : elle achète une baguette toutes les 3 minutes à la boulangerie, et vend mieux les œufs, le lait et les légumes du village s'ils existent. */
@@ -3995,8 +4008,20 @@ const SUPERP = [4, 34];
 const superG = group(SUPERP[0], SUPERP[1], 0, 'superette', 'superette');
 { const fb = slot('superette', superG, 2); box(7, 3.4, 4.6, '#F1E6D0', 0, 0, -1.5, fb); const s = sign('ÉPICERIE', 2.6, 0.5, '#3E6B45', '#FFFDF8', 60); s.position.set(0, 3.0, 0.85); fb.add(s); }
 const superRect = [SUPERP[0], SUPERP[1] - 1.5, 3.6, 2.4]; rects.push(superRect); STN.superette = [SUPERP[0], SUPERP[1] + 2.2, 1.6];
-movable('superette', { n: 'La supérette', ic: '🧺', pivot: [SUPERP[0], SUPERP[1]], objs: [superG], fp: [8, 8], pts: [ptA(SUPERP), ptA(STN.superette)], cols: [superRect], c: 3000, need: () => ((S.pop || 0) < 150 ? '150 habitants' : ''), desc: 'L’épicerie du village, ses cagettes et son store vert. Embauche Huguette, l’épicière (Améliorer) : elle vend le pain de ta boulangerie, les œufs, le lait et les légumes du village, et 30 habitants s’installent.' });
+movable('superette', { lvl: 14, n: 'La supérette', ic: '🧺', pivot: [SUPERP[0], SUPERP[1]], objs: [superG], fp: [8, 8], pts: [ptA(SUPERP), ptA(STN.superette)], cols: [superRect], c: 3000, need: () => ((S.pop || 0) < 150 ? '150 habitants' : ''), desc: 'L’épicerie du village, ses cagettes et son store vert. Embauche Huguette, l’épicière (Améliorer) : elle vend le pain de ta boulangerie, les œufs, le lait et les légumes du village, et 30 habitants s’installent.' });
 const superLab = label(superG, 5.6);
+/* la Poste et la caserne des sapeurs-pompiers (Manon et Romain, 25/11/2026) : deux services du village, débloqués au niveau 10 et au niveau 17.
+   La Poste : Josette, la factrice, livre les colis et les cartes postales, et le guichet a sa caisse. La caserne : le capitaine Fernand et son camion rouge
+   interviennent sur les imprévus (voir 3f-imprevus.js). Les deux ajoutent des habitants, jamais de plafond : les parties en cours ne perdent rien. */
+const POSTEP = [-40, 34], CASERNEP = [52, 34];
+const posteG = group(POSTEP[0], POSTEP[1], 0, 'poste', 'poste'), caserneG = group(CASERNEP[0], CASERNEP[1], 0, 'caserne', 'caserne');
+{ const fb = slot('poste', posteG, 2); box(6.8, 5.4, 4.6, '#F1E6D0', 0, 0, -1.5, fb); roof(7.2, 5.0, 1.7, '#B5543C', 0, 5.4, -1.5, fb); const s = sign('LA POSTE', 2.6, 0.5, '#1F3C88', '#F7C600', 60); s.position.set(0, 2.9, 0.85); fb.add(s); }
+{ const fb = slot('caserne', caserneG, 2); box(7.4, 4.2, 4.8, '#F1E6D0', -0.9, 0, -1.4, fb); box(1.6, 8, 1.6, '#B9634A', 3.9, 0, -1.6, fb); [-1.75, 1.75].forEach((x) => box(2.7, 2.9, 0.1, '#B3122A', x - 0.9, 0, 1.05, fb)); const s = sign('POMPIERS', 2.6, 0.5, '#B3122A', '#FFFDF8', 60); s.position.set(-0.9, 3.6, 1.05); fb.add(s); }
+const posteRect = [POSTEP[0], POSTEP[1] - 1.5, 3.5, 2.4], caserneRect = [CASERNEP[0] - 0.9, CASERNEP[1] - 1.4, 3.8, 2.5], tourRect = [CASERNEP[0] + 3.9, CASERNEP[1] - 1.6, 0.85, 0.85];
+rects.push(posteRect, caserneRect, tourRect); STN.poste = [POSTEP[0], POSTEP[1] + 2.2, 1.6]; STN.caserne = [CASERNEP[0] - 0.9, CASERNEP[1] + 2.6, 1.6];
+movable('poste', { lvl: 10, n: 'La Poste', ic: '📮', pivot: [POSTEP[0], POSTEP[1]], objs: [posteG], fp: [8, 8], pts: [ptA(POSTEP), ptA(STN.poste)], cols: [posteRect], c: 2000, need: () => ((S.pop || 0) < 100 ? '100 habitants' : ''), desc: 'Le bureau de poste, son bandeau bleu et sa boîte aux lettres jaune. Embauche Josette, la factrice (Améliorer) : le guichet rapporte, elle livre à vélo les colis et les cartes postales du village, et 20 habitants s’installent.' });
+movable('caserne', { lvl: 17, n: 'La caserne des pompiers', ic: '🚒', pivot: [CASERNEP[0], CASERNEP[1]], objs: [caserneG], fp: [10, 8], pts: [ptA(CASERNEP), ptA(STN.caserne)], cols: [caserneRect, tourRect], c: 5000, need: () => ((S.pop || 0) < 220 ? '220 habitants' : ''), desc: 'Deux grandes portes rouges et la tour de séchage des tuyaux. Embauche le capitaine Fernand (Améliorer) : le camion rouge file sur les feux, les chats perchés et les nids de guêpes, et 30 habitants s’installent.' });
+const posteLab = label(posteG, 6.4), caserneLab = label(caserneG, 5.2);
 /* la ferme et le hangar du tracteur se déplacent eux aussi (Eugénie, 22/11/2026) ; ils restent gratuits et toujours posés */
 movable('ferme', { n: 'Corps de ferme', ic: '🏡', pivot: [FERMEP[0], FERMEP[1]], objs: [FERME_G], fp: [14, 8], pts: [ptA(FERMEP)], cols: [findRect(FERMEP[0], FERMEP[1])], desc: 'La ferme de Léo.' }).free = true;
 movable('hangar', { n: 'Hangar du tracteur', ic: '🚜', pivot: [HANGAR[0], HANGAR[1]], objs: [HANGAR_G], fp: [10, 8], pts: [ptA(HANGAR)], cols: [findRect(HANGAR[0], HANGAR[1]), ...[0, 1, 2, 3].map((k) => findSolid(HANGAR[0] + 3.6, HANGAR[1] - 2 + k * 1.3))], desc: 'Le hangar de Marcel et de son tracteur.' }).free = true;
@@ -4004,7 +4029,7 @@ const PROD_KEYS = Object.keys(MOV);
 // l'ordre du menu Bâtiments : ma maison d'abord, la chapelle juste avant l'église, la cathédrale juste après
 function batOrder() { const L = PROD_KEYS.filter((k) => k !== 'chezmoi' && k !== 'chapelle' && k !== 'cathedrale'), i = L.indexOf('church'); L.splice(i, 0, 'chapelle'); L.splice(i + 2, 0, 'cathedrale'); return ['chezmoi'].concat(L); }
 const START_LAYOUT = { shop: [3, -10.2, 0], oven: [10, -9.5, 0], mill: [-12, -10, 0], champ: [6, 12.3, 0] }; // tout le départ tient dans quatre terrains du Bourg
-const SERV_BEAUTY = { ecole: 20, garage: 5, superette: 10, chezmoi: 10, fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve: 35, chapelle: 12, cathedrale: 120 };
+const SERV_BEAUTY = { ecole: 20, garage: 5, superette: 10, poste: 8, caserne: 8, chezmoi: 10, fontaine: 30, church: 40, bistrot: 25, mairie: 10, reserve: 35, chapelle: 12, cathedrale: 120 };
 // population ceilings: without this service, the village cannot grow past n
 const SERV = [[60, 'market', 'un marché'], [150, 'mairie', 'une mairie'], [400, 'fontaine', 'la grande fontaine'], [600, 'church', 'une église'], [1000, 'bistrot', 'un bistrot'], [1600, 'cake', 'une pâtisserie'], [2200, 'bq', 'une boutique de vêtements'], [2800, 'chateau', 'le château (étape 3)']];
 
@@ -4176,7 +4201,7 @@ const rentMult = () => 1 + Math.min(1.5, beauty() / 150);
 function capOf(it) { if (it.t !== 'h') return 0; const l = it.end > 0 ? (it.l || 1) - 1 : it.l || 1; return HOUSE_T[it.m].cap * [0, 1, 1.3, 1.6][l]; } // pendant qu'on l'embellit, elle garde les habitants de son niveau précédent
 function capTotal() { if (!links) computeLinks(); return S.city.items.reduce((a, it, i) => a + (links[i] ? capOf(it) : 0), 0); }
 function servCap() { for (const [n, k, lb] of SERV) { const ok = k === 'chateau' ? S.cst >= 3 : MOV[k].placed; if (!ok) return [n, k, lb]; } return [Infinity, null, '']; }
-function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.4 + 0.6 * Math.min(1, b / (cap + 1)); return Math.min(Math.max(10, 10 + cap * fill), servCap()[0]) + (S.hired && S.hired.marcel ? 80 : 0) + (ecoleOpen() ? Math.round(0.08 * cap * fill) : 0) + (garageOpen() ? 40 : 0) + (superOpen() ? 30 : 0); } /* + les familles de l'école, + le garage */ /* + les familles de la ferme de Marcel, l'agriculteur */ /* les dix anciens du village n'ont pas besoin de maison */
+function popTarget() { const cap = capTotal(), b = beauty(), fill = 0.4 + 0.6 * Math.min(1, b / (cap + 1)); return Math.min(Math.max(10, 10 + cap * fill), servCap()[0]) + (S.hired && S.hired.marcel ? 80 : 0) + (ecoleOpen() ? Math.round(0.08 * cap * fill) : 0) + (garageOpen() ? 40 : 0) + (superOpen() ? 30 : 0) + (posteOpen() ? 20 : 0) + (caserneOpen() ? 30 : 0); } /* + les familles de l'école, + le garage */ /* + les familles de la ferme de Marcel, l'agriculteur */ /* les dix anciens du village n'ont pas besoin de maison */
 function cityBoost() { return 0.7 + Math.min(3, (S.pop || 0) / 150); }
 const busyMasons = () => S.city.items.filter((it) => it.end > 0).length;
 // équilibrage 16/11 (beta14/equilibrage/simu.py) : le prix suit la taille du village, la durée grandit doucement et plafonne
@@ -4187,10 +4212,11 @@ function tickCity(n, dt) {
   if (!cityReady) return; const rm = rentMult();
   S.city.items.forEach((it, i) => { if (it.t !== 'h') return; const g = cityObjs[i]; if (!g) return; const v = g.userData.v;
     if (it.end > 0 && n >= it.end) { it.end = 0; it.l = Math.max(1, it.l || 0); it.tt = n; S.cbuilds = (S.cbuilds || 0) + 1; links = null; dirty = true; gain(10 + HOUSE_T[it.m].cap); burst(it.x, 3, it.z, ['#E3A73C', '#2F4B7C', '#C9573F', '#FFFDF8'], 18, 6); toast('✅ ' + HOUSE_T[it.m].n + ' : chantier terminé', links && !links[i] ? 'Relie-la à une rue pour que des habitants s\'y installent.' : 'De nouveaux habitants arrivent.'); }
-    if (it.l > 0 && !(it.end > 0)) { const dtm = Math.max(0, (n - (it.tt || n)) / 60000); it.rent = Math.min(capOf(it) * RENT_K * rm * 120, (it.rent || 0) + capOf(it) * RENT_K * rm * dtm * (links && links[i] ? 1 : 0)); } it.tt = n;
-    const key = (it.l || 0) + '|' + (it.end > 0); if (v.look !== key) { v.look = key; v.sc.visible = it.end > 0; v.fl.visible = it.l >= 2; v.gd.visible = it.l >= 3; }
+    if (it.l > 0 && !(it.end > 0)) { const dtm = Math.max(0, (n - (it.tt || n)) / 60000); it.rent = Math.min(capOf(it) * RENT_K * rm * 120, (it.rent || 0) + capOf(it) * RENT_K * rm * dtm * (links && links[i] ? 1 : 0) * (it.rep > n ? 0 : impMul('h' + i))); } it.tt = n; /* une maison en feu ou en réparation ne paie pas de loyer */
+    const key = (it.l || 0) + '|' + (it.end > 0) + '|' + (it.rep > n); if (v.look !== key) { v.look = key; v.sc.visible = it.end > 0 || it.rep > n; v.fl.visible = it.l >= 2; v.gd.visible = it.l >= 3; }
     const lb = g.userData.lb;
     if (it.end > 0) setLabel(lb, '🏗️ ' + clock(it.end - n), 'timer');
+    else if (it.rep > n) setLabel(lb, '🔧 ' + clock(it.rep - n), 'timer');
     else if ((it.rent || 0) >= 5 && zoom < 40) setLabel(lb, '🪙 +' + Math.floor(it.rent), 'coin'); /* de loin, un seul bouton « loyers » au lieu de cinquante pastilles */
     else setLabel(lb, '', ''); });
   { let tot = 0, full = false; S.city.items.forEach((it, i) => { if (it.t === 'h' && it.l > 0 && !(it.end > 0)) { tot += Math.floor(it.rent || 0); if ((it.rent || 0) >= capOf(it) * RENT_K * rm * 119) full = true; } });
@@ -4545,6 +4571,7 @@ $('v-quit').addEventListener('click', () => endVisit(false)); $('v-build').addEv
 const barOk = () => S.started && !VISIT.on;
 $('b-village').addEventListener('click', () => { if (!barOk()) return; openSheet('🏘️ ' + vil().n, 'Voir ton village, le visiter, s’y amuser.', [
   { t: '📊 Tableau de bord', s: 'Ce qui rentre, ce qui sort, ce qu’il reste à ramasser et qui s’occupe de quoi.', btn: 'Voir', ok: true, run: () => { closeSheet(); tableau(); } },
+  { t: '🔓 Prochains déblocages', s: 'Ce que chaque niveau va ouvrir, et le carnet des interventions.', btn: 'Voir', ok: true, run: () => { closeSheet(); unlockSheet(); } },
   { t: '🗺️ Carte des quartiers', s: 'Les quartiers ouverts, ceux à ouvrir, et leurs terrains.', btn: 'Ouvrir', ok: true, run: () => { closeSheet(); $('b-map').click(); } },
   { t: '🚶 Visiter le village', s: 'La caméra descend dans les rues et se promène de maison en maison, comme un habitant.', btn: 'Visiter', ok: true, run: () => { closeSheet(); startVisit(); } },
   { t: '🎲 Jeux du village', s: 'Pétanque, pêche, champignons, chamboule-tout : des écus et des cadeaux.', btn: 'Jouer', ok: true, run: () => { closeSheet(); jeuxSheet(); } },
@@ -4643,7 +4670,7 @@ const shareK = (n) => (n <= 1 ? 1 : (2 - Math.pow(0.5, n - 1)) / n); // la part 
 const FED_MS = 240000; // un restaurant est « approvisionné » s'il a eu son pain il y a moins de 4 minutes
 const fedOk = (t) => now() - (t || 0) < dur(FED_MS);
 function bizFed(it) { return !FOOD[it.k] || fedOk(it.fed); }
-function bizRate(it) { const B2 = BIZ[it.k]; if (!B2) return 0; return (B2.base + B2.perPop * (S.pop || 0)) * prixM(it.k) * (nearWater(it.x, it.z) ? 1.25 : 1) * shareK(bizCount(it.k)) * (bizFed(it) ? 1 : 0.3) * (1 - (UPKEEP[it.k] || 0)); } /* écus d'or par heure, frais déduits */
+function bizRate(it) { const B2 = BIZ[it.k]; if (!B2) return 0; return (B2.base + B2.perPop * (S.pop || 0)) * prixM(it.k) * (nearWater(it.x, it.z) ? 1.25 : 1) * shareK(bizCount(it.k)) * (bizFed(it) ? 1 : 0.3) * (1 - (UPKEEP[it.k] || 0)) * impMul('b' + S.city.items.indexOf(it)); } /* écus d'or par heure, frais déduits */
 // les restaurants viennent chercher leur pain à la boulangerie (le plus affamé d'abord) ; le boulanger encaisse la baguette au prix du comptoir
 let feedT = 0;
 function tickFeed(dt) { if ((feedT += dt) < 2) return; feedT = 0; const n = now(), need = [];
@@ -4654,7 +4681,7 @@ function tickFeed(dt) { if ((feedT += dt) < 2) return; feedT = 0; const n = now(
 /* le bistrot de Gégé (Romain, 22/11/2026) : café, pastis, jambon-beurre. Il a enfin une caisse : elle se remplit selon les habitants et le prix choisi,
    et s'il y a du pain en vitrine à la boulangerie, il en achète une baguette toutes les 3 minutes pour ses jambon-beurre (+30 % de ventes). */
 const BISTRO_CAP = 4; let bistroBread = 0;
-function bistroRate() { if (!MOV.bistrot || !MOV.bistrot.placed) return 0; return (600 + 1.6 * (S.pop || 0)) * prixM('bistrot') * (fedOk(S.bifed) ? 1.3 : 0.4); } /* écus d'or par heure */
+function bistroRate() { if (!MOV.bistrot || !MOV.bistrot.placed) return 0; return (600 + 1.6 * (S.pop || 0)) * prixM('bistrot') * (fedOk(S.bifed) ? 1.3 : 0.4) * impMul('bistrot'); } /* écus d'or par heure */
 function collectBistro() { const v = Math.floor(S.bitill || 0); if (v < 1) return 0; S.bitill -= v; led('☕ Bistrot', v); S.coins += v; dirty = true; SFX.coin(); floatAt(bistrot, '+' + v + ' ' + C); burst(BISTROTP[0], 3, BISTROTP[1] + 3, ['#E3A73C', '#F3CF7A'], 12, 4); return v; }
 /* la réserve naturelle et ses visites guidées (Romain, 22/11/2026) : une caisse qui se remplit selon les habitants, +40 % avec le garde forestier */
 const RES_CAP = 4;
@@ -4667,8 +4694,14 @@ const ECOLE_CAP = 4, GARAGE_CAP = 4, SUPER_CAP = 4;
 const superOpen = () => !!(MOV.superette && MOV.superette.placed && S.hired && S.hired.huguette);
 // ce que le village produit et qu'elle met en rayon : chaque produit présent ajoute 10 %
 const superGoods = () => (S.lv.hen > 0 ? 1 : 0) + (S.lv.cow > 0 ? 1 : 0) + (S.lv.mk > 0 ? 1 : 0);
-function superRate() { return superOpen() ? (120 + 0.6 * (S.pop || 0)) * prixM('superette') * (fedOk(S.sufed) ? 1.25 : 0.5) * (1 + 0.1 * superGoods()) : 0; } /* écus d'or par heure */
+function superRate() { return superOpen() ? (120 + 0.6 * (S.pop || 0)) * prixM('superette') * (fedOk(S.sufed) ? 1.25 : 0.5) * (1 + 0.1 * superGoods()) * impMul('superette') : 0; } /* écus d'or par heure */
 function collectSuper() { const v = Math.floor(S.sutill || 0); if (v < 1) return 0; S.sutill -= v; led('🧺 Supérette', v); S.coins += v; dirty = true; SFX.coin(); floatAt(superG, '+' + v + ' ' + C); return v; }
+const posteOpen = () => !!(MOV.poste && MOV.poste.placed && S.hired && S.hired.josette), caserneOpen = () => !!(MOV.caserne && MOV.caserne.placed && S.hired && S.hired.fernand);
+const POSTE_CAP = 4;
+function posteRate() { return posteOpen() ? (60 + 0.25 * (S.pop || 0)) * prixM('poste') : 0; } /* timbres, colis et mandats au guichet, écus d'or par heure */
+function collectPoste() { const v = Math.floor(S.potill || 0); if (v < 1) return 0; S.potill -= v; led('📮 Poste', v); S.coins += v; dirty = true; SFX.coin(); floatAt(posteG, '+' + v + ' ' + C); return v; }
+posteLab.act = () => { if (!MOV.poste.placed) return openBuildAt('poste'); if ((S.potill || 0) >= 1) walkCollect(STN.poste[0], STN.poste[1], () => collectPoste(), 1.6); else gerer('poste'); };
+caserneLab.act = () => { if (!MOV.caserne.placed) return openBuildAt('caserne'); try { impCaserne(); } catch (e) {} };
 const ecoleOpen = () => !!(MOV.ecole && MOV.ecole.placed && S.hired && S.hired.rose), garageOpen = () => !!(MOV.garage && MOV.garage.placed && S.hired && S.hired.lucien);
 function ecoleRate() { return ecoleOpen() ? (80 + 0.25 * (S.pop || 0)) * prixM('ecole') : 0; } /* la cantine et la garderie, écus d'or par heure */
 function garageRate() { return garageOpen() ? (150 + 0.7 * (S.pop || 0)) * prixM('garage') : 0; } /* réparations et pleins d'essence */
@@ -4688,6 +4721,9 @@ function tickPrix(dt) { tickSpin(dt); if (!S.started || !S.city) return; tickFee
     setLabel(garageLab, !MOV.garage.placed ? '' : t >= 1 ? '🪙 +' + t + ' · garage' : garageOpen() ? '🔧 Le garage' : '🔧 Garage · embauche le mécano', t >= 1 ? 'coin' : ''); }
   { const r = superRate(); if (r > 0) { if (!S.sutt) S.sutt = n; S.sutill = Math.min(r * SUPER_CAP, (S.sutill || 0) + r * (n - S.sutt) / 3600000); } S.sutt = n; const t = Math.floor(S.sutill || 0);
     setLabel(superLab, !MOV.superette.placed ? '' : t >= 1 ? '🪙 +' + t + ' · supérette' : superOpen() ? '🧺 La supérette' : '🧺 Supérette · embauche l’épicière', t >= 1 ? 'coin' : ''); }
+  { const r = posteRate(); if (r > 0) { if (!S.pott) S.pott = n; S.potill = Math.min(r * POSTE_CAP, (S.potill || 0) + r * (n - S.pott) / 3600000); } S.pott = n; const t = Math.floor(S.potill || 0);
+    setLabel(posteLab, !MOV.poste.placed ? '' : t >= 1 ? '🪙 +' + t + ' · poste' : posteOpen() ? '📮 La Poste' : '📮 Poste · embauche la factrice', t >= 1 ? 'coin' : ''); }
+  setLabel(caserneLab, !MOV.caserne.placed ? '' : caserneOpen() ? '🚒 Les pompiers' : '🚒 Caserne · embauche le capitaine', 'name');
   if (MOV.reserve && MOV.reserve.placed) { const r = reserveRate(); if (!S.rtt) S.rtt = n; S.rtill = Math.min(r * RES_CAP, (S.rtill || 0) + r * (n - S.rtt) / 3600000); S.rtt = n; const t = Math.floor(S.rtill || 0); setLabel(reserveLab, t >= 1 ? '🪙 +' + t + ' · réserve' : '🦌 La réserve', t >= 1 ? 'coin' : ''); } else { S.rtt = n; setLabel(reserveLab, '', ''); }
   const bo = bizOpen(); bo.forEach((i) => { const it = S.city.items[i], r = bizRate(it); if (!it.tt) it.tt = n; it.till = Math.min(r * BIZ[it.k].cap, (it.till || 0) + r * (n - it.tt) / 3600000); it.tt = n; });
   /* la caisse de chaque commerce posé (guinguette, barques, guignol, café, grande roue) se voit sur la carte (22/11/2026) */
@@ -4705,6 +4741,7 @@ const GERE = {
   ecole: { n: '🏫 L’école communale', sells: 'La cantine et la garderie : un repas chaud à midi, le goûter après la classe.', unit: () => 'environ ' + fmt(Math.round(ecoleRate())) + ' ' + C + ' par heure', till: () => Math.floor(S.etill || 0), collect: () => (collectEcole() ? 1 : 0), cat: '🏫 École', who: 'rose', ok: () => !!S.hired.rose, whoY: 'Mlle Rose fait la classe ; les familles s’installent au village (+8 % d’habitants dans les maisons).', whoN: 'Pas d’institutrice : l’école reste fermée. Embauche Mlle Rose dans « Améliorer ».', on: () => MOV.ecole && MOV.ecole.placed },
   garage: { n: '🔧 Le garage du village', sells: 'Réparations, vidanges et pleins d’essence pour les voitures du village et des visiteurs.', unit: () => 'environ ' + fmt(Math.round(garageRate())) + ' ' + C + ' par heure', till: () => Math.floor(S.gtill || 0), collect: () => (collectGarage() ? 1 : 0), cat: '🔧 Garage', who: 'lucien', ok: () => !!S.hired.lucien, whoY: 'Lucien répare et fait le plein ; plus de voitures viennent au village (+40 habitants).', whoN: 'Pas de mécano : le garage reste fermé. Embauche Lucien dans « Améliorer ».', on: () => MOV.garage && MOV.garage.placed },
   superette: { n: '🧺 La supérette', sells: 'Le pain de ta boulangerie, les œufs, le lait et les légumes du village, l’épicerie de tous les jours.', unit: () => 'environ ' + fmt(Math.round(superRate())) + ' ' + C + ' par heure' + (fedOk(S.sufed) ? ' (pain frais livré)' : ' · sans pain frais, elle vend moitié moins') + (superGoods() ? ' · ' + superGoods() + ' produit' + (superGoods() > 1 ? 's' : '') + ' du village en rayon (+' + 10 * superGoods() + ' %)' : ' · œufs, lait, légumes : +10 % chacun'), till: () => Math.floor(S.sutill || 0), collect: () => (collectSuper() ? 1 : 0), cat: '🧺 Supérette', who: 'huguette', ok: () => !!S.hired.huguette, whoY: 'Huguette tient la caisse et garnit les rayons ; 30 habitants de plus s’installent au village.', whoN: 'Pas d’épicière : la supérette reste fermée. Embauche Huguette dans « Améliorer ».', on: () => MOV.superette && MOV.superette.placed },
+  poste: { n: '📮 La Poste', sells: 'Timbres, colis et mandats au guichet ; Josette fait la tournée à vélo.', unit: () => 'environ ' + fmt(Math.round(posteRate())) + ' ' + C + ' par heure', till: () => Math.floor(S.potill || 0), collect: () => (collectPoste() ? 1 : 0), cat: '📮 Poste', who: 'josette', ok: () => !!S.hired.josette, whoY: 'Josette tient le guichet et livre les colis et les cartes postales ; 20 habitants de plus s’installent au village.', whoN: 'Pas de factrice : la Poste reste fermée. Embauche Josette dans « Améliorer ».', on: () => MOV.poste && MOV.poste.placed },
   bistrot: { n: '☕ Le bistrot de Gégé', sells: 'Café, pastis et jambon-beurre au comptoir et en terrasse. Il achète son pain à ta boulangerie.', unit: () => 'environ ' + fmt(Math.round(bistroRate())) + ' ' + C + ' par heure' + (fedOk(S.bifed) ? ' (pain frais livré)' : ' · sans pain frais, il vend peu'), till: () => Math.floor(S.bitill || 0), collect: () => (collectBistro() ? 1 : 0), cat: '☕ Bistrot', who: 'gege', auto: true, whoY: 'Gégé tient le comptoir. Sa caisse se remplit sur ' + BISTRO_CAP + ' heures au plus.', whoN: '', on: () => MOV.bistrot && MOV.bistrot.placed } };
 function gerer(k, idx) { if (!S.started) return; const el = document.createElement('div'); el.className = 'tdb';
   const biz = idx !== undefined ? S.city.items[idx] : null, G = biz ? null : GERE[k]; if (!biz && !G) return; if (biz) k = biz.k; const B2 = biz ? BIZ[k] : null;
@@ -6207,6 +6244,177 @@ function tickLife(dt) { if (!S.started || FPV.on) return; LIFE.t -= dt;
         const s = Math.min(d, 1.5 * dt); g.position.x += dx / d * s; g.position.z += dz / d * s; g.position.y = groundY(g.position.x, g.position.z); g.rotation.y = Math.atan2(dx, dz); g.userData.body.position.y = Math.abs(Math.sin(c.t * 11)) * 0.07;
         if (c.ph === 'out' && c.t > 40) { lifeFree(g); A.cl.splice(k, 1); } }
       else { g.userData.body.position.y = 0; g.rotation.y = c.ry + Math.sin(tt * 0.6 + g.id) * 0.12; if (c.t > c.stay) lifeLeave(c); } } } }
+/* ---------------- LES IMPRÉVUS DU VILLAGE (Manon et Romain, 25/11/2026) ----------------
+   De petits soucis qui rendent le village vivant et relient les bâtiments entre eux : un feu de cheminée, le four qui s'emballe,
+   un chat perché, un nid de guêpes, un colis urgent, une carte postale. Une bulle apparaît au-dessus du lieu ; on la touche :
+   - avec le service (caserne et capitaine Fernand, Poste et Josette), le camion ou le vélo part par les rues : récompense complète ;
+   - sans lui, ton boulanger y va à pied et fait le geste : plus long, récompense réduite.
+   Si on laisse traîner, le lieu cesse de rapporter un moment, sans jamais rien détruire. Aucun imprévu pendant le tutoriel,
+   ni pendant l'absence du joueur : le temps ne compte que quand on joue. */
+const IMP = { list: [], t: 0, next: 200 + Math.random() * 120, labs: [], seq: 0, truck: null, bike: null };
+const IMP_FAM = ['Martin', 'Bernard', 'Dubois', 'Moreau', 'Laurent', 'Lefèvre', 'Roux', 'Fournier', 'Girard', 'Bonnet', 'Mercier', 'Blanc', 'Garnier', 'Chevalier'];
+const IMP_CHAT = ['Mistigri', 'Pompon', 'Caramel', 'Minouche', 'Félix', 'Moustache', 'Réglisse'];
+const IMP_CARTE = [
+  ['Ginette, partie vivre à Biarritz', '« Il fait beau, la mer est bleue, mais rien ne vaut le pain de chez nous. Embrassez tout le monde ! »'],
+  ['le petit-fils des Moreau, en colonie à la montagne', '« On a vu une marmotte ! Gardez-moi une chouquette pour mon retour. »'],
+  ['le facteur d’autrefois, à la retraite en Bretagne', '« J’ai fait la tournée de votre village pendant trente ans. Je suis fier de ce qu’il devient. »'],
+  ['une touriste anglaise de passage cet été', '« Lovely village ! Je reviendrai l’an prochain avec toute ma famille. »'],
+  ['le maire du village voisin', '« Bravo pour vos rues fleuries. Rendez-vous au concours des villages ! »'],
+  ['la comtesse de Rocheval, en voyage à Venise', '« Les gondoles sont charmantes, mais il manque une bonne baguette. »']
+];
+const IMP_T = {
+  feu: { ic: '🔥', lab: '🔥 Au feu !', svc: 'pomp', exp: 360000, mult: 0, w: 3, t: '🔥 Feu de cheminée', self: '🪣 Faire la chaîne des seaux', selfS: 'Ton boulanger y va à pied et lance les seaux avec les voisins. Récompense réduite.' },
+  four: { ic: '🔥', lab: '💨 Le four fume !', svc: 'pomp', exp: 180000, mult: 1, w: 2, t: '💨 Le four s’emballe', self: '🪣 Éteindre moi-même', selfS: 'Ton boulanger y court avec un seau d’eau. Récompense réduite.' },
+  chat: { ic: '🐱', lab: '🐱 Miaou !', svc: 'pomp', exp: 480000, mult: 1, w: 2, t: '🐱 Un chat perché', self: '🪜 Prendre l’échelle', selfS: 'Ton boulanger grimpe lui-même. Récompense réduite.' },
+  guepes: { ic: '🐝', lab: '🐝 Des guêpes !', svc: 'pomp', exp: 480000, mult: 0.5, w: 2, t: '🐝 Un nid de guêpes', self: '🧯 Enfumer le nid moi-même', selfS: 'Ton boulanger s’en charge, bien couvert. Récompense réduite.' },
+  colis: { ic: '📦', lab: '📦 Colis urgent', svc: 'poste', exp: 480000, mult: 1, w: 2, t: '📦 Un colis urgent', self: '📦 Le porter moi-même', selfS: 'Ton boulanger fait la livraison à pied. Récompense réduite.' },
+  carte: { ic: '💌', lab: '💌 Courrier', svc: null, exp: 600000, mult: 1, w: 1.5, t: '💌 Une carte postale' }
+};
+function impMul(key) { try { for (const I of IMP.list) if (I.key === key && I.st !== 'done') return IMP_T[I.k].mult; } catch (e) {} return 1; }
+const impOvenFire = () => { try { return IMP.list.some((I) => I.k === 'four' && I.st !== 'done'); } catch (e) { return false; } };
+const impPick = (a) => a[Math.floor(Math.random() * a.length)];
+function impTop(o) { const b = new THREE.Box3().setFromObject(o); return b.isEmpty() ? [o.position.x, o.position.y + 3, o.position.z] : [(b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2]; }
+
+/* ---- trouver un lieu pour chaque imprévu ---- */
+function impTaken(key) { return IMP.list.some((I) => I.key === key && I.st !== 'done'); }
+function impHouse() { const n = now(), L = []; (S.city.items || []).forEach((it, i) => { if (it.t === 'h' && it.l > 0 && !(it.end > 0) && !(it.rep > n) && cityObjs[i] && !impTaken('h' + i)) L.push(i); }); return L.length ? impPick(L) : -1; }
+function impTarget(k) {
+  if (k === 'feu' || k === 'colis') { const i = impHouse(); return i < 0 ? null : { key: 'h' + i, obj: cityObjs[i], fam: impPick(IMP_FAM) }; }
+  if (k === 'four') return (S.fournees || 0) > 15 && !impTaken('oven') ? { key: 'oven', obj: oven } : null;
+  if (k === 'chat') { const L = []; S.city.items.forEach((it, i) => { const D = it.t === 'd' && DECOS[it.k]; if (D && D.cat === 'nature' && D.fp[0] === 1 && cityObjs[i] && !impTaken('d' + i) && /arbre|tilleul|marronnier|platane|chene|chêne|cerisier|pommier|bouleau|magnolia|ginkgo|sapin|pin|peuplier|olivier|saule|judee|érable|erable/i.test(it.k + D.n)) L.push(i); }); if (!L.length) return null; const i = impPick(L); return { key: 'd' + i, obj: cityObjs[i], fam: impPick(IMP_FAM), chat: impPick(IMP_CHAT) }; }
+  if (k === 'guepes') { const L = []; if (MOV.bistrot && MOV.bistrot.placed && !impTaken('bistrot')) L.push({ key: 'bistrot', obj: MOV.bistrot.objs[0].ob, nom: 'le bistrot de Gégé' }); if (superOpen() && !impTaken('superette')) L.push({ key: 'superette', obj: superG, nom: 'la supérette' });
+    S.city.items.forEach((it, i) => { if (it.t === 'd' && BIZ[it.k] && /guinguette|cafe_parc/.test(it.k) && cityObjs[i] && !impTaken('b' + i)) L.push({ key: 'b' + i, obj: cityObjs[i], nom: BIZ[it.k].n.toLowerCase() }); }); return L.length ? impPick(L) : null; }
+  if (k === 'carte') { if (impTaken('carte')) return null; const at = posteOpen() ? posteG : MOV.mairie && MOV.mairie.placed ? mairie : shop; return { key: 'carte', obj: at, carte: impPick(IMP_CARTE) }; }
+  return null;
+}
+function impSpawn() {
+  const max = (S.pop || 0) >= 1000 ? 3 : 2; if (IMP.list.filter((I) => I.st !== 'done').length >= max) return false;
+  const ks = Object.keys(IMP_T).filter((k) => !IMP.list.some((I) => I.k === k && I.st !== 'done')); let tot = 0; ks.forEach((k) => { tot += IMP_T[k].w; });
+  for (let tries = 0; tries < 6 && ks.length; tries++) { let r = Math.random() * tot, k = ks[0]; for (const q of ks) { r -= IMP_T[q].w; if (r <= 0) { k = q; break; } }
+    const tg = impTarget(k); if (!tg) continue;
+    const I = Object.assign({ id: ++IMP.seq, k, t0: now(), st: 'wait' }, tg); IMP.list.push(I); impFx(I); impLabel(I); impAnnounce(I); return true; }
+  return false;
+}
+function impAnnounce(I) { const T = IMP_T[I.k], svcOk = T.svc === 'pomp' ? caserneOpen() : T.svc === 'poste' ? posteOpen() : true;
+  const where = I.k === 'feu' ? 'chez les ' + I.fam : I.k === 'four' ? 'au four de la boulangerie' : I.k === 'chat' ? 'le chat des ' + I.fam : I.k === 'guepes' ? 'à ' + I.nom : I.k === 'colis' ? 'pour les ' + I.fam : 'au courrier';
+  const head = { feu: '🔥 Au feu, ', four: '💨 Le four fume, ', chat: '🐱 Un chat perché : ', guepes: '🐝 Des guêpes ', colis: '📦 Un colis urgent ', carte: '💌 Une carte postale est arrivée ' }[I.k];
+  toast(head + where + ' !', I.k === 'carte' ? 'Touche la bulle 💌 pour la lire.' : svcOk ? 'Touche la bulle pour envoyer ' + (T.svc === 'pomp' ? 'les pompiers.' : 'Josette, la factrice.') : 'Touche la bulle : sans ' + (T.svc === 'pomp' ? 'caserne' : 'Poste') + ', c’est à toi de t’en occuper.'); buzz(60); }
+
+/* ---- ce qu'on voit sur place ---- */
+const IMPG = { flame: new THREE.ConeGeometry(0.5, 1.9, 6), puff: new THREE.IcosahedronGeometry(0.6, 0), bee: new THREE.SphereGeometry(0.06, 5, 4), box: new THREE.BoxGeometry(0.5, 0.4, 0.5) };
+const IMPM = { f1: new THREE.MeshBasicMaterial({ color: '#FF8A2A' }), f2: new THREE.MeshBasicMaterial({ color: '#FFD24A' }), smoke: new THREE.MeshLambertMaterial({ color: '#6E6A66', transparent: true, opacity: 0.6, depthWrite: false }), dark: new THREE.MeshLambertMaterial({ color: '#4A4644', transparent: true, opacity: 0.6, depthWrite: false }), bee: new THREE.MeshBasicMaterial({ color: '#2B2535' }), kraft: new THREE.MeshLambertMaterial({ color: '#B98A4E' }) };
+function impFx(I) { const g = new THREE.Group(), [x, y, z] = impTop(I.obj); g.position.set(x, y, z); scene.add(g); I.fx = g; I.top = [x, y, z]; I.parts = [];
+  if (I.k === 'feu') { for (let k = 0; k < 4; k++) { const m = new THREE.Mesh(IMPG.flame, k % 2 ? IMPM.f2 : IMPM.f1); m.position.set((k - 1.5) * 0.5, 0.2, (k % 2) * 0.5 - 0.25); g.add(m); I.parts.push({ m, f: 1 }); } }
+  if (I.k === 'feu' || I.k === 'four') for (let k = 0; k < 6; k++) { const m = new THREE.Mesh(IMPG.puff, I.k === 'four' ? IMPM.dark : IMPM.smoke); g.add(m); I.parts.push({ m, s: k / 6 }); }
+  if (I.k === 'four') g.position.y = Math.max(y, I.obj.position.y + 2.5);
+  if (I.k === 'guepes') { g.position.y = I.obj.position.y + 2.3; g.position.x = I.obj.position.x; g.position.z = I.obj.position.z; for (let k = 0; k < 9; k++) { const m = new THREE.Mesh(IMPG.bee, IMPM.bee); g.add(m); I.parts.push({ m, b: k }); } }
+  if (I.k === 'chat') { const c = new THREE.Group(); box(0.42, 0.26, 0.24, '#E39A4A', 0, 0, 0, c); box(0.22, 0.2, 0.2, '#E39A4A', 0.26, 0.18, 0, c); cone(0.05, 0.1, '#E39A4A', 0.22, 0.38, 0.06, c); cone(0.05, 0.1, '#E39A4A', 0.22, 0.38, -0.06, c); const t = box(0.05, 0.36, 0.05, '#E39A4A', -0.24, 0.12, 0, c); t.rotation.z = 0.5; c.position.y = -0.25; g.add(c); I.parts.push({ m: c, cat: 1 }); }
+  if (I.k === 'colis') { const [fx, fz] = [I.obj.position.x, I.obj.position.z]; g.position.set(fx, I.obj.position.y, fz); const m = new THREE.Mesh(IMPG.box, IMPM.kraft); m.position.set(0, 0.2, 0); g.add(m); I.parts.push({ m, pk: 1 }); g.visible = false; } }
+function impFxTick(I, t) { if (!I.fx) return;
+  I.parts.forEach((p, j) => {
+    if (p.f) { p.m.scale.set(1, 0.7 + 0.5 * Math.abs(Math.sin(t * 9 + j * 1.7)), 1); }
+    else if (p.s !== undefined) { const u = (t * 0.35 + p.s) % 1; p.m.position.set(Math.sin(j * 2.1 + t) * 0.4 + u * 0.8, 0.8 + u * 4.5, Math.cos(j * 1.3) * 0.4); p.m.scale.setScalar(0.6 + u * 1.8); }
+    else if (p.b !== undefined) { const a = t * (2.5 + j * 0.2) + j; p.m.position.set(Math.cos(a) * (0.9 + (j % 3) * 0.3), Math.sin(t * 5 + j) * 0.35, Math.sin(a) * (0.9 + (j % 3) * 0.3)); }
+    else if (p.cat) { p.m.rotation.y = Math.sin(t * 1.3) * 0.6; p.m.position.y = -0.25 + Math.abs(Math.sin(t * 3)) * 0.05; }
+  }); }
+function impLabel(I) { let l = IMP.labs.find((q) => !q.busy); if (!l) { l = label(scene, 2); IMP.labs.push(l); } l.busy = I.id; I.lab = l; l.obj = I.k === 'guepes' ? I.fx : I.obj;
+  l.dy = I.k === 'guepes' ? 1.2 : I.k === 'four' ? 6 : Math.max(2, I.top[1] - I.obj.position.y + (I.k === 'feu' ? 2.2 : 1.2)); l.act = () => impOpen(I); setLabel(l, IMP_T[I.k].lab, 'warn imp'); }
+function impClear(I) { I.st = 'done'; if (I.fx) { scene.remove(I.fx); I.fx = null; } if (I.lab) { setLabel(I.lab, '', ''); I.lab.busy = 0; I.lab.act = null; I.lab = null; } }
+
+/* ---- la feuille qui s'ouvre quand on touche la bulle ---- */
+function impSvc(T) { if (T.svc === 'pomp') { const M = MOV.caserne; if (!M || !M.placed) return { ok: false, s: 'Construis la caserne des pompiers (Construire › Bâtiments, niveau 17).' }; if (!S.hired.fernand) return { ok: false, s: 'Embauche le capitaine Fernand dans « Améliorer ».' }; if (IMP.truck && IMP.truck.busy) return { ok: false, s: 'Le camion est déjà en intervention. Il sera libre dans un instant.' }; return { ok: true, s: 'Le capitaine Fernand file avec le camion rouge. Récompense complète.' }; }
+  if (T.svc === 'poste') { const M = MOV.poste; if (!M || !M.placed) return { ok: false, s: 'Construis la Poste (Construire › Bâtiments, niveau 10).' }; if (!S.hired.josette) return { ok: false, s: 'Embauche Josette, la factrice, dans « Améliorer ».' }; if (IMP.bike && IMP.bike.busy) return { ok: false, s: 'Josette est déjà en tournée. Elle sera libre dans un instant.' }; return { ok: true, s: 'Josette livre à vélo. Récompense complète.' }; }
+  return { ok: false, s: '' }; }
+function impOpen(I) { if (I.st !== 'wait') { toast(I.st === 'go' ? 'Les secours sont en route' : 'C’est en cours', 'Encore un instant.'); return; } const T = IMP_T[I.k];
+  if (I.k === 'carte') { const [who, txt] = I.carte; openSheet(T.t, 'De la part de ' + who + ' :', [{ t: txt, s: posteOpen() ? 'Josette l’a déposée avec le sourire. Les habitants sont ravis.' : 'Les habitants sont ravis de ces nouvelles.', btn: 'Merci !', ok: true, run: () => { closeSheet(); impDone(I, posteOpen() ? 'svc' : 'moi'); } }]); return; }
+  const left = Math.max(0, I.t0 + T.exp - now()), tgt = I.k === 'feu' ? 'Chez les ' + I.fam + ', la cheminée s’est embrasée. Tant que le feu brûle, la maison ne paie plus de loyer.' : I.k === 'four' ? 'Une fumée noire sort du four : impossible d’enfourner tant qu’il fume. Dans ' + clock(left) + ', la fournée en cours sera perdue.'
+    : I.k === 'chat' ? I.chat + ', le chat des ' + I.fam + ', est coincé tout en haut de l’arbre et miaule à fendre l’âme.' : I.k === 'guepes' ? 'Un nid de guêpes sous l’auvent de ' + I.nom + ' : les clients fuient, la caisse rapporte moitié moins.' : 'Un colis pour la famille ' + I.fam + ' attend à la mairie. Ils l’attendent avec impatience !';
+  const sv = impSvc(T);
+  openSheet(T.t, tgt + (I.k !== 'four' ? ' Il reste ' + clock(left) + '.' : ''), [
+    { t: T.svc === 'pomp' ? '🚒 Appeler les pompiers' : '📮 Confier à Josette', s: sv.s, btn: sv.ok ? 'Appeler' : '🔒', ok: sv.ok, run: () => { closeSheet(); impSend(I); } },
+    { t: T.self, s: T.selfS, btn: 'J’y vais', ok: true, run: () => { closeSheet(); impSelf(I); } } ]); }
+
+/* ---- les secours : le camion rouge, le vélo jaune ---- */
+function impTruckMake() { const g = new THREE.Group(); box(1.7, 1.2, 3.8, '#C8102E', 0, 0.35, -0.2, g); box(1.7, 1.0, 1.3, '#C8102E', 0, 0.9, 1.15, g); box(1.5, 0.45, 0.06, '#BFE3F2', 0, 1.35, 1.82, g);
+  box(0.5, 0.12, 3.4, '#C9C9C9', 0, 1.6, -0.5, g); box(1.72, 0.12, 3.8, '#FFFDF8', 0, 0.95, -0.2, g);
+  [[-0.85, 1.2], [0.85, 1.2], [-0.85, -1.3], [0.85, -1.3]].forEach((q) => { const w = cyl(0.36, 0.36, 0.3, '#2B2535', q[0], 0.36, q[1], g, 10); w.rotation.z = Math.PI / 2; w.position.y = 0.36; });
+  const L = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshBasicMaterial({ color: '#3A7BFF' })); L.position.set(0, 1.98, 1.1); g.add(L); g.userData.light = L; g.visible = false; scene.add(g); return { g, busy: false, path: [], i: 0, speed: 9 }; }
+function impBikeMake() { const g = new THREE.Group(); [-0.45, 0.45].forEach((z) => { const w = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.035, 5, 14), mat('#2B2535')); w.rotation.y = Math.PI / 2; w.position.set(0, 0.32, z); g.add(w); });
+  box(0.06, 0.06, 0.95, '#F7C600', 0, 0.55, 0, g); box(0.4, 0.3, 0.35, '#F7C600', 0, 0.55, 0.55, g); cyl(0.16, 0.2, 0.62, '#1F3C88', 0, 0.75, -0.08, g, 8); mesh(new THREE.SphereGeometry(0.16, 8, 6), '#F2C9A8', 0, 1.56, -0.04, g); cyl(0.17, 0.17, 0.08, '#1F3C88', 0, 1.68, -0.04, g, 10);
+  g.visible = false; scene.add(g); return { g, busy: false, path: [], i: 0, speed: 4.5 }; }
+function impRoute(v, x0, z0, x1, z1, done) { let p = []; try { p = findPath(x0, z0, x1, z1, 7) || []; } catch (e) { p = []; } if (!p.length) p = [[x1, z1]]; v.path = p; v.i = 0; v.done = done; v.g.position.set(x0, groundY(x0, z0), z0); v.g.visible = true; }
+function impVehTick(v, dt) { if (!v || !v.g.visible || !v.path.length) return; const w = v.path[v.i], dx = w[0] - v.g.position.x, dz = w[1] - v.g.position.z, d = Math.hypot(dx, dz), st = v.speed * dt;
+  if (d > 0.01) { const a = Math.atan2(dx, dz); let da = a - v.g.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); v.g.rotation.y += da * Math.min(1, dt * 8); }
+  if (d <= st) { v.g.position.x = w[0]; v.g.position.z = w[1]; v.i++; if (v.i >= v.path.length) { v.path = []; const f = v.done; v.done = null; if (f) f(); } }
+  else { v.g.position.x += dx / d * st; v.g.position.z += dz / d * st; }
+  v.g.position.y = groundY(v.g.position.x, v.g.position.z);
+  if (v.g.userData.light) v.g.userData.light.material.color.set(Math.floor(now() / 220) % 2 ? '#3A7BFF' : '#FF4040'); }
+function impHome(kind) { const M = MOV[kind], st = STN[kind]; return st ? [st[0], st[1]] : [M.x, M.z + 4]; }
+function impNear(I) { const o = I.obj.position; return [o.x, o.z + (I.k === 'four' ? 3.5 : 4.2)]; }
+function impSend(I) { const T = IMP_T[I.k], pomp = T.svc === 'pomp'; let v = pomp ? IMP.truck : IMP.bike; if (!v) { v = pomp ? (IMP.truck = impTruckMake()) : (IMP.bike = impBikeMake()); }
+  if (v.busy) return; v.busy = true; I.st = 'go'; I.who = 'svc'; const [hx, hz] = impHome(pomp ? 'caserne' : 'poste'), [tx, tz] = impNear(I);
+  setLabel(I.lab, pomp ? '🚒 En route…' : '🚲 En route…', 'timer');
+  if (!pomp) { const [mx, mz] = MOV.mairie && MOV.mairie.placed ? impHome('mairie') : [hx, hz]; impRoute(v, hx, hz, mx, mz, () => impRoute(v, mx, mz, tx, tz, () => impArrive(I, v, hx, hz))); }
+  else impRoute(v, hx, hz, tx, tz, () => impArrive(I, v, hx, hz)); }
+function impArrive(I, v, hx, hz) { I.st = 'work'; I.workEnd = now() + (I.k === 'colis' ? 1200 : 4000); I.veh = v; I.back = [hx, hz]; if (I.fx && I.k === 'colis') I.fx.visible = true; }
+function impSelf(I) { I.st = 'walk'; I.who = 'moi'; const [tx, tz] = impNear(I); setLabel(I.lab, '🚶 J’arrive…', 'timer');
+  goTo(tx, tz, 1.4, () => { I.st = 'work'; I.workEnd = now() + (I.k === 'colis' ? 1500 : 6000); if (I.fx && I.k === 'colis') I.fx.visible = true; });
+  if (!QUIET) floatAt(player, IMP_T[I.k].self.split(' ')[0] + ' J’y vais !'); }
+
+/* ---- la fin d'un imprévu ---- */
+function impDone(I, how) { const T = IMP_T[I.k], pop = S.pop || 0, f = how === 'svc' ? 1 : 0.6;
+  const coins = Math.round((40 + 0.35 * pop) * f), xp = Math.round((25 + 0.04 * pop) * f); impClear(I);
+  gain(xp, coins); S.renom = (S.renom || 0) + (how === 'svc' ? 2 : 1); const C2 = S.inter || (S.inter = {}); C2[I.k] = (C2[I.k] || 0) + 1; C2[how] = (C2[how] || 0) + 1; dirty = true;
+  SFX.coin(); try { floatAt(I.obj, '+' + coins + ' ' + C); } catch (e) {} burst(I.top[0], I.top[1] + 0.5, I.top[2], ['#E3A73C', '#FFFDF8', '#BFE3F2'], 14, 4);
+  const msg = { feu: ['🔥 Le feu est éteint', how === 'svc' ? 'Le capitaine Fernand range la lance : « Pensez à faire ramoner ! »' : 'Les voisins t’applaudissent : la chaîne des seaux a sauvé la maison des ' + I.fam + '.'],
+    four: ['💨 Le four est sauvé', 'La fumée retombe : on peut de nouveau enfourner.'], chat: ['🐱 ' + I.chat + ' est sauvé', 'Les ' + I.fam + ' le serrent dans leurs bras. Il ronronne déjà.'],
+    guepes: ['🐝 Le nid est parti', 'Les clients reviennent s’attabler.'], colis: ['📦 Colis livré', 'Les ' + I.fam + ' ouvrent le paquet en riant : c’est le cadeau de la grand-mère !'], carte: ['💌 Quelle belle carte', 'Elle rejoint le tableau d’affichage de la mairie.'] }[I.k];
+  toast(msg[0] + ' · +' + coins + ' ' + C, msg[1]); }
+function impExpire(I) { const n = now(); impClear(I); dirty = true;
+  if (I.k === 'feu') { const i = +I.key.slice(1), it = S.city.items[i]; if (it) it.rep = n + 240000; toast('🔥 Les voisins ont éteint le feu', 'Mais la maison des ' + I.fam + ' doit être réparée : 4 minutes sans loyer. La caserne aurait été plus rapide.'); }
+  else if (I.k === 'four') { if (S.oven && n < S.oven.end) { S.oven = null; toast('💨 La fournée est perdue', 'Le four a trop fumé : les baguettes sont brûlées. Le four est de nouveau libre.'); } else toast('💨 Le four a fini de fumer', 'On peut de nouveau enfourner.'); }
+  else if (I.k === 'chat') toast('🐱 ' + I.chat + ' est redescendu tout seul', 'Vexé, il boude sur le perron des ' + I.fam + '.');
+  else if (I.k === 'guepes') toast('🐝 Les guêpes sont parties', 'Elles ont fini par s’en aller toutes seules.');
+  else if (I.k === 'colis') toast('📦 Le colis est reparti', 'Personne ne l’a livré : il retourne à l’expéditeur.'); }
+
+/* ---- la boucle : appelée à chaque image par 4-boucle.js ---- */
+function tickImp(dt) { const n = now(), t = n / 1000;
+  impVehTick(IMP.truck, dt); impVehTick(IMP.bike, dt);
+  for (const I of IMP.list) { if (I.st === 'done') continue; impFxTick(I, t);
+    if (I.st === 'walk' && !P.goal) { I.st = 'wait'; setLabel(I.lab, IMP_T[I.k].lab, 'warn imp'); } /* le boulanger a été appelé ailleurs en chemin */
+    if (I.st === 'wait' && n > I.t0 + IMP_T[I.k].exp) { impExpire(I); continue; }
+    if (I.st === 'work') { if (Math.random() < dt * 7 && I.k !== 'colis' && I.k !== 'carte') burst(I.top[0], I.top[1] + 0.3, I.top[2], I.k === 'guepes' ? ['#DDDDDD', '#FFFFFF'] : ['#BFE3F2', '#FFFFFF', '#7FC4E8'], 3, 2);
+      if (n >= I.workEnd) { const v = I.veh; impDone(I, I.who === 'svc' ? 'svc' : 'moi'); if (v) { const b = I.back; impRoute(v, v.g.position.x, v.g.position.z, b[0], b[1], () => { v.g.visible = false; v.busy = false; }); } } } }
+  IMP.list = IMP.list.filter((I) => I.st !== 'done');
+  if (!S.started || S.over || VISIT.on || BUILD || (S.q || 0) < 8 || level() < 12) return;
+  IMP.t += dt; if (IMP.t < IMP.next) return; IMP.t = 0; IMP.next = (360 + Math.random() * 240) * ((S.pop || 0) > 800 ? 0.8 : 1); impSpawn(); }
+
+/* ---- la caserne : la feuille du capitaine ---- */
+function impCaserne() { const C2 = S.inter || {}, act = IMP.list.filter((I) => I.st !== 'done' && IMP_T[I.k].svc === 'pomp');
+  openSheet('🚒 La caserne des pompiers', caserneOpen() ? 'Le capitaine Fernand : « Toujours prêts ! » ' + (IMP.truck && IMP.truck.busy ? 'Le camion est en intervention.' : 'Le camion est à la caserne.') : 'Embauche le capitaine Fernand dans « Améliorer » pour ouvrir la caserne.',
+    act.length ? act.map((I) => ({ t: IMP_T[I.k].t, s: I.st === 'wait' ? 'En attente des secours.' : 'En cours.', btn: 'Voir', ok: I.st === 'wait', run: () => { closeSheet(); impOpen(I); } }))
+      : [{ t: '✅ Rien à signaler', s: 'Feux éteints : ' + (C2.feu || 0) + ' · chats sauvés : ' + (C2.chat || 0) + ' · nids de guêpes : ' + (C2.guepes || 0) + ' · fours sauvés : ' + (C2.four || 0) + '.', btn: 'OK', ok: true, run: closeSheet }]); }
+
+/* ---- les déblocages par niveau ---- */
+function lvUnlockList() { const L = [];
+  Object.keys(TAB_LVL).forEach((k) => { const nm = k === 'logements' ? ['Logements', '🏠'] : k === 'rues' ? ['Rues', '🧱'] : k === 'batiments' ? ['Bâtiments', '🏛️'] : DCAT_NAMES[k]; if (nm && TAB_LVL[k] > 1) L.push([TAB_LVL[k], nm[1] + ' Catalogue : ' + nm[0]]); });
+  PROD_KEYS.forEach((k) => { const M = MOV[k]; if (M.lvl) L.push([M.lvl, M.ic + ' ' + M.n]); });
+  [['⚙️ Moulin', 8, 4], ['🔥 Four', 8, 4], ['🥖 Boulangerie', 5, 5], ['🌱 Semences', 4, 6], ['👟 Équipe', 4, 6]].forEach(([n, mx, k]) => { for (let s = 3; s <= mx; s++) L.push([k * (s - 2), n + ' · niveau ' + s]); });
+  [[3, 10], [4, 18], [5, 26]].forEach(([s, l]) => L.push([l, '🧱 Équipe de maçons n° ' + s])); [[3, 8], [4, 14], [5, 20], [6, 26]].forEach(([s, l]) => L.push([l, '🏚️ Grenier et réserves · niveau ' + s]));
+  [[2, 20], [3, 26], [4, 32]].forEach(([s, l]) => L.push([l, '🧁 Pâtisserie · niveau ' + s])); [[2, 26], [3, 34]].forEach(([s, l]) => L.push([l, '👕 Boutique de vêtements · niveau ' + s]));
+  const dl = {}; Object.values(DECOS).forEach((d) => { if (!d.hide && !d.gift && (d.lvl || 1) > 1) dl[d.lvl] = (dl[d.lvl] || 0) + 1; }); Object.keys(dl).forEach((l) => L.push([+l, '🌷 ' + dl[l] + ' décor' + (dl[l] > 1 ? 's' : '') + ' au catalogue']));
+  L.push([12, '🚨 Les imprévus du village commencent']);
+  return L.sort((a, b) => a[0] - b[0]); }
+function lvNews(l) { try { const L = lvUnlockList().filter((q) => q[0] === l && !/décor/.test(q[1])).map((q) => q[1]); return L.length ? 'Nouveau : ' + L.slice(0, 3).join(' · ') + (L.length > 3 ? '…' : '') : ''; } catch (e) { return ''; } }
+function unlockSheet() { const lv = level(), L = lvUnlockList(), next = L.filter((q) => q[0] > lv), lvls = [...new Set(next.map((q) => q[0]))].slice(0, 6);
+  const el = document.createElement('div'); el.className = 'unl';
+  const nx = LEVELS[lv], pc = nx ? Math.round((S.xp - (LEVELS[lv - 1] || 0)) / (nx - (LEVELS[lv - 1] || 0)) * 100) : 100;
+  let h = '<div class="unl-now">Niveau <b>' + lv + '</b> sur ' + LEVELS.length + (nx ? ' · ' + pc + ' % vers le niveau ' + (lv + 1) : ' · le plus haut niveau') + '</div>';
+  if (!lvls.length) h += '<p>Tout ce qui existe aujourd’hui est débloqué. Bientôt : la gendarmerie, le terrain de sport et la gare.</p>';
+  lvls.forEach((l) => { h += '<div class="unl-l"><b>Niveau ' + l + '</b>' + next.filter((q) => q[0] === l).map((q) => '<span>' + tdbEsc(q[1]) + '</span>').join('') + '</div>'; });
+  const C2 = S.inter || {}, tot = (C2.svc || 0) + (C2.moi || 0);
+  h += '<div class="unl-l"><b>🚨 Carnet des interventions</b>' + (tot ? '<span>🔥 Feux éteints : ' + (C2.feu || 0) + '</span><span>💨 Fours sauvés : ' + (C2.four || 0) + '</span><span>🐱 Chats sauvés : ' + (C2.chat || 0) + '</span><span>🐝 Nids de guêpes : ' + (C2.guepes || 0) + '</span><span>📦 Colis livrés : ' + (C2.colis || 0) + '</span><span>💌 Cartes postales : ' + (C2.carte || 0) + '</span><span>🚒 Par les secours : ' + (C2.svc || 0) + ' · 🧑 par toi : ' + (C2.moi || 0) + '</span>' : '<span>Aucune intervention pour l’instant' + (lv < 12 ? ' : les imprévus commencent au niveau 12.' : '.') + '</span>') + '</div>';
+  el.innerHTML = h; openSheet('🔓 Prochains déblocages', 'Chaque niveau ouvre de nouvelles choses à bâtir.', [{ t: 'Continuer', s: 'Gagne de l’expérience en faisant vivre le village.', btn: 'OK', ok: true, run: closeSheet }], null, el); }
 
 /* ---------------- the loop ---------------- */
 const clockT = new THREE.Clock(); let lastCoins = -1, guideEl = null, hudT = 1, saveT = 0, loadT = 0, zoneId = '', zoneT = 0;
@@ -6392,7 +6600,7 @@ function step() {
     carT -= dt;
     if (carT <= 0) { carT = Math.max(5, Math.min(45, 3.5 / (D * 0.4))) * (0.7 + Math.random() * 0.6) * (S.pain > 0 ? 1 : 1.6) * (garageOpen() ? 0.7 : 1); /* le garage attire les voitures */ if (MOV.parking.placed && queue.length < 8 && Math.random() < Math.min(1, 0.3 + (S.pop || 0) / ECO.carPop)) spawnCar(); /* pas de parking, pas de voitures */ }
   }
-  tickCars(dt); try { tickVCars(dt); } catch (e) {} try { tickLife(dt); } catch (e) { if (!tickLife.err) { tickLife.err = 1; console.warn('vie des commerces', e); } }
+  tickCars(dt); try { tickVCars(dt); } catch (e) {} try { tickLife(dt); } catch (e) { if (!tickLife.err) { tickLife.err = 1; console.warn('vie des commerces', e); } } try { tickImp(dt); } catch (e) { if (!tickImp.err) { tickImp.err = 1; console.warn('imprévus', e); } }
   const serveGap = S.hired.margot && !S.tasks.margot ? 220 : 480; let worst = 0;
   for (let i = villagers.length - 1; i >= 0; i--) {
     const v = villagers[i], d = v.userData.v; d.walk += dt * 12; let moving = true;
